@@ -1,0 +1,5 @@
+This package is based on package Rniftilib. We heavily modified their C code file 'Rniftilib.C' that acts as an R wrapper to the niftilib. None of the original Rniftilib functions or class definitions have been included in this package.
+
+# TODO
+# - start creating man files (start with read.nifti.Rd)...want to see with R CMD check will stop complaining about read.nifti.Rd....start with the functions (methods will need nifti-methods.Rd...see bigmemory)
+# - create Rniftilib-package.Rd following bigmemory-package.Rd

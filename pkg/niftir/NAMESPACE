@@ -1,0 +1,4 @@
+import(bigmemory)
+importFrom(roxygen, roxygen)
+exportPattern("^[^\\.]")
+useDynLib(niftir)
