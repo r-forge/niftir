@@ -24,7 +24,7 @@
 #' @seealso \code{\link{as.big.nifti4d}}
 #'
 #' @keywords methods
-roxygen()
+
 
 #' Create a big.nifti4d object
 #'
@@ -55,7 +55,6 @@ roxygen()
 #'  as.big.nifti4d(nifti(0, dim=c(10,10,10,10)))   # should give same thing as above
 #' 
 #' @keywords methods
-roxygen()
 
 
 #' @nord
@@ -74,13 +73,7 @@ setMethod('as.big.nifti4d',
     signature(x='nifti', header='missing', mask='missing'),
     function(x, ...) as.big.nifti4d(x@.Data, x@header, ...)
 )
-
-#' @nord
-setMethod('as.big.nifti4d',
-    signature(x='nifti4d', header='missing', mask='missing'),
-    function(x, ...) as.big.nifti4d(x@.Data, x@header, x@mask, ...)
-)
-
+ 
 #' @nord
 setMethod('as.big.nifti4d',
     signature(x='array', header='list', mask='missing'),
@@ -109,7 +102,7 @@ setMethod('as.big.nifti4d',
 setMethod('as.big.nifti4d',
     signature(x='big.matrix', header='list', mask='logical'),
     function(x, header, mask, ...) {
-        # 1. Check input
+        # Check input
         if (length(header$dim) != 4)
             stop("dimensions of header attribute not equal to 4")
         if (prod(header$dim[1:3]) != length(mask))
@@ -117,20 +110,20 @@ setMethod('as.big.nifti4d',
                  nifti image")
         if (ncol(x) != sum(mask))
             stop("mask must have as many TRUE elements as columns in input x")
-
-        # 2. Get filebacking info
+        
+        # Get absolute path for backingpath
         if (is.filebacked(x)) {
             args <- list(...)
-            path <- args$backingpath
-            bfile <- abspath(file.path(path, args$backingfile))
-            dfile <- abspath(file.path(path, args$descriptorfile))
-        } else {
-            bfile <- character()
-            dfile <- character()
+            bpath <- abspath(args$backingpath)
+            bfile <- basename(args$backingfile)
+            dfile <- basename(args$descriptorfile)
+            # TODO: if file-backed, then save some additional info?
+            # with the header, mask, backingpath, etc?
         }
         
-        # 3. New object
-        bigmat <- new("big.nifti4d", header=header, mask=mask, backingfile=bfile, descriptorfile=dfile)
+        # New object
+        bigmat <- new("big.nifti4d", header=header, mask=mask, 
+            backingpath=bpath, backingfile=bfile, descriptorfile=dfile)
         bigmat@address <- x@address
         
         return(bigmat)
@@ -216,9 +209,52 @@ read.big.nifti4d <- function(fname, ...) {
     
     # Clear nifti address
     header <- x$header
-    gc()
+    gc(FALSE)
     
     as.big.nifti4d(bigmat, header, rep(TRUE, ncol(bigmat)), ...)
 }
 
 
+#' @nord
+setMethod("free.memory",
+    signature(x="big.nifti4d", backingpath="missing"),
+    function(x) {
+        if (!is.filebacked(x))
+            stop("input to free.memory cannot be a non-filebacked big.matrix")
+        # free up memory
+        .Call("CDestroyBigMatrix", x@address, PACKAGE="bigmemory")
+        gc()
+        # reattach matrix
+        tmp <- attach.big.matrix(x@descriptorfile)
+        x@address <- tmp@address
+        # done!
+        return(x)
+    }
+)
+
+#' @nord
+setMethod("free.memory",
+    signature(x="list", backingpath="missing"),
+    function(x) {
+        xs <- x
+        # check input
+        lapply(xs, function(x) {
+            if (!is.big.niftiXd(x))
+                stop("input to free.memory must be bigniftiXd object")
+            if (!is.filebacked(x))
+                stop("input to free.memory cannot be a non-filebacked big.matrix")
+        })
+        # free memory
+        lapply(xs, function(x) 
+            .Call("CDestroyBigMatrix", x@address, PACKAGE="bigmemory")
+        )
+        gc()
+        # reattach matrices
+        for (i in 1:length(xs)) {
+            tmp <- attach.big.matrix(xs[[i]]@descriptorfile)
+            xs[[i]]@address <- tmp@address
+        }
+        # done!
+        return(xs)
+    }
+)

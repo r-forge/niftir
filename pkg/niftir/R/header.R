@@ -92,7 +92,6 @@ copygeom <- function(x, y) {
 #' @param x \code{nifti} or \code{niftiXd} object
 #' 
 #' @return list with header attributes or specific attribute or NULL
-roxygen()
 
 #' @nord
 setGeneric('header', function(x) standardGeneric('header'))
@@ -222,7 +221,6 @@ xyz2ijk <- function(header, xyz, use.qform=T) {
 #' @param usemask trim the coordinates returned based on \code{mask} slot of \code{x}
 #'
 #' @return data frame with 3 columns (i, j, k coordinates) and rownames corresponding to vector indices
-roxygen()
 
 #' @nord
 setGeneric('coords', function(x, mask=NULL) standardGeneric('coords'))

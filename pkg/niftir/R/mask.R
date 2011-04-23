@@ -12,9 +12,6 @@ read.mask <- function(fname, thresh=0) {
         ret
 }
 
-#' @nord
-write.mask <- function(...) write.nifti(...)
-
 
 #' Access/set mask info
 #' 
@@ -28,20 +25,14 @@ write.mask <- function(...) write.nifti(...)
 #' @param x \code{niftiXd} or \code{big.niftiXd} object
 #' 
 #' @return logical vector for \code{mask(x)}
-roxygen()
+
 
 #' @nord
 setGeneric('mask', function(x) standardGeneric('mask'))
 
 #' @nord
 setMethod('mask',
-    signature(x='niftiXd'),
-    function(x) x@mask
-)
-
-#' @nord
-setMethod('mask',
-    signature(x='big.niftiXd'),
+    signature(x='big.nifti4d'),
     function(x) x@mask
 )
 
@@ -50,17 +41,7 @@ setGeneric('mask<-', function(x, value) standardGeneric('mask<-'))
 
 #' @nord
 setMethod('mask<-',
-    signature(x='niftiXd'),
-    function(x, value) {
-        if (!is.vector(value) && !is.logical(value))
-            stop("mask must be vector and logical")
-        x@mask <- value
-    }
-)
-
-#' @nord
-setMethod('mask<-',
-    signature(x='big.niftiXd'),
+    signature(x='big.nifti4d'),
     function(x, value) {
         if (!is.vector(value) && !is.logical(value))
             stop("mask must be vector and logical")
@@ -170,149 +151,47 @@ prepare.mask <- function(new_mask, orig_mask=NULL, thresh=0) {
 #' @param ... Additional options possible for \code{do.mask}
 #' 
 #' @return A masked \code{niftiXd} or \code{big.niftiXd} object
-roxygen()
+
 
 #' @nord
-setGeneric('do.mask', function(x, mask, thresh=0, output.prefix=NULL, ...)
+setGeneric('do.mask', function(x, mask, thresh=0, ...)
            standardGeneric('do.mask'))
 
 #' @nord
 setMethod('do.mask',
-    signature(x='niftiXd', mask='character', output.prefix='missing'),
-    function(x, mask, thresh=0) {
-        mask <- read.nifti3d(mask)  ## assume 3D
-        return(mask(x, mask, thresh))
-    }
-)
-
-#' @nord
-setMethod('do.mask',
-    signature(x='big.niftiXd', mask='character'),
-    function(x, mask, thresh=0, output.prefix=NULL, ...) {
-        mask <- read.nifti3d(mask)  ## assume 3D
-        return(mask(x, mask, thresh, output.prefix, ...))
-    }
-)
-
-#' @nord
-setMethod('do.mask',
     signature(x='big.nifti4d', mask='character'),
-    function(x, mask, thresh=0, output.prefix=NULL, ...) {
-        mask <- read.nifti3d(mask)  ## assume 3D
-        return(mask(x, mask, thresh, output.prefix, ...))
+    function(x, mask, thresh=0, ...) {
+        mask <- read.mask(mask)  ## assume 3D
+        return(do.mask(x, mask, thresh, ...))
     }
 )
 
 #' @nord
 setMethod('do.mask',
     signature(x='big.nifti4d', mask='vector'),
-    function(x, mask, thresh=0, output.prefix=NULL) {
+    function(x, mask, thresh=0, ...) {
         # Prepare mask
         mask <- prepare.mask(mask, x@mask, thresh)
         n <- sum(mask)
         
-        # Check if file.backed
-        if (is.filebacked(x) && is.null(output.prefix))
-            warning("no output.prefix specified, will output a non-filebacked 
-                matrix")
-        
         # Get indices of mask
         inds <- which(mask[x@mask])
         
-        # Set output stuff and create big matrix
-        ylist <- niftir.big.matrix(nrow(x), n, output=output.prefix, type=typeof(x), separated=is.separated(x), shared=is.shared(x))
+        # Copy over masked data
+        y <- deepcopy(x, cols=inds, ...)
         
-        # Call the function
-        .Call("BigDeepCopyMain", x@address, ylist$bm@address, 
-            as.double(1:nrow(x)), as.double(inds))
-        
-        # Create new class
-        y <- new(class(x), mask=mask, backingfile=ylist$bf, descriptorfile=ylist$df)
-        y@address <- ylist$bm@address
-        
-        # Add any other slot names that might have been missed
-        slot_names <- setdiff(slotNames(x), 
-                                c("mask", "address", "backingfile", "descriptorfile"))
-        for (slot_name in slot_names)
-            slot(y, slot_name) <- slot(x, slot_name)
+        # Return a big.nifti4d object
+        y <- as.big.nifti4d(y, header=x@header, mask=mask, ...)
         
         return(y)
     }
 )
 
 #' @nord
-setMethod('do.mask',
-    signature(x='niftiXd', mask="vector", output.prefix="missing"),
-    function(x, mask, thresh=0) {  
-        mask <- prepare.mask(mask, x@mask, thresh)
-        x@mask <- mask
-        x@.Data <- x[,mask]
-        return(x)
-    }
-)
-
-#' @nord
-setGeneric('do.unmask', function(x, return.niftiXd=TRUE)
+setGeneric('do.unmask', function(x)
            standardGeneric('do.unmask'))
 
-#' @nord
-setMethod('do.unmask',
-    signature(x='big.niftiXd', return.niftiXd='missing'),
-    function(x) {
-        stop("unmasking is not yet supported with a big.niftiXd object")
-})
-
-#' @nord
-setMethod('do.unmask',
-    signature(x='nifti3d'),
-    function(x, return.niftiXd=TRUE) {
-        # Check if need to unmask
-        lenmask <- length(x@mask)
-        if (lenmask == length(x)) {
-            if (return.niftiXd)
-                return(x)
-            else
-                return(x@.Data)
-        }
-        
-        x@header$dim <- x@header$dim[1:3]
-        newVec <- vector("numeric", prod(x@header$dim))
-        newVec[x@mask] <- x@.Data
-        
-        if (return.niftiXd) {
-            x@.Data <- newVec
-            x@mask <- rep(TRUE, lenmask)
-            return(x)
-        } else {
-            return(newVec)
-        }
-})
-
-#' @nord
-setMethod('do.unmask',
-    signature(x='nifti4d'),
-    function(x, return.niftiXd=TRUE) {
-        # Check if need to unmask
-        lenmask <- length(x@mask)
-        if (lenmask == ncol(x)) {
-            if (return.niftiXd)
-                return(x)
-            else
-                return(x@.Data)
-        }
-        
-        x@header$dim <- x@header$dim[1:4]
-        newMat <- matrix(0, x@header$dim[4], prod(x@header$dim[1:3]))
-        newMat[,x@mask] <- x@.Data
-        
-        if (return.niftiXd) {
-            x@.Data <- newMat
-            x@mask <- rep(TRUE, lenmask)
-            return(x)
-        } else {
-            return(newMat)
-        }
-})
+# TODO: make an unmask for big.nifti4d
 
 
 #-------------------
@@ -329,7 +208,6 @@ setMethod('do.unmask',
 #' @param i mask that might be applied to \code{x]}
 #'
 #' @return vector of column or vector indices in \code{x}
-roxygen()
 
 #' @nord
 setGeneric('indices', function(x, i) standardGeneric('indices'))
@@ -340,28 +218,22 @@ setMethod('indices',
     function(x, i) {
         i <- prepare.mask(i, x)
         i <- which(i[x])
-        indices(x, i)
+        return(i)
 })
 
 #' @nord
 setMethod('indices',
     signature(x='logical', i="integer"),
     function(x, i) {
-        if (min(i)<1 || max(i)>length(x))
+        oi <- order(i)
+        if (oi[1]<1 || oi[length(i)]>length(x))
             stop("Illegal index usage")
         return(i)
 })
 
 #' @nord
 setMethod('indices',
-    signature(x='niftiXd', i="logical"),
-    function(x, i) {
-        indices(x@mask, i)
-})
-
-#' @nord
-setMethod('indices',
-    signature(x='big.niftiXd', i="logical"),
+    signature(x='big.nifti4d', i="logical"),
     function(x, i) {
         indices(x@mask, i)
 })

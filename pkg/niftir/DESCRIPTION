@@ -1,20 +1,17 @@
 Package: niftir
 Type: Package
-Title: niftir 0.1-1
-Version: 0.1-1
-Date: 2010-08-14
+Title: niftir 0.2
+Version: 0.2
+Date: 2011-04-06
 Author: Zarrar Shehzad <zarrar [dot] shehzad [at] yale.edu> and Jay
     Emerson
 Maintainer: Zarrar Shehzad <zarrar.shehzad@yale.edu>
-Depends: methods, bigmemory, biganalytics
-Imports: roxygen
+Depends: methods, bigmemory, bigextensions
 LinkingTo: bigmemory
-Suggests: svUnit
 Description: Read/write nifti/analyze files using the nifticlib. Files
     can be read into R as an array type class or in the case of 4D
     files (3D+time) as a matrix or big matrix type class.
 License: LGPL-3
 LazyLoad: yes
-Collate: 'aclasses.R' 'big.nifti4d.R' 'header.R' 'image.R' 'mask.R'
-    'nifti.R' 'nifti3d.R' 'nifti4d.R' 'niftir-package.R' 'niftiXd.R'
-    'unitTests.R' 'utils.R' 'big.utils.R' 'big.niftiXd.R' 'zzz.R'
+Collate: 'aclasses.R' 'big.nifti4d.R' 'header.R' 'mask.R'
+    'nifti.R' 'utils.R' 'zzz.R'

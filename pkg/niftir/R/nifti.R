@@ -39,20 +39,6 @@ setMethod('as.nifti',
 )
 
 setMethod('as.nifti',
-    signature(x='niftiXd', header='missing'),
-    function(x) {
-        if (is.null(x@header$dim))
-            stop("the header in x must have the dim attribute")
-        
-        dat <- do.unmask(x, return.niftiXd=FALSE)
-        header <- x@header
-        dim(dat) <- header$dim
-        
-        return(as.nifti(as.array(dat), header))
-    }
-)
-
-setMethod('as.nifti',
     signature(x='array', header='list'),
     function(x, header) {
         arr <- new("nifti", header=create.header(header))
@@ -180,51 +166,6 @@ check.outfile <- function(outfile, overwrite, header) {
     return(outfile)
 }
 
-#' Write nifti/analyze file
-#'
-#' @name write.nifti-methods
-#'
-#' @aliases write.nifti,nifti-method
-#'  write.nifti,big.nifti4d-method
-#'  write.nifti,ANY-method
-#'
-#' @sectionMethods
-#'  \describe{
-#'      \item{\code{signature(x="nifti")}}{...}
-#'      \item{\code{signature(x="big.nifti4d")}}{...}
-#'      \item{\code{signature(x="ANY")}}{...}
-#'  }
-#'
-#' @seealso \code{\link{write.nifti}}
-#'
-#' @keywords methods
-roxygen()
-
-#' Write nifti/analyze file
-#'
-#' @name write.nifti
-#'
-#' @usage write.nifti(x, outfile=NULL, overwrite=FALSE, header=NULL, ...)
-#'
-#' @author Zarrar Shehzad
-#' 
-#' @param x \code{nifti}, \code{big.nifti4d}, or anything accepted by
-#'  \code{\link{as.nifti}}
-#' @param outfile output filename (if want .hdr/.img please just specify one)
-#'  (default: fname in header)
-#' @param overwrite if output exists, do you want to overwrite (default: FALSE)
-#' @param header list of header attributes (note that this takes precedence over
-#'  header attributes found in the primary argument \code{x})
-#' @param ... Header attribute arguments as in header_attribute=value (note 
-#'  that these header attributes and values take precedence over the attributes
-#'  in the previous \code{header} argument)
-#' 
-#' @seealso \code{\link{write.nifti-methods}}
-#'
-#' @keywords methods
-roxygen()
-
-
 #' @nord
 setGeneric('write.nifti', 
     function(x, header, mask, outfile=NULL, overwrite=FALSE, ...)
@@ -238,14 +179,6 @@ setMethod('write.nifti',
         header <- create.header(x@header, ...)
         outfile <- check.outfile(outfile, overwrite, header)
         .Call("write_nifti", header, x@.Data, outfile, PACKAGE="niftir")
-    }
-)
-
-#' @nord
-setMethod('write.nifti',
-    signature(x='niftiXd', header='missing', mask='missing'),
-    function(x, outfile=NULL, overwrite=FALSE, ...) {
-        write.nifti(as.nifti(x), outfile=outfile, overwrite=overwrite, ...)
     }
 )
 
@@ -334,4 +267,3 @@ setMethod('write.nifti',
         .Call("write_nifti", header, x, outfile, PACKAGE="niftir")
     }
 )
-
