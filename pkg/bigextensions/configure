@@ -1,0 +1,24 @@
+FLAGS="PKG_CPPFLAGS=-I../inst/include"
+LIBS=""
+
+echo -n "  checking for Sun Studio compiler..."
+CC=`${R_HOME}/bin/R CMD config CC`
+cmd=`echo $CC | grep -E 'suncc'`
+if test -n "$cmd"; then
+  echo "yes"
+  FLAGS="${FLAGS} -DINTERLOCKED_EXCHANGE_HACK"
+else
+  echo "no"
+fi
+
+echo -n "  checking for Darwin..."
+if test `uname` = "Linux" ; then
+  echo "no"
+  FLAGS="${FLAGS} -DLINUX"
+  LIBS="PKG_LIBS=-lrt"
+else
+  echo "yes"
+fi
+
+echo "${FLAGS}" > src/Makevars
+echo "${LIBS}" >> src/Makevars

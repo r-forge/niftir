@@ -1,0 +1,13 @@
+Package: connectir
+Type: Package
+Title: connectir 0.1
+Version: 0.1
+Date: 2011-04-07
+Author: Zarrar Shehzad <zarrar [dot] shehzad [at] yale.edu> and Jay
+    Emerson
+Maintainer: Zarrar Shehzad <zarrar.shehzad@yale.edu>
+Depends: methods, plyr, testthat, foreach, bigmemory, Rcpp, biganalytics, bigalgebra, bigextensions, niftir
+LinkingTo: bigmemory, Rcpp
+Description: Functional connectivity analyses tools.
+License: LGPL-3
+LazyLoad: yes

@@ -1,0 +1,13 @@
+Package: bigextensions
+Type: Package
+Title: Functions for big matrices
+Version: 0.1
+Date: 2011-04-06
+Author: Zarrar Shehzad <zarrar [dot] shehzad [at] yale.edu> and Jay 
+  Emerson
+Maintainer: Zarrar Shehzad <zarrar.shehzad@yale.edu>
+Depends: methods, bigmemory
+LinkingTo: bigmemory
+Description: A set of functions that allow manipulation of bigmemory objects
+License: LGPL-3
+LazyLoad: yes
