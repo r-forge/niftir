@@ -1,11 +1,11 @@
-//#ifndef _connectir_SUBDIST
-//#define _connectir_SUBDIST
+#ifndef _connectir_SUBDIST
+#define _connectir_SUBDIST
 
 #include "connectirDefines.h"
 
-#include <Rcpp.h>
-using namespace Rcpp; 
-using namespace Rcpp::sugar;
+//#include <Rcpp.h>
+//using namespace Rcpp; 
+//using namespace Rcpp::sugar;
 
 #include <math.h>
 #include <iostream>
@@ -15,10 +15,11 @@ using namespace Rcpp::sugar;
 #include "bigmemory/bigmemoryDefines.h"
 #include "bigmemory/isna.hpp"
 
-//#include <R.h>
-//#include <Rinternals.h>
-//#include <Rdefines.h>
+#include <R.h>
+#include <Rinternals.h>
+#include <Rdefines.h>
 
-RcppExport SEXP CombineSubMapsMain(SEXP LIST_allVoxs_allSubs, SEXP ADDR_oneVox_allSubs, SEXP Rseed_index, SEXP Rvoxindices, SEXP Rnvoxs, SEXP Rnsubs);
-
-//#endif // _connectir_SUBDIST
+extern "C" {
+    SEXP CombineSubMapsMain(SEXP LIST_allVoxs_allSubs, SEXP ADDR_oneVox_allSubs, SEXP Rseed_index, SEXP Rvoxindices, SEXP Rnvoxs, SEXP Rnsubs);
+}
+#endif // _connectir_SUBDIST

@@ -62,17 +62,20 @@ SEXP CombineSubMaps(BigMatrix *oneVox_allSubs, SEXP RallVoxs_allSubs, index_type
     LDOUBLE mean = 0;
     LDOUBLE M2 = 0;
     LDOUBLE stdev = 0;
-    SEXP Rp;
 //    CType *inCol;
     CType *outCol;
     LDOUBLE scaled_x;
     BigMatrix *allVoxs_oneSub;
+    SEXP Rp;
     SEXP tmp;
     for (s=0; s < nsubs; ++s) {
-        tmp = allVoxs_allSubs[s];
-        RObject RallVoxs_oneSub(tmp);
-        Rp = RallVoxs_oneSub.slot("address");
+        PROTECT(tmp = VECTOR_ELT(allVoxs_allSubs, s));
+        PROTECT(Rp = GET_SLOT(tmp, install("address")));
+        //tmp = allVoxs_allSubs[s];
+        //RObject RallVoxs_oneSub(tmp);
+        //Rp = RallVoxs_oneSub.slot("address");
         allVoxs_oneSub = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(Rp));
+        UNPROTECT(2);
         BMAccessorType inMat( *allVoxs_oneSub );
         
 //        inCol = inMat[seed];
@@ -103,6 +106,8 @@ SEXP CombineSubMaps(BigMatrix *oneVox_allSubs, SEXP RallVoxs_allSubs, index_type
 }
 
 
+extern "C" {
+
 SEXP CombineSubMapsMain(SEXP LIST_allVoxs_allSubs, SEXP ADDR_oneVox_allSubs, SEXP Rseed_index, SEXP Rvoxindices, SEXP Rnvoxs, SEXP Rnsubs) {
         BigMatrix *oneVox_allSubs = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(ADDR_oneVox_allSubs));
         index_type seed = static_cast<index_type>(NUMERIC_DATA(Rseed_index)[0]) - 1;
@@ -115,3 +120,4 @@ SEXP CombineSubMapsMain(SEXP LIST_allVoxs_allSubs, SEXP ADDR_oneVox_allSubs, SEX
         return(ret);
 }
 
+} // end extern "C"
