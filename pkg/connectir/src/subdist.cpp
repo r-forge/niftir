@@ -41,9 +41,8 @@
 
 
 template<typename CType, typename BMAccessorType>
-SEXP CombineSubMaps(BigMatrix *oneVox_allSubs, SEXP RallVoxs_allSubs, index_type seed, double *pVoxs, index_type nvoxs, index_type nsubs) {
+SEXP CombineSubMaps(BigMatrix *oneVox_allSubs, SEXP allVoxs_allSubs, index_type seed, double *pVoxs, index_type nvoxs, index_type nsubs) {
     
-    List allVoxs_allSubs(RallVoxs_allSubs);
     BMAccessorType outMat( *oneVox_allSubs );
     
     //BEGIN_RCPP
