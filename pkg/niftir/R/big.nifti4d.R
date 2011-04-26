@@ -120,9 +120,9 @@ setMethod('as.big.nifti4d',
             # TODO: if file-backed, then save some additional info?
             # with the header, mask, backingpath, etc?
         } else {
-            bpath <- NULL
-            bfile <- NULL
-            dfile <- NULL
+            bpath <- ""
+            bfile <- ""
+            dfile <- ""
         }
         
         # New object
