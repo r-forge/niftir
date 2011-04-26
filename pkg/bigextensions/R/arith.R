@@ -7,10 +7,10 @@ setGeneric("scale",
 #' @nord
 setMethod("scale",
     signature(x="big.matrix"),
-    function(x, center=TRUE, scale=TRUE, to.copy=TRUE) {
+    function(x, center=TRUE, scale=TRUE, to.copy=TRUE, ...) {
         # Copy
         if (to.copy)
-            y <- zarrar.deepcopy(x)
+            y <- deepcopy(x, ...)
         else
             y <- x
 
