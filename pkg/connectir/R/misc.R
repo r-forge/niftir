@@ -1,7 +1,7 @@
 load_func_data <- function(fnames) lapply(fnames, read.big.nifti4d)
 
 create_func_maskoverlap <- function(funcs) {
-    allmasks <- sapply(funcs, function(x) colmin(x) > 0)
+    allmasks <- sapply(funcs, function(x) colmin(x) != 0)
     apply(allmasks, 1, all)
 }
 
