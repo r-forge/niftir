@@ -1,0 +1,222 @@
+#!/usr/bin/env Revoscript
+
+suppressPackageStartupMessages(library("optparse"))
+
+# General Function(s)
+printf <- function(msg, ..., newline=TRUE) {
+    if (opts$verbose) {
+        cat(sprintf(msg, ...))
+        if (newline) cat("\n")
+    }
+}
+
+# Make option list
+option_list <- list(
+    make_option("--ztransform", action="store_true", default=FALSE, dest="ztransform", help="Fischer Z-Transform the correlations before calculating the distance between participants"),
+    make_option("--seedmask", type="character", default=NULL, help="Mask to select the voxels that will be used to correlate with each voxel in the rest of the brain (or anything within the specified --brainmask)", metavar="file"),
+    make_option("--brainmask", type="character", default=NULL, help="When computing each whole-brain connectivity map, this mask will restrict which parts of the whole-brain are to be considered", metavar="file"),
+    make_option("--blocksize", type="integer", default=50, help="How many sets of voxels should be used in each iteration of computing the correlation [default: %default]", metavar="number"),
+    make_option(c("-c", "--cores"), type="integer", default=1, help="Number of computer processors to use in parallel [default: %default]", metavar="number"),
+    make_option(c("-t", "--threads"), type="integer", default=1, help="Number of computer processors to use in parallel for MKL library [default: %default]", metavar="number"),
+    make_option("--overwrite", action="store_true", default=FALSE, help="Overwrite output that already exists (default is not to overwrite already existing output)"),
+    make_option(c("-v", "--verbose"), action="store_true", default=TRUE, help="Print extra output [default]"),
+    make_option(c("-q", "--quiet"), action="store_false", dest="verbose", help="Print little output")
+)
+
+# Make class/usage
+parser <- OptionParser(usage = "%prog [options] output-directory functional-file-1 functional-file-2 [...functional-file-N]", option_list=option_list, add_help_option=TRUE)
+
+# Parse
+parser_out <- parse_args(parser, positional_arguments = TRUE)
+args <- parser_out$args
+opts <- parser_out$options
+
+if (length(args) < 3) {
+    print_help(parser)
+    quit(save="no", status=1)
+}
+
+suppressPackageStartupMessages(library("connectir"))
+suppressPackageStartupMessages(library("foreach"))
+
+start.time <- Sys.time()
+
+###
+# Check Arguments
+###
+printf("01. Checking required inputs")
+outdir <- abspath(args[1])
+if (file.exists(outdir) && !opts$overwrite)
+    stop("Output directory '", outdir, "' already exists, you can use --overwrite")
+infiles <- sapply(args[-1], function(fp) {
+    fp <- abspath(fp)
+    if (!file.exists(fp))
+        stop("One of the input functionals does not exist: ", fp)
+    fp
+})
+n <- length(infiles)
+
+###
+# Check Options
+###
+printf("02. Checking optional inputs")
+if (!is.null(opts$seedmask)) {
+    if(!file.exists(opts$seedmask))
+        stop("--seedmask file ", opts$seedmask, " does not exist")
+    opts$seedmask <- abspath(opts$seedmask)
+}
+if (!is.null(opts$brainmask)) {
+    if(!file.exists(opts$brainmask))
+        stop("--brainmask file ", opts$rowmask, " does not exist")
+    opts$brainmask <- abspath(opts$brainmask)
+}
+
+
+###
+# Parallel processing setup
+###
+printf("04. Setting %i cores to be used", opts$cores)
+if (opts$cores > 1) {
+    printf("...setting parallel processing with doMC")
+    suppressPackageStartupMessages(library("doMC"))
+    registerDoMC()
+    if (opts$cores > getDoParWorkers())
+    	stop("Number of -c/--cores specified '", opts$cores, "' is greater than the actual number of cores '", getDoParWorkers(), "'")
+}
+options(cores=opts$cores)
+if (existsFunction("setMKLthreads")) {
+	printf("04. Setting %i MKL threads to be used", opts$threads)
+	printf("...setting number of threads for MKL")
+	setMKLthreads(opts$threads)
+}
+
+###
+# Read in inputs
+###
+printf("05. Setting up inputs")
+## remove existing output
+if (opts$overwrite)
+    stop("Right now the overwrite function isn't implemented")
+
+## masks
+if (is.null(opts$brainmask)) {
+    prebrainmask <- NULL
+} else {
+    printf("...reading brain mask")
+    prebrainmask <- read.mask(opts$brainmask)
+}
+if (is.null(opts$seedmask)) {
+	if (!is.null(prebrainmask))
+		preseedmask <- prebrainmask
+	else
+    	preseedmask <- NULL
+} else {
+    printf("...reading seed mask")
+    preseedmask <- read.mask(opts$seedmask)
+}
+
+## functional data
+printf("...reading functional data")
+funclist <- load_func_data(infiles)
+
+printf("...creating overlap mask across participants")
+maskoverlap <- create_func_maskoverlap(funclist) # regions present in all participants
+
+printf("...creating final seed mask")
+if (!is.null(preseedmask)) {
+    if (length(preseedmask) != length(maskoverlap))
+        stop("length of seedmask and maskoverlap not the same")
+    if (sum(preseedmask[!maskoverlap]) > 0)
+        warning(sprintf("Seed mask '%s' contains some voxels that don't overlap across all participants", opts$seedmask))
+    seedmask <- preseedmask & maskoverlap
+} else {
+    seedmask <- maskoverlap
+}
+
+printf("...creating final brain mask")
+if (!is.null(prebrainmask)) {
+    if (length(prebrainmask) != length(maskoverlap))
+        stop("length of brainmask and maskoverlap not the same")
+    if (sum(prebrainmask[!maskoverlap]) > 0)
+        warning(sprintf("Brain mask '%s' contains some voxels that don't overlap across all participants", opts$brainmask))
+    brainmask <- prebrainmask & maskoverlap
+} else {
+    brainmask <- maskoverlap
+}
+if (!all(seedmask[brainmask]==TRUE))
+    stop("For now the brainmask must contain all elements of the seedmask")
+
+printf("...masking the functional data")
+funclist <- mask_func_data(funclist, brainmask)
+gc(FALSE)
+
+# create the subdist directory (and get the subject distance matrix)
+printf("...creating subdist directory and files")
+masks <- list(maskoverlap=maskoverlap, preseedmask=preseedmask, prebrainmask=prebrainmask, seedmask=seedmask, brainmask=brainmask)
+subdist <- create_subdist(outdir, infiles, masks, opts) # note: this isn't filebacked yet
+gc(F)
+
+end.time <- Sys.time()
+printf("Setup is done. It took: %.2f minutes\n", as.numeric(end.time-start.time, units="mins"))
+
+
+###
+# Compute the subdist
+###
+start.time <- Sys.time()
+
+printf("06. Computing subject distances")
+compute_subdist(funclist, subdist, seed_inds=which(seedmask[brainmask]), blocksize=opts$blocksize, ztransform=opts$ztransform, verbose=opts$verbose)
+rm(funclist)
+gc(FALSE)
+
+end.time <- Sys.time()
+printf("Distance computation is done! It took: %.2f minutes\n", as.numeric(end.time-start.time, units="mins"))
+
+
+###
+# Save the subdist
+###
+printf("07. Saving subject distances")
+tmp <- deepcopy(subdist, backingpath=outdir, backingfile="subdist.bin", descriptorfile="subdist.desc")
+rm(tmp)
+gc(FALSE)
+
+
+###
+# Create gower matrix
+###
+start.time <- Sys.time()
+
+printf("07. Creating gower's centered matrices")
+gdist <- gower.subdist(subdist)
+rm(subdist)
+gc(FALSE)
+
+end.time <- Sys.time()
+printf("Centering of matrices done! It took: %.2f minutes\n", as.numeric(end.time-start.time, units="mins"))
+
+
+###
+# Save gower matrix
+###
+printf("08. Saving gower's centered matrices")
+tmp <- deepcopy(gdist, backingpath=outdir, backingfile="subdist_gower.bin", descriptorfile="subdist_gower.desc")
+rm(tmp, gdist)
+gc(FALSE)
+
+# TODO:
+# - read in info on:
+#   - how many times to split the data
+#   - mask
+# 1. load the data
+# 2. get # of blocks
+# 3. create the main subdist matrix with everything
+# 4. run in chunks: a. batch.vbca; b. dist.submaps
+# 5. convert to gower's matrix (in chunks) ... so should have larger copy of gower's matrix
+# 6. save the resulting subdist to a file, want to also save mask and other info (do we want to have a class that saves this?)
+
+# for sge, can just use the sge.submit function
+# note for this might want to save individual pieces?...have seperate function that does this?
+# 
+
