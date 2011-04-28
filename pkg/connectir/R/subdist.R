@@ -1,6 +1,6 @@
 # This checks that everything in folder is good
-check_subdist <- function() {
-
+check_subdist <- function(sdir) {
+    
 }
 
 # This creates a new subdist directory and relevant files
@@ -106,16 +106,19 @@ compute_subdist_worker <- function(sub.cormaps, inds, outmat=NULL, type="double"
         .Call("BigSubtractScalarMain", col@address, as.double(1), TRUE);
     }
     
+    gc(F)
+    
     return(outmat)
 }
 
 # bigmat: rows=subject distances, cols=voxels
 # not that each column is a vectorized version of n x n matrix comparing subjects where n^2 = # of row elements
-gower.subdist <- function(bigmat, gower.bigmat=NULL, ...) {
+gower.subdist <- function(bigmat, gower.bigmat=NULL, verbose=TRUE, do.parallel=FALSE, ...) {
     # this all does
     # G <- -0.5 * -(dmat*dmat) %*% (I - ones %*% t(ones)/n)
     
     # setup
+    nc <- ncol(bigmat)
     n <- sqrt(nrow(bigmat))
     I <- diag(n)
     ones <- matrix(1, nrow=n)
@@ -126,14 +129,86 @@ gower.subdist <- function(bigmat, gower.bigmat=NULL, ...) {
     .Call("BigPowMain", gower.bigmat@address, as.double(2))
     
     # bigmat <- -(bigmat)/2
-    dscal(ALPHA=-2, Y=gower.bigmat)
+    dscal(ALPHA=-0.5, Y=gower.bigmat)
     
     # I - ones %*% t(ones)/n
     adj <- I - ones %*% t(ones)/n
-    adj <- as.big.matrix(adj)
     
     # newmat <- bigmat %*% adj
-    dgemm(C=gower.bigmat, A=gower.bigmat, B=adj)
+    if (verbose)
+        pb <- progressbar(nc)
+    for (i in 1:nc) {
+        if (verbose)
+            update(pb, i)
+        gower.vox <- matrix(gower.bigmat[,i], n, n)
+        gower.bigmat[,i] <- as.vector(gower.vox %*% adj)
+    }
+    if (verbose)
+        end(pb)
     
     return(gower.bigmat)
+}
+
+gower.subdist <- function(bigmat, gower.bigmat=NULL, verbose=TRUE, ...) {
+    # this all does
+    # G <- -0.5 * -(dmat*dmat) %*% (I - ones %*% t(ones)/n)
+    
+    # setup
+    nc <- ncol(bigmat)
+    n <- sqrt(nrow(bigmat))
+    I <- diag(n)
+    ones <- matrix(1, nrow=n)
+    if (is.null(gower.bigmat))
+        gower.bigmat <- deepcopy(bigmat, ...)
+    
+    # bigmat <- bigmat * bigmat
+    .Call("BigPowMain", gower.bigmat@address, as.double(2))
+    
+    # bigmat <- -(bigmat)/2
+    dscal(ALPHA=-0.5, Y=gower.bigmat)
+    
+    # I - ones %*% t(ones)/n
+    adj <- I - ones %*% t(ones)/n
+    
+    if (verbose)
+        pb <- progressbar(nc)
+    
+    # newmat <- bigmat %*% adj
+    gfun <- function(i, gower.bigmat) {
+        if (verbose)
+            update(pb, i)
+        gower.vox <- matrix(gower.bigmat[,i], n, n)
+        gower.bigmat[,i] <- as.vector(gower.vox %*% adj)
+        return(NULL)
+    }
+    for (i in seq_len(nc))
+        gfun(i, gower.bigmat)
+    #TODO: seems like the parallel thing here takes longer than it should
+    #if (getDoParWorkers() == 1) {
+    #    for (i in seq_len(nc)) gfun(i, gower.bigmat)
+    #} else {
+    #    foreach(i = seq_len(nc)) %dopar% gfun(i, gower.bigmat)
+    #}
+    
+    if (verbose)
+        end(pb)
+    
+    return(gower.bigmat)
+}
+
+square.subdist <- function(bigmat, square.bigmat=NULL, ...) {
+    # this all does
+    # Amat <- -0.5 * -(dmat*dmat)
+    
+    # setup
+    if (is.null(square.bigmat))
+        square.bigmat <- deepcopy(bigmat, ...)
+    
+    # bigmat <- bigmat * bigmat
+    .Call("BigPowMain", square.bigmat@address, as.double(2))
+    
+    # bigmat <- -(bigmat)/2
+    dscal(ALPHA=-0.5, Y=square.bigmat)
+    
+    return(square.bigmat)
 }

@@ -101,8 +101,55 @@ mdmr.prepare.permIH <- function(modelinfo, p) {
     return(IHmat)
 }
 
+mdmr_worker <- function(firstVox, lastVox, 
+    Gmat, H2mats, IHmat, df.Res, df.Exp, Pmat, Fperms) {
+    # n = number of subjects
+    # where H2mat has rows of H's (n^2 rows) and cols of # of permutations
+    # where Gmat has rows of dmats (n^2 rows)  and cols of # of voxels
+    # result has rows of # of permutations and cols of # of voxels
+    
+    inds <- firstVox:lastVox
+    nperms <- ncol(IHmat)
+    nvoxs <- length(inds)
+    nterms <- length(H2mats)
+    
+    # get part of bigmatrix with Gower's centered subject distances
+    Gmat.chunk <- deepcopy(Gmat, cols=inds)
+    
+    # get part of Pmat
+    Pmat.chunk <- sub.big.matrix(Pmat, firstRow=firstVox, lastRow=lastVox)
+    
+    # compute error term
+    error.variance <- big.matrix(nperms, nvoxs, type="double")
+    dgemm(C=error.variance, A=IHmat, B=Gmat.chunk, TRANSA='t')
+    
+    explained.variance <- big.matrix(nperms, nvoxs, type="double")
+    for (i in 1:nterms) {
+        # compute explained variance
+        dgemm(C=explained.variance, A=H2mats[[i]], B=Gmat.chunk, TRANSA='t')
+        
+        # explained-variance / error
+        Fstats <- sub.big.matrix(Fperms[[i]], firstCol=firstVox, lastCol=lastVox)
+        do.operator(explained.variance, error.variance, "/", Fstats)
+        
+        # adjust for degrees of freedom
+        dscal(Y=Fstats, ALPHA=df.Res/df.Exp[i])
+        
+        # get pvals (TODO: convert below line to C++ code)
+        Pmat.chunk[,i] <- apply(Fstats, 2, function(x) sum(x >= x[1])/nperms)
+    }
+    
+    # cleanup
+    rm(explained.variance)
+    rm(error.variance)
+    gc(FALSE)
+    
+    return(NULL)
+}
+
+
 # assume each column of x has been gower centered
-mdmr <- function(x, formula, model, nperms=4999, factors.to.perm=NULL, voxs=1:ncol(x), block.size=250, verbose=T, contr.unordered="contr.sum", contr.ordered="contr.poly", max.iter=10, strata=NULL) {
+mdmr <- function(x, formula, model, nperms=4999, factors.to.perm=NULL, voxs=1:ncol(x), block.size=250, verbose=TRUE, do.parallel=FALSE, contr.unordered="contr.sum", contr.ordered="contr.poly", max.iter=10, strata=NULL) {
     # todo: test if x is matrix or big.matrix?
     if (!is.data.frame(model))
         stop("'model' input must be a data frame")
@@ -145,60 +192,22 @@ mdmr <- function(x, formula, model, nperms=4999, factors.to.perm=NULL, voxs=1:nc
     
     vcat(verbose, "Will calculate permutation based p-values for the following factors:", factor.names)
     
-    afun <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, Pmat, Fperms) {
-        # n = number of subjects
-        # where H2mat has rows of H's (n^2 rows) and cols of # of permutations
-        # where Gmat has rows of dmats (n^2 rows)  and cols of # of voxels
-        # result has rows of # of permutations and cols of # of voxels
-        
-        inds <- firstVox:lastVox
-        nperms <- ncol(IHmat)
-        nvoxs <- length(inds)
-        nterms <- length(H2mats)
-        
-        # get part of bigmatrix with Gower's centered subject distances
-        Gmat.chunk <- deepcopy(Gmat, cols=inds)
-        
-        # get part of Pmat
-        Pmat.chunk <- sub.big.matrix(Pmat, firstRow=firstVox, lastRow=lastVox)
-        
-        # compute error term
-        error.variance <- big.matrix(nperms, nvoxs, type="double")
-        dgemm(C=error.variance, A=IHmat, B=Gmat.chunk, TRANSA='t')
-        
-        explained.variance <- big.matrix(nperms, nvoxs, type="double")
-        for (i in 1:nterms) {
-            # compute explained variance
-            dgemm(C=explained.variance, A=H2mats[[i]], B=Gmat.chunk, TRANSA='t')
-            
-            # explained-variance / error
-            Fstats <- sub.big.matrix(Fperms[[i]], firstCol=firstVox, lastCol=lastVox)
-            do.operator(explained.variance, error.variance, "/", Fstats)
-            
-            # adjust for degrees of freedom
-            dscal(Y=Fstats, ALPHA=df.Res/df.Exp[i])
-            
-            # get pvals
-            Pmat.chunk[,i] <- apply(Fstats, 2, function(x) sum(x >= x[1])/nperms)
-        }
-        
-        # cleanup
-        rm(explained.variance)
-        rm(error.variance)
-        gc(FALSE)
-        
-        return(NULL)
-    }
-    
     vcat(verbose, "Computing MDMR across", blocks$n, "blocks")
-    prog <- ifelse(verbose, "progress_text", "progress_none")
-    llply(1:blocks$n, function(i) {
-        afun(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms)
-    }, .progress=prog, .parallel=FALSE)
+    if (verbose)
+        pb <- progressbar(blocks$n)
+    if (getDoParWorkers() == 1) {
+        for (i in 1:blocks$n)
+            mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms)
+    } else {
+        foreach(i=1:blocks$n) %dopar% mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms)
+    }
+    if (verbose)
+        end(pb)
     
     return(list(
         modelinfo=modelinfo,
         pvals=Pmat,
-        fstats=Fperms
+        fstats=Fperms,
+        perms=p
     ))
 }

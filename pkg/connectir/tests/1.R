@@ -180,17 +180,4 @@ timing.combine.submaps <- function() {
     
 }
 
-test.mdmr.prepare.model <- function() {
-    model <- data.frame(group=factor(c(rep(c(1,2,3),30))), age=rnorm(90), random=rnorm(90))
-    return(mdmr.prepare.model(.~group+age+random, model))
-}
 
-test.mdmr <- function() {
-    nsubs <- 90
-    nvoxs <- 120
-    x <- as.big.matrix(matrix(rnorm(nsubs^2 * nvoxs), nsubs^2, nvoxs))
-    model <- data.frame(group=factor(c(rep(1:3,nsubs/3))), age=rnorm(nsubs), random=rnorm(nsubs))
-    return(mdmr(x, .~group+age+random, model, nperms=99, factors.to.perm=c("group"), block.size=50))
-}
-
-test.subdist <- 
