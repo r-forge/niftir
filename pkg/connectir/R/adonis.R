@@ -1,3 +1,21 @@
+# BELOW: CODE DIRECTLY TAKEN FROM vegan
+permuted.index <- function (n, strata) 
+{
+    if (missing(strata) || is.null(strata)) 
+        out <- sample(n, n)
+    else {
+        out <- 1:n
+        inds <- names(table(strata))
+        for (is in inds) {
+            gr <- out[strata == is]
+            if (length(gr) > 1) 
+                out[gr] <- sample(gr, length(gr))
+        }
+    }
+    out
+}
+# ABOVE: CODE DIRECTLY TAKEN FROM vegan
+
 # NOTE: assume that y-intercept exists...need to deal with case when don't have intercept
 mdmr.prepare.model <- function(formula, model, contr.unordered="contr.sum", contr.ordered="contr.poly") {
     n <- nrow(model)

@@ -1,6 +1,76 @@
 # This checks that everything in folder is good
 check_subdist <- function(sdir) {
+    # Checking Functions
+    checkpath <- function(p, is.dir) { 
+        if (!file.exists(p)) {
+            if (is.dir)
+                stop("Directory: ", p, " does not exist but required")
+            else
+                stop("File: ", p, " does not exist but required")
+        }
+    }
+    checkthing <- function(comparison, ...) {
+        if (!comparison)
+            stop(...)
+    }
     
+    # File/directory paths to check
+    sdir <- abspath(sdir)
+    optsfile <- file.path(sdir, "options.rda")
+    infuncdir <- file.path(sdir, "input_funcs")
+    inmaskdir <- file.path(sdir, "input_masks")
+    inmaskfiles <- file.path(inmaskdir, 
+        c("brainmask.nii.gz",  "seedmask.nii.gz")
+    )
+    seedfile <- file.path(inmaskdir, "seedmask.nii.gz")
+    distfiles <- file.path(sdir, 
+        c("subdist.desc", "subdist.bin", "subdist_grower.desc", "subdist_grower.bin")
+    )
+    sdistfile <- file.path(sdir, "subdist.desc")
+    gdistfile <- file.path(sdir, "subdist_gower.desc")
+    
+    # Check main directory
+    checkpath(sdir, TRUE)
+    
+    # Check opts and read them in
+    checkpath(optsfile, FALSE)
+    load(optsfile)
+    
+    # Check input funcs
+    checkpath(infuncdir, TRUE)
+    checkthing(
+        length(list.files(infuncdir))==length(opts$infiles), 
+        "Missing some input functional files"
+    )
+    
+    # Check input masks
+    checkpath(inmaskdir, TRUE)
+    lapply(inmaskfiles, checkpath, FALSE)
+    
+    # Check subdist and related files
+    lapply(distfiles, checkpath, FALSE)
+    
+    # Count number of seed voxels
+    mask <- read.mask(seedfile)
+    nvoxs <- sum(mask)
+    
+    # Read in subdist and seedmask + check
+    lapply(c(sdistfile, gdistfile), function(f) {
+        x <- attach.big.matrix(f)
+        ## make sure appropriate number of voxels
+        checkthing(
+            nvoxs==ncol(x),
+            "# of seed voxels does not match # of columns in ", f
+        )
+        ## mask sure appropriate number of subjects
+        nsubs <- sqrt(nrow(x))
+        checkthing(
+            length(length(opts$infiles))==nsubs,
+            "# of subjects does not match # of rows in ", f
+        )
+    })
+    
+    return(TRUE)
 }
 
 # This creates a new subdist directory and relevant files
