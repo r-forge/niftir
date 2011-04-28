@@ -57,7 +57,8 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
     nseeds <- length(seed_inds)
     blocks <- niftir.split.indices(start, nseeds, by=blocksize)
     
-    dfun <- function(i, blocks, seed_inds, funclist, subdist, ztransform, verbose, pb) {
+#    dfun <- function(i, blocks, seed_inds, funclist, subdist, ztransform, verbose, pb) {
+    dfun <- function(i) {
         if (verbose)
             update(pb, i)
         inds_CHUNK <- seed_inds[blocks$starts[i]:blocks$ends[i]]
@@ -73,11 +74,11 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
     
     if (getDoParRegistered()) {
         foreach(i=1:blocks$n, .packages=c("connectir")) %dopar% 
-            dfun(i, blocks, seed_inds, funclist, subdist, ztransform, verbose, pb)
+            dfun(i)
     }
     else {
         foreach(i=1:blocks$n, .packages=c("connectir")) %do% 
-            dfun(i, blocks, seed_inds, funclist, subdist, ztransform, verbose, pb)
+            dfun(i)
     }
     
     if (verbose)
@@ -113,42 +114,6 @@ compute_subdist_worker <- function(sub.cormaps, inds, outmat=NULL, type="double"
 
 # bigmat: rows=subject distances, cols=voxels
 # not that each column is a vectorized version of n x n matrix comparing subjects where n^2 = # of row elements
-gower.subdist <- function(bigmat, gower.bigmat=NULL, verbose=TRUE, do.parallel=FALSE, ...) {
-    # this all does
-    # G <- -0.5 * -(dmat*dmat) %*% (I - ones %*% t(ones)/n)
-    
-    # setup
-    nc <- ncol(bigmat)
-    n <- sqrt(nrow(bigmat))
-    I <- diag(n)
-    ones <- matrix(1, nrow=n)
-    if (is.null(gower.bigmat))
-        gower.bigmat <- deepcopy(bigmat, ...)
-    
-    # bigmat <- bigmat * bigmat
-    .Call("BigPowMain", gower.bigmat@address, as.double(2))
-    
-    # bigmat <- -(bigmat)/2
-    dscal(ALPHA=-0.5, Y=gower.bigmat)
-    
-    # I - ones %*% t(ones)/n
-    adj <- I - ones %*% t(ones)/n
-    
-    # newmat <- bigmat %*% adj
-    if (verbose)
-        pb <- progressbar(nc)
-    for (i in 1:nc) {
-        if (verbose)
-            update(pb, i)
-        gower.vox <- matrix(gower.bigmat[,i], n, n)
-        gower.bigmat[,i] <- as.vector(gower.vox %*% adj)
-    }
-    if (verbose)
-        end(pb)
-    
-    return(gower.bigmat)
-}
-
 gower.subdist <- function(bigmat, gower.bigmat=NULL, verbose=TRUE, ...) {
     # this all does
     # G <- -0.5 * -(dmat*dmat) %*% (I - ones %*% t(ones)/n)
@@ -174,7 +139,7 @@ gower.subdist <- function(bigmat, gower.bigmat=NULL, verbose=TRUE, ...) {
         pb <- progressbar(nc)
     
     # newmat <- bigmat %*% adj
-    gfun <- function(i, gower.bigmat) {
+    gfun <- function(i) {
         if (verbose)
             update(pb, i)
         gower.vox <- matrix(gower.bigmat[,i], n, n)
@@ -182,12 +147,12 @@ gower.subdist <- function(bigmat, gower.bigmat=NULL, verbose=TRUE, ...) {
         return(NULL)
     }
     for (i in seq_len(nc))
-        gfun(i, gower.bigmat)
+        gfun(i)
     #TODO: seems like the parallel thing here takes longer than it should
     #if (getDoParWorkers() == 1) {
-    #    for (i in seq_len(nc)) gfun(i, gower.bigmat)
+    #    for (i in seq_len(nc)) gfun(i)
     #} else {
-    #    foreach(i = seq_len(nc)) %dopar% gfun(i, gower.bigmat)
+    #    foreach(i = seq_len(nc)) %dopar% gfun(i)
     #}
     
     if (verbose)
