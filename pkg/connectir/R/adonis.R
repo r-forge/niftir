@@ -71,7 +71,7 @@ mdmr.prepare.model <- function(formula, model, contr.unordered="contr.sum", cont
     ))
 }
 
-mdmr.prepare.permutations <- function(modelinfo, nperms, strata, max.iter, factors.to.perm) {
+mdmr.prepare.permutations <- function(modelinfo, nperms, strata, max.iter, factors2perm) {
     # get matrix containing different permutations of observations
     p <- sapply(1:nperms, function(x) permuted.index(modelinfo$nobs, strata))
     # remove permutations that are significantly correlated with your model
@@ -79,7 +79,7 @@ mdmr.prepare.permutations <- function(modelinfo, nperms, strata, max.iter, facto
         rthresh <- tanh(1.96/sqrt(modelinfo$nobs-3)) # r value that is significant (p < 0.05)
         which.cor <- 1:nperms
         for (iter in 1:max.iter) {
-            which.cor <- unique(unlist(lapply(factors.to.perm, function(i) {
+            which.cor <- unique(unlist(lapply(factors2perm, function(i) {
                 H <- modelinfo$H2s[[i]]
                 tmp <- sapply(which.cor, function(j) cor(H[,1], H[p[,j],1]))
                 which(abs(tmp)>rthresh)
@@ -94,9 +94,9 @@ mdmr.prepare.permutations <- function(modelinfo, nperms, strata, max.iter, facto
 
 mdmr.prepare.permH2s <- function(modelinfo, p) {
     nperms <- ncol(p) + 1   # original data + nperms
-    nfactors <- length(modelinfo$factors.to.perm)
+    nfactors <- length(modelinfo$factors2perm)
     H2mats <- lapply(1:nfactors, function(ii) {
-        i <- modelinfo$factors.to.perm[ii]
+        i <- modelinfo$factors2perm[ii]
         bigmat <- big.matrix(modelinfo$nobs^2, nperms, type="double")
         bigmat[,1] <- as.vector(modelinfo$H2s[[i]])
         for (k in 2:nperms) {
@@ -167,7 +167,7 @@ mdmr_worker <- function(firstVox, lastVox,
 
 
 # assume each column of x has been gower centered
-mdmr <- function(x, formula, model, nperms=4999, factors.to.perm=NULL, voxs=1:ncol(x), block.size=250, verbose=TRUE, do.parallel=FALSE, contr.unordered="contr.sum", contr.ordered="contr.poly", max.iter=10, strata=NULL) {
+mdmr <- function(x, formula, model, nperms=4999, factors2perm=NULL, voxs=1:ncol(x), block.size=250, verbose=TRUE, contr.unordered="contr.sum", contr.ordered="contr.poly", max.iter=10, strata=NULL) {
     # todo: test if x is matrix or big.matrix?
     if (!is.data.frame(model))
         stop("'model' input must be a data frame")
@@ -183,16 +183,16 @@ mdmr <- function(x, formula, model, nperms=4999, factors.to.perm=NULL, voxs=1:nc
     # Permutation Business
     vcat(verbose, "Preparing permutation related inputs")
     ## factors to permute
-    if (is.null(factors.to.perm))
-        factors.to.perm <- 1:modelinfo$nfactors
-    else if (is.character(factors.to.perm))
-        factors.to.perm <- sapply(factors.to.perm, function(x) which(modelinfo$factor.names==x))
-    factor.names <- modelinfo$factor.names[factors.to.perm]
+    if (is.null(factors2perm))
+        factors2perm <- 1:modelinfo$nfactors
+    else if (is.character(factors2perm))
+        factors2perm <- sapply(factors2perm, function(x) which(modelinfo$factor.names==x))
+    factor.names <- modelinfo$factor.names[factors2perm]
     ## get permutations
-    p <- mdmr.prepare.permutations(modelinfo, nperms, strata, max.iter, factors.to.perm)
+    p <- mdmr.prepare.permutations(modelinfo, nperms, strata, max.iter, factors2perm)
     ## refine df of experiment
-    modelinfo$df.Exp <- sapply(factors.to.perm, function(i) modelinfo$df.Exp[i])
-    modelinfo$factors.to.perm <- factors.to.perm
+    modelinfo$df.Exp <- sapply(factors2perm, function(i) modelinfo$df.Exp[i])
+    modelinfo$factors2perm <- factors2perm
     
     # Hat matrices prepared with all possible permuted models
     vcat(verbose, "Preparing permuted model matrices")
@@ -202,9 +202,9 @@ mdmr <- function(x, formula, model, nperms=4999, factors.to.perm=NULL, voxs=1:nc
     # Create output matrices
     vcat(verbose, "Preparing output matrices (pvals and fstats)")
     ## pvals
-    Pmat <- big.matrix(nVoxs, length(factors.to.perm), type="double")
+    Pmat <- big.matrix(nVoxs, length(factors2perm), type="double")
     ## fstats
-    Fperms <- lapply(1:length(factors.to.perm), function(i) {
+    Fperms <- lapply(1:length(factors2perm), function(i) {
         big.matrix(nperms+1, nVoxs, type="double")
     })
     
@@ -222,10 +222,103 @@ mdmr <- function(x, formula, model, nperms=4999, factors.to.perm=NULL, voxs=1:nc
     if (verbose)
         end(pb)
     
-    return(list(
-        modelinfo=modelinfo,
-        pvals=Pmat,
-        fstats=Fperms,
-        perms=p
-    ))
+    structure(
+        list(
+            modelinfo=modelinfo,
+            pvals=Pmat,
+            fstats=Fperms,
+            perms=p
+        ),
+        class="mdmr"
+    )
 }
+
+save.mdmr <- function(obj, outdir) {
+    if (!file.exists(outdir))
+        stop("Cannot save MDMR to ", outdir, " since it doesn't exist")
+    
+    vcat(verbose, "...creating MDMR output directory")
+    mdmr.output <- file.path(outdir, "mdmr")
+    if (file.exists(mdmr.output))
+        stop("MDMR output ", mdmr.output, " already exists")
+    dir.create(mdmr.output)
+    
+    mpath <- function(...) file.path(mdmr.output, ...)
+    
+    vcat(verbose, "...reading in brain mask")
+    seedfn <- file.path(outdir, "input_masks", "seedmask.nii.gz")
+    mask <- read.mask(seedfn)
+    header <- read.nifti.header(seedfn)
+    
+    # Model Stuff
+    modelinfo <- obj$modelinfo
+    modelinfo$perms <- obj$perms
+    ## save
+    vcat(verbose, "...saving model info")
+    save(modelinfo, file=mpath("modelinfo.rda"))
+    ## factors
+    vcat(verbose, "...saving factor names")
+    factornames <- modelinfo$factor.names[modelinfo$factors2perm]
+    nfactors <- length(factornames)
+    cat("# Permuted Factors\n", factornames, "\n", file=mpath("factors2perm.txt"))
+    ## evs
+    vcat(verbose, "...saving evs")
+    evs <- modelinfo$rhs
+    write.csv(evs, file=mpath("evs.csv"))
+    ## models
+    # H2s <- modelinfo$H2s
+    ## residuals
+    vcat(verbose, "...saving residuals")
+    IH <- modelinfo$IH
+    write.table(IH[,], quote=F, row.names=F, col.names=F)
+    
+    vcat(verbose, "...saving p-values")
+    Pmat <- obj$pvals
+    for (i in 1:nfactors) {
+        fn <- mpath(sprintf("pvals_%s.nii.gz", factornames[i]))
+        write.nifti(Pmat[,i], header, mask, outfile=fn)
+    }
+    
+    vcat(verbose, "...saving FDR corrected p-values")
+    CorrPmat <- big.matrix(nrow(Pmat), ncol(Pmat), type="double")
+    for (i in 1:nfactors) {
+        fn <- mpath(sprintf("fdr_pvals_%s.nii.gz", factornames[i]))
+        tmp <- p.adjust(Pmat[,i], "BH")
+        CorrPmat[,i] <- tmp
+        write.nifti(tmp, header, mask, outfile=fn)
+        rm(tmp)
+        gc(FALSE)
+    }
+    
+    vcat(verbose, "...saving z-statics")
+    for (i in 1:nfactors) {
+        fn <- mpath(sprintf("zstats_%s.nii.gz", factornames[i]))
+        tmp <- qt(Pmat[,i], Inf, lower.tail=FALSE)
+        write.nifti(tmp, header, mask, outfile=fn)
+        rm(tmp)
+        gc(FALSE)
+    }
+    
+    vcat(verbose, "...saving FDR corrected z-statistics")
+    for (i in 1:nfactors) {
+        fn <- mpath(sprintf("fdr_zstats_%s.nii.gz", factornames[i]))
+        tmp <- qt(CorrPmat[,i], Inf, lower.tail=FALSE)
+        write.nifti(tmp, header, mask, outfile=fn)
+        rm(tmp)
+        gc(FALSE)
+    }
+    rm(CorrPmat)
+    gc(FALSE)
+    
+    vcat(verbose, "...saving permutated F-statistics")
+    Fperms <- obj$fstats
+    for (i in 1:nfactors) {
+        tmp <- deepcopy(Fperms[[i]], backingpath=mdmr.output, 
+            backingfile=sprintf("fperms_%s.bin", factornames[i]), 
+            descriptorfile=sprintf("fperms_%s.desc", factornames[i]))
+        rm(tmp)
+        gc(FALSE)
+    }
+}
+
+

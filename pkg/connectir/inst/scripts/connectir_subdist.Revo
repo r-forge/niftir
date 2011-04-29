@@ -37,7 +37,6 @@ if (length(args) < 3) {
 }
 
 suppressPackageStartupMessages(library("connectir"))
-suppressPackageStartupMessages(library("foreach"))
 
 start.time <- Sys.time()
 

@@ -1,3 +1,19 @@
+check_dmat <- function(dmat) {
+    dmat <- as.matrix(dmat)
+    if (any(is.na(dmat)))
+        stop("NAs were present in inter-subject distance matrix")
+    if (any(diag(dmat)!=0))
+        warning("Diagonal of inter-subject distance matrix has non-zeros")
+    if (any(dmat[lower.tri(dmat)]==0))
+        warning("Off-diagonal of inter-subject distance matrix has zeros")
+}
+
+check_gmat <- function(gmat) {
+    gmat <- as.matrix(gmat)
+    if (any(is.na(dmat)))
+        stop("NAs were present in inter-subject gower's centered distance matrix")
+}
+
 # This checks that everything in folder is good
 check_subdist <- function(sdir) {
     # Checking Functions
