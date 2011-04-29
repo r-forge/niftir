@@ -10,7 +10,7 @@ check_dmat <- function(dmat) {
 
 check_gmat <- function(gmat) {
     gmat <- as.matrix(gmat)
-    if (any(is.na(dmat)))
+    if (any(is.na(gmat)))
         stop("NAs were present in inter-subject gower's centered distance matrix")
 }
 
@@ -50,7 +50,10 @@ check_subdist <- function(sdir) {
     
     # Check opts and read them in
     checkpath(optsfile, FALSE)
+    opts <- NULL
     load(optsfile)
+    if (is.null(opts))
+        stop("Optsfile doesn't have opts variable!")
     
     # Check input funcs
     checkpath(infuncdir, TRUE)
@@ -158,12 +161,12 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
     else
         pb <- NULL
     
-    if (getDoParRegistered()) {
+    if (getDoParRegistered() && getDoParWorkers() > 1) {
         foreach(i=1:blocks$n, .packages=c("connectir")) %dopar% 
             dfun(i)
     }
     else {
-        foreach(i=1:blocks$n, .packages=c("connectir")) %do% 
+        for (i in 1:blocks$n)
             dfun(i)
     }
     
