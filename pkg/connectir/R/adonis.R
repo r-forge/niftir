@@ -233,7 +233,7 @@ mdmr <- function(x, formula, model, nperms=4999, factors2perm=NULL, voxs=1:ncol(
     )
 }
 
-save.mdmr <- function(obj, outdir) {
+save_mdmr <- function(obj, outdir, verbose=TRUE) {
     if (!file.exists(outdir))
         stop("Cannot save MDMR to ", outdir, " since it doesn't exist")
     
