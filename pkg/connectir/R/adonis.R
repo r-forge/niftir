@@ -119,8 +119,7 @@ mdmr.prepare.permIH <- function(modelinfo, p) {
     return(IHmat)
 }
 
-mdmr_worker <- function(firstVox, lastVox, 
-    Gmat, H2mats, IHmat, df.Res, df.Exp, Pmat, Fperms) {
+mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, Pmat, Fperms, pb) {
     # n = number of subjects
     # where H2mat has rows of H's (n^2 rows) and cols of # of permutations
     # where Gmat has rows of dmats (n^2 rows)  and cols of # of voxels
@@ -161,6 +160,8 @@ mdmr_worker <- function(firstVox, lastVox,
     rm(explained.variance)
     rm(error.variance)
     gc(FALSE)
+    
+    pb$step()
     
     return(NULL)
 }
@@ -211,16 +212,15 @@ mdmr <- function(x, formula, model, nperms=4999, factors2perm=NULL, voxs=1:ncol(
     vcat(verbose, "Will calculate permutation based p-values for the following factors:", factor.names)
     
     vcat(verbose, "Computing MDMR across", blocks$n, "blocks")
-    if (verbose)
-        pb <- progressbar(blocks$n)
+    prog <- ifelse(verbose, "text", "none")
+    pb <- create_progress_bar(prog)
     if (getDoParRegistered() && getDoParWorkers() > 1) {
-        foreach(i=1:blocks$n) %dopar% mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms)
+        foreach(i=1:blocks$n) %dopar% mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms, pb)
     } else {
         for (i in 1:blocks$n)
-            mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms)
+            mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms, pb)
     }
-    if (verbose)
-        end(pb)
+    pb$term()
     
     structure(
         list(
