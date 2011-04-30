@@ -217,12 +217,17 @@ mdmr <- function(x, formula, model, nperms=4999, factors2perm=NULL, voxs=1:ncol(
     pb <- create_progress_bar(prog)
     pb$init(blocks$n)
     ## loop through
-    if (getDoParRegistered() && getDoParWorkers() > 1) {
-        foreach(i=1:blocks$n) %dopar% mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms, pb)
-    } else {
-        for (i in 1:blocks$n)
-            mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms, pb)
-    }
+    tryCatch({
+        if (getDoParRegistered() && getDoParWorkers() > 1) {
+            foreach(i=1:blocks$n) %dopar% mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms, pb)
+        } else {
+            for (i in 1:blocks$n)
+                mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms, pb)
+        }
+    }, interrupt=function(ex) {
+        cat("An interrupt was detected.\n");
+        print(ex);
+    })
     ## end progress bar
     pb$term()
     
@@ -274,7 +279,7 @@ save_mdmr <- function(obj, outdir, verbose=TRUE) {
     ## residuals
     vcat(verbose, "...saving residuals")
     IH <- modelinfo$IH
-    write.table(IH[,], quote=F, row.names=F, col.names=F)
+    write.table(IH[,], quote=F, row.names=F, col.names=F, file=mpath("residuals.2D"))
     
     vcat(verbose, "...saving p-values")
     Pmat <- obj$pvals
