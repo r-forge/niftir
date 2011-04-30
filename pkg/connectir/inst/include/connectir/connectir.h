@@ -21,6 +21,6 @@
 
 extern "C" {
     SEXP CombineSubMapsMain(SEXP LIST_allVoxs_allSubs, SEXP ADDR_oneVox_allSubs, SEXP Rseed_index, SEXP Rvoxindices, SEXP Rnvoxs, SEXP Rnsubs);
-    SEXP ComputePvalsMain(SEXP bigaddr);
+    SEXP ComputePvalsMain(SEXP Rinmat, SEXP Routmat, SEXP Routcol);
 }
 #endif // _connectir_CONNECTIR

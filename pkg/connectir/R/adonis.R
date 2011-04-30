@@ -153,7 +153,8 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
         dscal(Y=Fstats, ALPHA=df.Res/df.Exp[i])
         
         # get pvals (TODO: convert below line to C++ code)
-        Pmat.chunk[,i] <- apply(Fstats[,], 2, function(x) sum(x >= x[1])/nperms)
+        #Pmat.chunk[,i] <- apply(Fstats[,], 2, function(x) sum(x >= x[1])/nperms)
+        .Call("ComputePvalsMain", Fstats@address, Pmat.chunk@address, as.double(i), PACKAGE="connectir")
     }
     
     # cleanup

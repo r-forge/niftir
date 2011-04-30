@@ -1,3 +1,9 @@
+test.computepvals <- function() {
+    x <- as.big.matrix(matrix(rnorm(1000), 100, 10))
+    tmp1 <- apply(x[,], 2, function(y) sum(y >= y[1])/nrow(x))
+    tmp2 <- .Call("ComputePvalsMain", x@address, PACKAGE="connectir")
+}
+
 test.mdmr.prepare.model <- function() {
     model <- data.frame(group=factor(c(rep(c(1,2,3),30))), age=rnorm(90), random=rnorm(90))
     return(mdmr.prepare.model(.~group+age+random, model))
@@ -22,8 +28,6 @@ test.mdmr <- function() {
     
     
 }
-
-test.philmdmr_worker <- function()
 
 test.philmdmr <- function(D.array, X, test.columns=ncol(X), permat=NULL, nperm=if (!is.null(permat)) ncol(permat) else 999, H2mat=NULL, IHmat=NULL, report.every=50, chunksize = 1000) {
     require(MASS)

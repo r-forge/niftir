@@ -1,81 +1,47 @@
 #include "connectir/connectir.h"
 
 template<typename CType, typename BMAccessorType>
-void ComputePvals(BigMatrix *pMat, double *pRet) {
-    BMAccessorType m( *pMat );
+SEXP ComputePvals(BigMatrix *inMat, BigMatrix *outMat, double colnum) {
+    BMAccessorType om( *outMat );
+    CType *outCol;
+    outCol = om[static_cast<index_type>(colnum)-1];
     
-    index_type ncols = pMat->ncol();
-    index_type nrows = pMat->nrow();
+    BMAccessorType im( *inMat );    
+    index_type ncols = inMat->ncol();
+    index_type nrows = inMat->nrow();
     index_type i=0;
     index_type j=0;
-    CType *pCol;
+    CType *inCol;
     
     for (i=0; i < ncols; ++i) {
-        pCol = m[i];
-        pRet[i] = 1;
+        inCol = im[i];
+        outCol[i] = 1;
         for (j=1; j < nrows; ++j) {
-            if (pCol[j] > pCol[0])
-                pRet[i] += 1;            
+            if (inCol[j] > inCol[0])
+                outCol[i] += 1;
         }
-        pRet[i] = pRet[i]/nrows;
+        outCol[i] = outCol[i]/nrows;
     }
     
-    return;
+    return R_NilValue;
 }
 
 
 extern "C" {
 
-SEXP ComputePvalsMain(SEXP bigaddr) {
-    BigMatrix *pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(bigaddr));
-    index_type nCols = pMat->ncol();
+SEXP ComputePvalsMain(SEXP Rinmat, SEXP Routmat, SEXP Routcol) {
+    BigMatrix *inMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(Rinmat));
+    BigMatrix *outMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(Routmat));
+    double outCol = NUMERIC_DATA(Routcol)[0];
     
-    SEXP ret = R_NilValue;
-    ret = PROTECT(NEW_NUMERIC(nCols));
-    double *pRet = NUMERIC_DATA(ret);
+    if (inMat->separated_columns() != outMat->separated_columns())
+        error("all big matrices are not the same column separated type");
+    if (inMat->matrix_type() != outMat->matrix_type())
+        error("all big matrices are not the same matrix type");
+    if (inMat->ncol() != outMat->nrow())
+        error("inMat # of cols must be the same as outMat # of rows");
     
-    if (pMat->separated_columns()) { 
-        switch (pMat->matrix_type()) {
-            case 1:
-                ComputePvals<char, SepMatrixAccessor<char> >(
-                    pMat, pRet);
-                break;
-            case 2:
-                ComputePvals<short, SepMatrixAccessor<short> >(
-                    pMat, pRet);
-                break;
-            case 4:
-                ComputePvals<int, SepMatrixAccessor<int> >(
-                    pMat, pRet);
-                break;
-            case 8:
-                ComputePvals<double, SepMatrixAccessor<double> >(
-                    pMat, pRet);
-                break;
-        }
-    }
-    else {
-        switch (pMat->matrix_type()) {
-            case 1:
-                ComputePvals<char, MatrixAccessor<char> >(
-                    pMat, pRet);
-                break;
-            case 2:
-                ComputePvals<short, MatrixAccessor<short> >(
-                    pMat, pRet);
-                break;
-            case 4:
-                ComputePvals<int, MatrixAccessor<int> >(
-                    pMat, pRet);
-                break;
-            case 8:
-                ComputePvals<double, MatrixAccessor<double> >(
-                    pMat, pRet);
-                break;
-        }
-    }
-    
-    UNPROTECT(1);
+    CALL_BIGFUNCTION_ARGS_THREE(ComputePvals, inMat, outMat, outCol)
     return(ret);
 }
 
