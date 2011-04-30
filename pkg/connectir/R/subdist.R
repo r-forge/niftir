@@ -84,7 +84,7 @@ check_subdist <- function(sdir) {
         ## mask sure appropriate number of subjects
         nsubs <- sqrt(nrow(x))
         checkthing(
-            length(length(opts$infiles))==nsubs,
+            length(opts$infiles)==nsubs,
             "# of subjects does not match # of rows in ", f
         )
     })
