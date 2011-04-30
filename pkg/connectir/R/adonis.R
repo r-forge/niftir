@@ -161,6 +161,8 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
     rm(error.variance)
     gc(FALSE)
     
+    cat("1\n")
+    
     return(NULL)
 }
 
