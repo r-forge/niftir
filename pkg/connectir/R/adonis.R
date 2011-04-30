@@ -154,7 +154,7 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
         dscal(Y=Fstats, ALPHA=df.Res/df.Exp[i])
         
         # get pvals (TODO: convert below line to C++ code)
-        Pmat.chunk[,i] <- apply(Fstats, 2, function(x) sum(x >= x[1])/nperms)
+        Pmat.chunk[,i] <- apply(Fstats[,], 2, function(x) sum(x >= x[1])/nperms)
     }
     
     # cleanup
@@ -213,23 +213,25 @@ mdmr <- function(x, formula, model, nperms=4999, factors2perm=NULL, voxs=1:ncol(
     
     vcat(verbose, "Computing MDMR across", blocks$n, "blocks")
     ## progress bar
-    prog <- ifelse(verbose, "text", "none")
-    pb <- create_progress_bar(prog)
-    pb$init(blocks$n)
+    if (verbose)
+        pb <- progressbar(blocks$n)
     ## loop through
     if (getDoParRegistered() && getDoParWorkers() > 1) {
         foreach(i=1:blocks$n) %dopar% {
-            pb$step()
+            if (verbose)
+                update(pb)
             mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms)
         }
     } else {
         for (i in 1:blocks$n) {
-            pb$step()
+            if (verbose)
+                update(pb)
             mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms)
         }
     }
     ## end progress bar
-    pb$term()
+    if (verbose)
+        end(pb)
     
     structure(
         list(
