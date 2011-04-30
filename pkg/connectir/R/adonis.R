@@ -124,15 +124,12 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
     # where H2mat has rows of H's (n^2 rows) and cols of # of permutations
     # where Gmat has rows of dmats (n^2 rows)  and cols of # of voxels
     # result has rows of # of permutations and cols of # of voxels
-    
-    cat("1\n")
+    require(biganalytics)
     
     inds <- firstVox:lastVox
     nperms <- ncol(IHmat)
     nvoxs <- length(inds)
     nterms <- length(H2mats)
-    
-    cat("2\n")
     
     # get part of bigmatrix with Gower's centered subject distances
     Gmat.chunk <- deepcopy(Gmat, cols=inds)
@@ -143,8 +140,6 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
     # compute error term
     error.variance <- big.matrix(nperms, nvoxs, type="double")
     dgemm(C=error.variance, A=IHmat, B=Gmat.chunk, TRANSA='t')
-    
-    cat("3\n")
     
     explained.variance <- big.matrix(nperms, nvoxs, type="double")
     for (i in 1:nterms) {
@@ -162,14 +157,10 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
         Pmat.chunk[,i] <- apply(Fstats, 2, function(x) sum(x >= x[1])/nperms)
     }
     
-    cat("4\n")
-    
     # cleanup
     rm(explained.variance)
     rm(error.variance)
     gc(FALSE)
-    
-    cat("2\n")
     
     return(NULL)
 }
@@ -239,8 +230,6 @@ mdmr <- function(x, formula, model, nperms=4999, factors2perm=NULL, voxs=1:ncol(
     }
     ## end progress bar
     pb$term()
-    
-    cat("3\n")
     
     structure(
         list(
