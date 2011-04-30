@@ -119,7 +119,7 @@ mdmr.prepare.permIH <- function(modelinfo, p) {
     return(IHmat)
 }
 
-mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, Pmat, Fperms, pb) {
+mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, Pmat, Fperms) {
     # n = number of subjects
     # where H2mat has rows of H's (n^2 rows) and cols of # of permutations
     # where Gmat has rows of dmats (n^2 rows)  and cols of # of voxels
@@ -160,8 +160,6 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
     rm(explained.variance)
     rm(error.variance)
     gc(FALSE)
-    
-    pb$step()
     
     return(NULL)
 }
@@ -218,10 +216,15 @@ mdmr <- function(x, formula, model, nperms=4999, factors2perm=NULL, voxs=1:ncol(
     pb$init(blocks$n)
     ## loop through
     if (getDoParRegistered() && getDoParWorkers() > 1) {
-        foreach(i=1:blocks$n) %dopar% mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms, pb)
+        foreach(i=1:blocks$n) %dopar% {
+            pb$step()
+            mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms)
+        }
     } else {
-        for (i in 1:blocks$n)
-            mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms, pb)
+        for (i in 1:blocks$n) {
+            pb$step()
+            mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms)
+        }
     }
     ## end progress bar
     pb$term()
