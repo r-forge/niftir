@@ -158,6 +158,8 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
         
         # get pvals (TODO: convert below line to C++ code)
         Pmat.chunk[,i] <- apply(Fstats, 2, function(x) sum(x >= x[1])/nperms)
+        
+        cat("3\n")
     }
     
     # cleanup
@@ -235,6 +237,8 @@ mdmr <- function(x, formula, model, nperms=4999, factors2perm=NULL, voxs=1:ncol(
     ## end progress bar
     if (verbose)
         end(pb)
+    
+    cat("5\n")
     
     structure(
         list(
