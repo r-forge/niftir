@@ -23,6 +23,7 @@ option_list <- list(
     make_option("--overwrite", action="store_true", default=FALSE, help="Overwrite output if it already exists (default is not to overwrite already existing output)"),
     make_option(c("-v", "--verbose"), action="store_true", default=TRUE, help="Print extra output [default]"),
     make_option(c("-q", "--quiet"), action="store_false", dest="verbose", help="Print little output")
+)
     
 # Make class/usage
 parser <- OptionParser(usage = "%prog [options] formula", option_list=option_list, add_help_option=TRUE)
@@ -58,7 +59,8 @@ opts$indir <- abspath(opts$indir)
 check_subdist(opts$indir)
 if (!file.exists(opts$model))
     stop("-m/--model ", opts$model, " does not exist")
-
+if (file.exists(file.path(opts$indir, "mdmr")))
+    stop("Output mdmr directory already exists")
 
 ###
 # Setup inputs
