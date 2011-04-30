@@ -1,0 +1,140 @@
+#!/usr/bin/env Revoscript
+
+suppressPackageStartupMessages(library("optparse"))
+
+# General Function(s)
+printf <- function(msg, ..., newline=TRUE) {
+    if (opts$verbose) {
+        cat(sprintf(msg, ...))
+        if (newline) cat("\n")
+    }
+}
+
+# Make option list
+option_list <- list(
+    make_option(c("-i", "--indir"), type="character", default=NULL, help="Input subdist director (required)", metavar="subdist"),
+    make_option(c("-m", "--model"), type="character", default=NULL, help="Filename of a comma separated file with participant info in R friendly format where column names correspond to formula values... (required)", metavar="csv"),
+    make_option("--strata", type="character", default=NULL, help="Only compute permutations within groups, you can specify the name of a column in your '--model' that indicates these groups (optional)", metavar="name"),
+    make_option(c("-p", "--permutations"), type="integer", default=4999, help="Number of permutations to conduct for each voxel [default: %default]", metavar="number"),
+    make_option("--factors2perm", type="character", default=NULL, help="Which factors to permute from the formula specified [default: all of them]", metavar="numbers"),
+    make_option(c("-c", "--cores"), type="integer", default=2, help="Number of computer processors to use in parallel [default: %default]", metavar="number"),
+    make_option(c("-t", "--threads"), type="integer", default=1, help="Number of computer processors to use in parallel for MKL library [default: %default]", metavar="number"),
+    make_option("--blocksize", type="integer", default=250, dest="blocksize", help="How many sets of voxels should used in each iteration of computing the correlation [default: %default]", metavar="number"),
+    make_option("--overwrite", action="store_true", default=FALSE, help="Overwrite output if it already exists (default is not to overwrite already existing output)"),
+    make_option(c("-v", "--verbose"), action="store_true", default=TRUE, help="Print extra output [default]"),
+    make_option(c("-q", "--quiet"), action="store_false", dest="verbose", help="Print little output")
+    
+# Make class/usage
+parser <- OptionParser(usage = "%prog [options] formula", option_list=option_list, add_help_option=TRUE)
+
+# Parse
+parser_out <- parse_args(parser, positional_arguments = TRUE)
+args <- parser_out$args
+opts <- parser_out$options
+
+# Check options/arguments
+if (length(args) < 1) {
+    print_help(parser)
+    quit(save="no", status=1)
+}
+
+###
+# Check Inputs
+###
+printf("01. Checking options")
+## check variables
+if (is.null(opts$indir))
+    stop("must specify -i/--indir option")
+if (is.null(opts$model))
+    stop("must specify -m/--model option")
+if (opts$overwrite)
+    stop("Right now the overwrite function isn't implemented")
+if (opts$permutations < 2)
+    stop("# of permutations must be greater than 1")
+## load connectir
+suppressPackageStartupMessages(library("connectir"))
+## check paths exist
+opts$indir <- abspath(opts$indir)
+check_subdist(opts$indir)
+if (!file.exists(opts$model))
+    stop("-m/--model ", opts$model, " does not exist")
+
+
+###
+# Setup inputs
+###
+printf("02. Setting up inputs")
+
+# formula
+printf("...formula")
+formula <- as.formula(sprintf(". ~ %s", paste(args, collapse=" ")))
+
+# factors2perm
+if (!is.null(opts$factors2perm)) {
+    printf("...factors2perm")
+    opts$factors2perm <- sub(", ", ",", opts$factors2perm)
+    opts$factors2perm <- strsplit(opts$factors2perm, ",")[[1]]
+}
+
+# model
+printf("...model")
+model <- read.csv(opts$model)
+if (!is.null(opts$strata)) {
+    if (is.null(model[[opts$strata]]))
+        stop("Strata given but doesn't match any column in the input model")
+    else
+        opts$strata <- model[[opts$strata]]
+}
+# TODO: check if below works with more than one permuted factor
+if (!is.null(opts$factors2perm) && is.null(model[[opts$factors2perm]]))
+    stop("Factors to permute given but doesn't match any column in the input model")
+
+# subject distances (gower's centered)
+printf("...subject distances")
+## read
+tmp <- attach.big.matrix(file.path(opts$indir, "subdist_gower.desc"))
+## copy into memory
+xdist <- deepcopy(tmp)
+rm(tmp); invisible(gc(FALSE))
+## check
+tmp <- matrix(xdist[,1], sqrt(nrow(xdist)), sqrt(nrow(xdist)))
+check_gmat(tmp)
+rm(tmp); invisible(gc(FALSE))
+
+
+###
+# Parallel processing setup
+###
+printf("03a. Setting %i cores to be used", opts$cores)
+if (opts$cores > 1) {
+    printf("...setting parallel processing with doMC")
+    suppressPackageStartupMessages(library("doMC"))
+    registerDoMC()
+    if (opts$cores > getDoParWorkers())
+    	stop("Number of -c/--cores specified '", opts$cores, "' is greater than the actual number of cores '", getDoParWorkers(), "'")
+}
+options(cores=opts$cores)
+if (existsFunction("setMKLthreads")) {
+	printf("03b. Setting %i MKL threads to be used", opts$threads)
+	printf("...setting number of threads for MKL")
+	setMKLthreads(opts$threads)
+}
+
+
+###
+# Compute MDMR
+###
+printf("04. Computing MDMR")
+start.time <- Sys.time()
+
+res.mdmr <- mdmr(xdist, formula, model, nperms=opts$permutations, factors2perm=opts$factors2perm, block.size=opts$blocksize, verbose=opts$verbose, strata=opts$strata)
+
+end.time <- Sys.time()
+printf("MDMR is done! It took: %.2f minutes\n", as.numeric(end.time-start.time, units="mins"))
+
+
+###
+# Save MDMR Results
+###
+printf("05. Saving MDMR Results")
+save_mdmr(res.mdmr, opts$indir, verbose=opts$verbose)
