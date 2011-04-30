@@ -125,6 +125,8 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
     # where Gmat has rows of dmats (n^2 rows)  and cols of # of voxels
     # result has rows of # of permutations and cols of # of voxels
     
+    cat("1\n")
+    
     inds <- firstVox:lastVox
     nperms <- ncol(IHmat)
     nvoxs <- length(inds)
@@ -161,7 +163,7 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
     rm(error.variance)
     gc(FALSE)
     
-    cat("1\n")
+    cat("2\n")
     
     return(NULL)
 }
@@ -170,6 +172,7 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
 # assume each column of x has been gower centered
 mdmr <- function(x, formula, model, nperms=4999, factors2perm=NULL, voxs=1:ncol(x), block.size=250, verbose=TRUE, contr.unordered="contr.sum", contr.ordered="contr.poly", max.iter=10, strata=NULL) {
     # todo: test if x is matrix or big.matrix?
+    
     if (!is.data.frame(model))
         stop("'model' input must be a data frame")
     
@@ -230,6 +233,8 @@ mdmr <- function(x, formula, model, nperms=4999, factors2perm=NULL, voxs=1:ncol(
     }
     ## end progress bar
     pb$term()
+    
+    cat("3\n")
     
     structure(
         list(
