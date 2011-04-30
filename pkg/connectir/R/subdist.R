@@ -88,8 +88,6 @@ check_subdist <- function(sdir) {
             "# of subjects does not match # of rows in ", f
         )
     })
-    
-    return(TRUE)
 }
 
 # This creates a new subdist directory and relevant files

@@ -244,12 +244,12 @@ mdmr <- function(x, formula, model, nperms=4999, factors2perm=NULL, voxs=1:ncol(
     )
 }
 
-save_mdmr <- function(obj, outdir, verbose=TRUE) {
+save_mdmr <- function(obj, sdir, mdir, verbose=TRUE) {
     if (!file.exists(outdir))
         stop("Cannot save MDMR to ", outdir, " since it doesn't exist")
     
     vcat(verbose, "...creating MDMR output directory")
-    mdmr.output <- file.path(outdir, "mdmr")
+    mdmr.output <- mdir
     if (file.exists(mdmr.output))
         stop("MDMR output ", mdmr.output, " already exists")
     dir.create(mdmr.output)
@@ -257,7 +257,7 @@ save_mdmr <- function(obj, outdir, verbose=TRUE) {
     mpath <- function(...) file.path(mdmr.output, ...)
     
     vcat(verbose, "...reading in brain mask")
-    seedfn <- file.path(outdir, "input_masks", "seedmask.nii.gz")
+    seedfn <- file.path(sdir, "input_masks", "seedmask.nii.gz")
     mask <- read.mask(seedfn)
     header <- read.nifti.header(seedfn)
     

@@ -1,7 +1,19 @@
 test.computepvals <- function() {
-    x <- as.big.matrix(matrix(rnorm(1000), 100, 10))
-    tmp1 <- apply(x[,], 2, function(y) sum(y >= y[1])/nrow(x))
-    tmp2 <- .Call("ComputePvalsMain", x@address, PACKAGE="connectir")
+    nr <- 5000; nc <- 500   
+    x <- as.big.matrix(matrix(rnorm(nr*nc), nr, nc))
+    
+    system.time(y1 <- apply(x[,], 2, function(y) sum(y >= y[1])/nrow(x)))
+    
+    library(biganalytics)
+    system.time(y2 <- apply(x, 2, function(y) sum(y >= y[1])/nrow(x)))
+    
+    system.time({
+        y3 <- big.matrix(nc, 1, init=0, type="double")
+        .Call("ComputePvalsMain", x@address, y3@address, as.double(1), PACKAGE="connectir")
+    })
+    
+    all.equal(y1, y2)
+    all.equal(y2, y3[,])
 }
 
 test.mdmr.prepare.model <- function() {

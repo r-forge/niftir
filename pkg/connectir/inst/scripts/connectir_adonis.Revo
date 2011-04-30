@@ -12,7 +12,8 @@ printf <- function(msg, ..., newline=TRUE) {
 
 # Make option list
 option_list <- list(
-    make_option(c("-i", "--indir"), type="character", default=NULL, help="Input subdist director (required)", metavar="subdist"),
+    make_option(c("-i", "--indir"), type="character", default=NULL, help="Input subdist directory (required)", metavar="subdist"),
+    make_option(c("-o", "--outdir"), type="character", default="mdmr", help="Directory to output MDMR results (this will be within the input subdist directory)", metavar="MDMR"),
     make_option(c("-m", "--model"), type="character", default=NULL, help="Filename of a comma separated file with participant info in R friendly format where column names correspond to formula values... (required)", metavar="csv"),
     make_option("--strata", type="character", default=NULL, help="Only compute permutations within groups, you can specify the name of a column in your '--model' that indicates these groups (optional)", metavar="name"),
     make_option(c("-p", "--permutations"), type="integer", default=4999, help="Number of permutations to conduct for each voxel [default: %default]", metavar="number"),
@@ -59,8 +60,11 @@ opts$indir <- abspath(opts$indir)
 check_subdist(opts$indir)
 if (!file.exists(opts$model))
     stop("-m/--model ", opts$model, " does not exist")
-if (file.exists(file.path(opts$indir, "mdmr")))
-    stop("Output mdmr directory already exists")
+opts$outdir <- file.path(opts$indir, opts$outdir)
+if (file.exists(opts$outdir))
+    stop("Output mdmr directory '", opts$outdir,  "' already exists")
+if (!file.exists(dirname(opts$outdir)))
+    stop("Basepath to mdmr directory '", dirname(opts$outdir), "' doesn't exist")
 
 ###
 # Setup inputs
@@ -139,4 +143,4 @@ printf("MDMR is done! It took: %.2f minutes\n", as.numeric(end.time-start.time, 
 # Save MDMR Results
 ###
 printf("05. Saving MDMR Results")
-save_mdmr(res.mdmr, opts$indir, verbose=opts$verbose)
+save_mdmr(res.mdmr, opts$indir, opts$outdir, verbose=opts$verbose)
