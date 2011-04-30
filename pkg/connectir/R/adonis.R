@@ -125,8 +125,6 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
     # where Gmat has rows of dmats (n^2 rows)  and cols of # of voxels
     # result has rows of # of permutations and cols of # of voxels
     
-    cat("1\n")
-    
     inds <- firstVox:lastVox
     nperms <- ncol(IHmat)
     nvoxs <- length(inds)
@@ -154,12 +152,8 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
         # adjust for degrees of freedom
         dscal(Y=Fstats, ALPHA=df.Res/df.Exp[i])
         
-        cat("2\n")
-        
         # get pvals (TODO: convert below line to C++ code)
         Pmat.chunk[,i] <- apply(Fstats[,], 2, function(x) sum(x >= x[1])/nperms)
-        
-        cat("3\n")
     }
     
     # cleanup
@@ -237,8 +231,6 @@ mdmr <- function(x, formula, model, nperms=4999, factors2perm=NULL, voxs=1:ncol(
     ## end progress bar
     if (verbose)
         end(pb)
-    
-    cat("5\n")
     
     structure(
         list(

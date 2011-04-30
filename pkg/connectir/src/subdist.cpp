@@ -1,38 +1,4 @@
-#include "connectir/subdist.h"
-
-#define SET_ACCESSOR(ptr, mat)                                          \
-    if (ptr->separated_columns()) {                                     \
-        switch (ptr->matrix_type()) {                                   \
-            case 1:                                                     \
-                SepMatrixAccessor<char> mat( *ptr );                    \
-                break;                                                  \
-            case 2:                                                     \
-                SepMatrixAccessor<short> mat( *ptr );                   \
-                break;                                                  \
-            case 4:                                                     \
-                SepMatrixAccessor<int> mat( *ptr );                     \
-                break;                                                  \
-            case 8:                                                     \
-                SepMatrixAccessor<double> mat( *ptr );                  \
-                break;                                                  \
-        }                                                               \
-    }                                                                   \
-    else {                                                              \
-        switch (ptr->matrix_type()) {                                   \
-            case 1:                                                     \
-                MatrixAccessor<char> mat( *ptr );                       \
-                break;                                                  \
-            case 2:                                                     \
-                MatrixAccessor<short> mat( *ptr );                      \
-                break;                                                  \
-            case 4:                                                     \
-                MatrixAccessor<int> mat( *ptr );                        \
-                break;                                                  \
-            case 8:                                                     \
-                MatrixAccessor<double> mat( *ptr );                     \
-                break;                                                  \
-        }                                                               \
-    }
+#include "connectir/connectir.h"
 
 #define Z_STOP \
     BEGIN_RCPP \
