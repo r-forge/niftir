@@ -40,7 +40,7 @@ check_subdist <- function(sdir) {
     )
     seedfile <- file.path(inmaskdir, "seedmask.nii.gz")
     distfiles <- file.path(sdir, 
-        c("subdist.desc", "subdist.bin", "subdist_grower.desc", "subdist_grower.bin")
+        c("subdist.desc", "subdist.bin", "subdist_gower.desc", "subdist_gower.bin")
     )
     sdistfile <- file.path(sdir, "subdist.desc")
     gdistfile <- file.path(sdir, "subdist_gower.desc")
