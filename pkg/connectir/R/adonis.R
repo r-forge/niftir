@@ -124,7 +124,8 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
     # where H2mat has rows of H's (n^2 rows) and cols of # of permutations
     # where Gmat has rows of dmats (n^2 rows)  and cols of # of voxels
     # result has rows of # of permutations and cols of # of voxels
-    require(biganalytics)
+    
+    cat("1\n")
     
     inds <- firstVox:lastVox
     nperms <- ncol(IHmat)
@@ -153,8 +154,10 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
         # adjust for degrees of freedom
         dscal(Y=Fstats, ALPHA=df.Res/df.Exp[i])
         
+        cat("2\n")
+        
         # get pvals (TODO: convert below line to C++ code)
-        Pmat.chunk[,i] <- apply(Fstats[,], 2, function(x) sum(x >= x[1])/nperms)
+        Pmat.chunk[,i] <- apply(Fstats, 2, function(x) sum(x >= x[1])/nperms)
     }
     
     # cleanup
@@ -219,13 +222,13 @@ mdmr <- function(x, formula, model, nperms=4999, factors2perm=NULL, voxs=1:ncol(
     if (getDoParRegistered() && getDoParWorkers() > 1) {
         foreach(i=1:blocks$n) %dopar% {
             if (verbose)
-                update(pb)
+                update(pb, i)
             mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms)
         }
     } else {
         for (i in 1:blocks$n) {
             if (verbose)
-                update(pb)
+                update(pb, i)
             mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms)
         }
     }
