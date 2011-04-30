@@ -132,6 +132,8 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
     nvoxs <- length(inds)
     nterms <- length(H2mats)
     
+    cat("2\n")
+    
     # get part of bigmatrix with Gower's centered subject distances
     Gmat.chunk <- deepcopy(Gmat, cols=inds)
     
@@ -141,6 +143,8 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
     # compute error term
     error.variance <- big.matrix(nperms, nvoxs, type="double")
     dgemm(C=error.variance, A=IHmat, B=Gmat.chunk, TRANSA='t')
+    
+    cat("3\n")
     
     explained.variance <- big.matrix(nperms, nvoxs, type="double")
     for (i in 1:nterms) {
@@ -157,6 +161,8 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
         # get pvals (TODO: convert below line to C++ code)
         Pmat.chunk[,i] <- apply(Fstats, 2, function(x) sum(x >= x[1])/nperms)
     }
+    
+    cat("4\n")
     
     # cleanup
     rm(explained.variance)
