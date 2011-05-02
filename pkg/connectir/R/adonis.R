@@ -245,8 +245,8 @@ mdmr <- function(x, formula, model, nperms=4999, factors2perm=NULL, voxs=1:ncol(
 }
 
 save_mdmr <- function(obj, sdir, mdir, verbose=TRUE) {
-    if (!file.exists(outdir))
-        stop("Cannot save MDMR to ", outdir, " since it doesn't exist")
+    if (!file.exists(sdir))
+        stop("Cannot save MDMR to ", sdir, " since it doesn't exist")
     
     vcat(verbose, "...creating MDMR output directory")
     mdmr.output <- mdir
@@ -271,7 +271,9 @@ save_mdmr <- function(obj, sdir, mdir, verbose=TRUE) {
     vcat(verbose, "...saving factor names")
     factornames <- modelinfo$factor.names[modelinfo$factors2perm]
     nfactors <- length(factornames)
-    cat("# Permuted Factors\n", factornames, "\n", file=mpath("factors2perm.txt"))
+    totext <- sprintf("# All Factors\n%s\n# Permuted Factors\n%s\n", 
+                modelinfo$factor.names, factornames))
+    cat(totext, file=mpath("factorinfo.txt"))
     ## evs
     vcat(verbose, "...saving evs")
     evs <- modelinfo$rhs

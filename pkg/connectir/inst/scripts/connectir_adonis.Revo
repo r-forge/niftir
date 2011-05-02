@@ -54,10 +54,10 @@ if (opts$overwrite)
 if (opts$permutations < 2)
     stop("# of permutations must be greater than 1")
 ## load connectir
-suppressPackageStartupMessages(library("connectir"))
+suppressWarnings(suppressPackageStartupMessages(library("connectir")))
 ## check paths exist
 opts$indir <- abspath(opts$indir)
-check_subdist(opts$indir)
+invisible(check_subdist(opts$indir))
 if (!file.exists(opts$model))
     stop("-m/--model ", opts$model, " does not exist")
 opts$outdir <- file.path(opts$indir, opts$outdir)
