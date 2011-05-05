@@ -179,26 +179,31 @@ if (opts$blocksize == 0) {
     # amount of RAM used in GB for functionals
     mem_used4func <- sum(sapply(funclist, function(x) n2gb(prod(dim(x)))))
     
+    # amount of RAM used for distance matrix
+    nsubs <- length(funclist)
+    nvoxs <- sum(brainmask)
+    mem_used4dmat <- n2gb(nsubs^2 * nvoxs)
+    
     # minimum amount of RAM needed
     ## mem_used4func + memory for 2 connectivity maps per subjects
-    n4onemap <- ncol(funclist[[1]]) * length(funclist)
-    min_mem_needed <- mem_used4func + n2gb(n4onemap*2)
+    n4onemap <- nvoxs * nsubs
+    min_mem_needed <- n2gb(n4onemap*2) + mem_used4func + mem_used4dmat
     
     # limit in RAM use
     mem_limit <- Sys.getenv("CONNECTIR_RAM_LIMIT")
-    mem_limit <- ifelse(mem_limit == "", 4, mem_limit)
+    mem_limit <- ifelse(mem_limit == "", 8, mem_limit)
     if (mem_limit < min_mem_needed)
         stop(sprintf("You require %i GB of memory but are limited to %i GB. Please set the environmental variable CONNECTIR_RAM_LIMIT to a higher number to continue.", mem_used4func, min_mem_needed))
     
     # amount of RAM for connectivity matrix
-    mem_used4conn <- mem_limit - mem_used4func
+    mem_used4conn <- mem_limit - mem_used4func - mem_used4dmat
     
     # block size
     opts$blocksize <- floor(gb2n(mem_used4conn)/n4onemap)
     printf("%i (with RAM limit of %.2f GB)", opts$blocksize, mem_limit)
     
     # clear variables
-    rm(n2gb, gb2n, mem_used4func, min_mem_used, mem_used4conn, n4onemap)
+    rm(n2gb, gb2n, mem_used4func, min_mem_needed, mem_used4conn, n4onemap)
 }
     
 
