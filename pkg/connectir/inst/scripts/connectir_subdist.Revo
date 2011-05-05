@@ -12,8 +12,8 @@ printf <- function(msg, ..., newline=TRUE) {
 
 # Make option list
 option_list <- list(
-    make_option(c("-i", "--infuncs"), action="character", default=NULL, dest="infuncs", help="File containing paths of different 4D functional images in one column (required)", metavar="file"),
-    make_option(c("-m", "--inmasks"), action="character", default=NULL, dest="inmasks", help="File containing paths of different 3D masks for each functional image (required). Make sure that this list of masks are in the same order as the -i/--infuncs file.", metavar="file"),
+    make_option(c("-i", "--infuncs"), type="character", default=NULL, dest="infuncs", help="File containing paths of different 4D functional images in one column (required)", metavar="file"),
+    make_option(c("-m", "--inmasks"), type="character", default=NULL, dest="inmasks", help="File containing paths of different 3D masks for each functional image (required). Make sure that this list of masks are in the same order as the -i/--infuncs file.", metavar="file"),
     make_option("--ztransform", action="store_true", default=FALSE, dest="ztransform", help="Fischer Z-Transform the correlations before calculating the distance between participants"),
     make_option("--seedmask", type="character", default=NULL, help="Mask to select the voxels that will be used to correlate with each voxel in the rest of the brain (or anything within the specified --brainmask)", metavar="file"),
     make_option("--brainmask", type="character", default=NULL, help="When computing each whole-brain connectivity map, this mask will restrict which parts of the whole-brain are to be considered", metavar="file"),
