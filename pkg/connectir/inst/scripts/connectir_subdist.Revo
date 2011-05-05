@@ -38,7 +38,7 @@ if (length(args) < 1) {
     quit(save="no", status=1)
 }
 
-suppressPackageStartupMessages(library("connectir"))
+suppressWarnings(suppressPackageStartupMessages(library("connectir")))
 
 start.time <- Sys.time()
 
@@ -143,8 +143,8 @@ printf("...creating final seed mask")
 if (!is.null(preseedmask)) {
     if (length(preseedmask) != length(maskoverlap))
         stop("length of seedmask and maskoverlap not the same")
-    if (sum(preseedmask[!maskoverlap]) > 0)
-        warning(sprintf("Seed mask '%s' contains some voxels that don't overlap across all participants", opts$seedmask))
+#    if (sum(preseedmask[!maskoverlap]) > 0)
+#        warning(sprintf("Seed mask '%s' contains some voxels that don't overlap across all participants", opts$seedmask))
     seedmask <- preseedmask & maskoverlap
 } else {
     seedmask <- maskoverlap
@@ -155,8 +155,8 @@ printf("...creating final brain mask")
 if (!is.null(prebrainmask)) {
     if (length(prebrainmask) != length(maskoverlap))
         stop("length of brainmask and maskoverlap not the same")
-    if (sum(prebrainmask[!maskoverlap]) > 0)
-        warning(sprintf("Brain mask '%s' contains some voxels that don't overlap across all participants", opts$brainmask))
+#    if (sum(prebrainmask[!maskoverlap]) > 0)
+#        warning(sprintf("Brain mask '%s' contains some voxels that don't overlap across all participants", opts$brainmask))
     brainmask <- prebrainmask & maskoverlap
 } else {
     brainmask <- maskoverlap
@@ -188,14 +188,14 @@ if (opts$blocksize == 0) {
     mem_limit <- Sys.getenv("CONNECTIR_RAM_LIMIT")
     mem_limit <- ifelse(mem_limit == "", 4, mem_limit)
     if (mem_limit < min_mem_needed)
-        stop(sprintf("You require %i GB of memory but are limited to %i GB. Please set the environmental variable CONNECTIR_RAM_LIMIT to a higher number to continue.", mem_used4func, min_mem_needed)
+        stop(sprintf("You require %i GB of memory but are limited to %i GB. Please set the environmental variable CONNECTIR_RAM_LIMIT to a higher number to continue.", mem_used4func, min_mem_needed))
     
     # amount of RAM for connectivity matrix
     mem_used4conn <- mem_limit - mem_used4func
     
     # block size
     opts$blocksize <- floor(gb2n(mem_used4conn)/n4onemap)
-    printf("%i", opts$blocksize)
+    printf("%i (with RAM limit of %.2f GB)", opts$blocksize, mem_limit)
     
     # clear variables
     rm(n2gb, gb2n, mem_used4func, min_mem_used, mem_used4conn, n4onemap)
