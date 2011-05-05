@@ -274,7 +274,7 @@ save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE) {
     factornames <- modelinfo$factor.names[modelinfo$factors2perm]
     nfactors <- length(factornames)
     totext <- sprintf("# All Factors\n%s\n# Permuted Factors\n%s\n", 
-                modelinfo$factor.names, factornames))
+                modelinfo$factor.names, factornames)
     cat(totext, file=mpath("factorinfo.txt"))
     ## evs
     vcat(verbose, "...saving evs")
