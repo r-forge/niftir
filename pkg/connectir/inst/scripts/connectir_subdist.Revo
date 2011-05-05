@@ -12,10 +12,12 @@ printf <- function(msg, ..., newline=TRUE) {
 
 # Make option list
 option_list <- list(
+    make_option(c("-i", "--infuncs"), action="character", default=NULL, dest="infuncs", help="File containing paths of different 4D functional images in one column (required)", metavar="file"),
+    make_option(c("-m", "--inmasks"), action="character", default=NULL, dest="inmasks", help="File containing paths of different 3D masks for each functional image (required). Make sure that this list of masks are in the same order as the -i/--infuncs file.", metavar="file"),
     make_option("--ztransform", action="store_true", default=FALSE, dest="ztransform", help="Fischer Z-Transform the correlations before calculating the distance between participants"),
     make_option("--seedmask", type="character", default=NULL, help="Mask to select the voxels that will be used to correlate with each voxel in the rest of the brain (or anything within the specified --brainmask)", metavar="file"),
     make_option("--brainmask", type="character", default=NULL, help="When computing each whole-brain connectivity map, this mask will restrict which parts of the whole-brain are to be considered", metavar="file"),
-    make_option("--blocksize", type="integer", default=50, help="How many sets of voxels should be used in each iteration of computing the correlation [default: %default]", metavar="number"),
+    make_option("--blocksize", type="integer", default=0, help="How many sets of voxels should be used in each iteration of computing the correlation (0 = auto) [default: %default]", metavar="number"),
     make_option(c("-c", "--cores"), type="integer", default=1, help="Number of computer processors to use in parallel [default: %default]", metavar="number"),
     make_option(c("-t", "--threads"), type="integer", default=1, help="Number of computer processors to use in parallel for MKL library [default: %default]", metavar="number"),
     make_option("--overwrite", action="store_true", default=FALSE, help="Overwrite output that already exists (default is not to overwrite already existing output)"),
@@ -24,14 +26,14 @@ option_list <- list(
 )
 
 # Make class/usage
-parser <- OptionParser(usage = "%prog [options] output-directory functional-file-1 functional-file-2 [...functional-file-N]", option_list=option_list, add_help_option=TRUE)
+parser <- OptionParser(usage = "%prog [options] output-directory", option_list=option_list, add_help_option=TRUE)
 
 # Parse
 parser_out <- parse_args(parser, positional_arguments = TRUE)
 args <- parser_out$args
 opts <- parser_out$options
 
-if (length(args) < 3) {
+if (length(args) < 1) {
     print_help(parser)
     quit(save="no", status=1)
 }
@@ -47,13 +49,31 @@ printf("01. Checking required inputs")
 outdir <- abspath(args[1])
 if (file.exists(outdir) && !opts$overwrite)
     stop("Output directory '", outdir, "' already exists, you can use --overwrite")
-infiles <- sapply(args[-1], function(fp) {
+if (is.null(opts$infuncs))
+    stop("You must specify the -i/--infuncs option")
+if (is.null(opts$inmasks))
+    stop("You must specify the -m/--inmasks option")
+if (!file.exists(opts$infuncs))
+    stop("The file specified by -i/--infuncs does not exist")
+if (!file.exists(opts$inmasks))
+    stop("The file specified by -m/--inmasks does not exist")
+## get input functionals
+infiles <- sapply(as.character(read.table(opts$infuncs)[,1]), function(fp) {
     fp <- abspath(fp)
     if (!file.exists(fp))
         stop("One of the input functionals does not exist: ", fp)
     fp
 })
 n <- length(infiles)
+## get input masks
+inmasks <- sapply(as.character(read.table(opts$inmasks)[,1]), function(fp) {
+    fp <- abspath(fp)
+    if (!file.exists(fp))
+        stop("One of the input functionals does not exist: ", fp)
+    fp
+})
+if (length(inmasks) != n)
+    stop("Number of masks is not the same as the number of functional images")
 
 ###
 # Check Options
@@ -114,13 +134,11 @@ if (is.null(opts$seedmask)) {
     preseedmask <- read.mask(opts$seedmask)
 }
 
-## functional data
-printf("...reading functional data")
-funclist <- load_func_data(infiles)
+## overlap mask
+printf("...creating overlap of masks across participants")
+maskoverlap <- create_maskoverlap(inmasks)
 
-printf("...creating overlap mask across participants")
-maskoverlap <- create_func_maskoverlap(funclist) # regions present in all participants
-
+## seed mask
 printf("...creating final seed mask")
 if (!is.null(preseedmask)) {
     if (length(preseedmask) != length(maskoverlap))
@@ -132,6 +150,7 @@ if (!is.null(preseedmask)) {
     seedmask <- maskoverlap
 }
 
+## brainmask
 printf("...creating final brain mask")
 if (!is.null(prebrainmask)) {
     if (length(prebrainmask) != length(maskoverlap))
@@ -145,15 +164,53 @@ if (!is.null(prebrainmask)) {
 if (!all(seedmask[brainmask]==TRUE))
     stop("For now the brainmask must contain all elements of the seedmask")
 
-printf("...masking the functional data")
-funclist <- mask_func_data(funclist, brainmask)
-gc(FALSE)
+## functional data
+printf("...reading and masking the functional data")
+funclist <- load_and_mask_func_data(infiles, brainmask)
+invisible(gc(FALSE))
+
+# set blocksize if auto based on RAM
+if (opts$blocksize == 0) {
+    printf("...autosetting blocksize to -> ", newline=F)
+    
+    n2gb <- function(x) x*8/1024^3
+    gb2n <- function(x) x/8*1024^3
+    
+    # amount of RAM used in GB for functionals
+    mem_used4func <- sum(sapply(funclist, function(x) n2gb(prod(dim(x)))))
+    
+    # minimum amount of RAM needed
+    ## mem_used4func + memory for 2 connectivity maps per subjects
+    n4onemap <- ncol(funclist[[1]]) * length(funclist)
+    min_mem_needed <- mem_used4func + n2gb(n4onemap*2)
+    
+    # limit in RAM use
+    mem_limit <- Sys.getenv("CONNECTIR_RAM_LIMIT")
+    mem_limit <- ifelse(mem_limit == "", 4, mem_limit)
+    if (mem_limit < min_mem_needed)
+        stop(sprintf("You require %i GB of memory but are limited to %i GB. Please set the environmental variable CONNECTIR_RAM_LIMIT to a higher number to continue.", mem_used4func, min_mem_needed)
+    
+    # amount of RAM for connectivity matrix
+    mem_used4conn <- mem_limit - mem_used4func
+    
+    # block size
+    opts$blocksize <- floor(gb2n(mem_used4conn)/n4onemap)
+    printf("%i", opts$blocksize)
+    
+    # clear variables
+    rm(n2gb, gb2n, mem_used4func, min_mem_used, mem_used4conn, n4onemap)
+}
+    
 
 # create the subdist directory (and get the subject distance matrix)
 printf("...creating subdist directory and files")
 masks <- list(maskoverlap=maskoverlap, preseedmask=preseedmask, prebrainmask=prebrainmask, seedmask=seedmask, brainmask=brainmask)
 subdist <- create_subdist(outdir, infiles, masks, opts) # note: this isn't filebacked yet
-gc(F)
+
+# clear memory of unneeded stuff + get seedinds
+seedinds <- which(seedmask[brainmask])
+rm(masks, maskoverlap, preseedmask, prebrainmask, seedmask, brainmask)
+invisible(gc(F))
 
 end.time <- Sys.time()
 printf("Setup is done. It took: %.2f minutes\n", as.numeric(end.time-start.time, units="mins"))
@@ -165,9 +222,9 @@ printf("Setup is done. It took: %.2f minutes\n", as.numeric(end.time-start.time,
 start.time <- Sys.time()
 
 printf("06. Computing subject distances")
-compute_subdist(funclist, subdist, seed_inds=which(seedmask[brainmask]), blocksize=opts$blocksize, ztransform=opts$ztransform, verbose=opts$verbose)
+compute_subdist(funclist, subdist, seed_inds=seedinds, blocksize=opts$blocksize, ztransform=opts$ztransform, verbose=opts$verbose)
 rm(funclist)
-gc(FALSE)
+invisible(gc(FALSE))
 
 end.time <- Sys.time()
 printf("Distance computation is done! It took: %.2f minutes\n", as.numeric(end.time-start.time, units="mins"))
@@ -179,7 +236,7 @@ printf("Distance computation is done! It took: %.2f minutes\n", as.numeric(end.t
 printf("07. Saving subject distances")
 tmp <- deepcopy(subdist, backingpath=outdir, backingfile="subdist.bin", descriptorfile="subdist.desc")
 rm(tmp)
-gc(FALSE)
+invisible(gc(FALSE))
 
 
 ###
@@ -187,10 +244,10 @@ gc(FALSE)
 ###
 start.time <- Sys.time()
 
-printf("07. Creating gower's centered matrices")
+printf("08. Creating gower's centered matrices")
 gdist <- gower.subdist(subdist)
 rm(subdist)
-gc(FALSE)
+invisible(gc(FALSE))
 
 end.time <- Sys.time()
 printf("Centering of matrices done! It took: %.2f minutes\n", as.numeric(end.time-start.time, units="mins"))
@@ -199,23 +256,8 @@ printf("Centering of matrices done! It took: %.2f minutes\n", as.numeric(end.tim
 ###
 # Save gower matrix
 ###
-printf("08. Saving gower's centered matrices")
+printf("09. Saving gower's centered matrices")
 tmp <- deepcopy(gdist, backingpath=outdir, backingfile="subdist_gower.bin", descriptorfile="subdist_gower.desc")
 rm(tmp, gdist)
-gc(FALSE)
-
-# TODO:
-# - read in info on:
-#   - how many times to split the data
-#   - mask
-# 1. load the data
-# 2. get # of blocks
-# 3. create the main subdist matrix with everything
-# 4. run in chunks: a. batch.vbca; b. dist.submaps
-# 5. convert to gower's matrix (in chunks) ... so should have larger copy of gower's matrix
-# 6. save the resulting subdist to a file, want to also save mask and other info (do we want to have a class that saves this?)
-
-# for sge, can just use the sge.submit function
-# note for this might want to save individual pieces?...have seperate function that does this?
-# 
+invisible(gc(FALSE))
 

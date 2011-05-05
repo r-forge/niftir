@@ -1,11 +1,10 @@
 load_func_data <- function(fnames) lapply(fnames, read.big.nifti4d)
 
-create_func_maskoverlap <- function(funcs) {
+create_maskoverlap_fromfuncs <- function(funcs) {
     allmasks <- sapply(funcs, function(x) colmin(x) != 0)
     apply(allmasks, 1, all)
 }
 
-# NOTE: this function transposes the data
 mask_func_data <- function(funcs, mask) {
     dat <- lapply(funcs, function(x) {
         x <- do.mask(x, mask)
@@ -17,19 +16,25 @@ mask_func_data <- function(funcs, mask) {
     return(dat)
 }
 
-load_func_data2 <- function(fnames, mask) {
+create_maskoverlap <- function(mask_fnames) {
+    overlap <- read.mask(mask_fnames[[1]])
+    for (i in 1:length(mask_fnames))
+        overlap <- overlap & read.mask(mask_fnames[[i]])
+    return(overlap)
+}
+
+load_and_mask_func_data <- function(fnames, mask) {
     if (is.character(mask))
         mask <- read.mask(mask)
     dat.list <- lapply(fnames, function(f) {
         x <- read.big.nifti4d(f)
         x <- do.mask(x, mask)
-        scale(x, to.copy=F)
-        y <- big.matrix(ncol(x), nrow(x))
-        .Call("BigTransposeMain", x@address, y@address)
+        y <- scale(x, to.copy=T)
         rm(x)
+        gc(FALSE)
         y
     })
-    gc(F)
+    gc(FALSE)
     return(dat.list)
 }
 

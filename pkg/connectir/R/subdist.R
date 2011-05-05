@@ -151,7 +151,10 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
         inds_CHUNK <- seed_inds[blocks$starts[i]:blocks$ends[i]]
         cormaps_list <- vbca_batch(funclist, inds_CHUNK, ztransform=ztransform)
         subdist_CHUNK <- sub.big.matrix(subdist, firstCol=blocks$starts[i], lastCol=blocks$ends[i])
-        compute_subdist_worker(cormaps_list, inds_CHUNK, subdist_CHUNK)
+        tmp <- compute_subdist_worker(cormaps_list, inds_CHUNK, subdist_CHUNK)
+        rm(inds_CHUNK, subdist_CHUNK, tmp)
+        gc(FALSE)
+        return(NULL)
     }
     
     if (verbose)
@@ -160,8 +163,10 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
         pb <- NULL
     
     if (getDoParRegistered() && getDoParWorkers() > 1) {
-        foreach(i=1:blocks$n, .packages=c("connectir")) %dopar% 
-            dfun(i)
+        lo <- min(getDoParWorkers()*3, blocks$n)
+        superblocks <- niftir.split.indices(1, blocks$n, length.out=lo)
+        foreach(si=1:superblocks$n, .packages=c("connectir"), .inorder=FALSE) %dopar% 
+            for(i in superblocks$starts[si]:superblocks$ends[si]) dfun(i)
     }
     else {
         for (i in 1:blocks$n)
@@ -194,6 +199,7 @@ compute_subdist_worker <- function(sub.cormaps, inds, outmat=NULL, type="double"
         .Call("BigSubtractScalarMain", col@address, as.double(1), TRUE);
     }
     
+    rm(subsMap)
     gc(F)
     
     return(outmat)

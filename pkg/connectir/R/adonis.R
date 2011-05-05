@@ -244,7 +244,7 @@ mdmr <- function(x, formula, model, nperms=4999, factors2perm=NULL, voxs=1:ncol(
     )
 }
 
-save_mdmr <- function(obj, sdir, mdir, verbose=TRUE) {
+save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE) {
     if (!file.exists(sdir))
         stop("Cannot save MDMR to ", sdir, " since it doesn't exist")
     
@@ -267,6 +267,8 @@ save_mdmr <- function(obj, sdir, mdir, verbose=TRUE) {
     ## save
     vcat(verbose, "...saving model info")
     save(modelinfo, file=mpath("modelinfo.rda"))
+    ## formula
+    cat(as.character(formula)[-c(1:2)], file=mpath("formula.txt"))
     ## factors
     vcat(verbose, "...saving factor names")
     factornames <- modelinfo$factor.names[modelinfo$factors2perm]
