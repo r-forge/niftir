@@ -270,3 +270,9 @@ square.subdist <- function(bigmat, square.bigmat=NULL, ...) {
     
     return(square.bigmat)
 }
+
+slice.subdist <- function(bigmat, subs=1:sqrt(nrow(bigmat)), voxs=1:ncol(bigmat), ...) {
+    matinds <- matrix(1:nrow(bigmat), sqrt(nrow(bigmat)))
+    matinds <- as.vector(matinds[subs,subs])
+    deepcopy(bigmat, cols=voxs, rows=matinds, ...)
+}

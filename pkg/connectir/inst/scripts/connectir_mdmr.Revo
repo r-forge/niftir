@@ -15,6 +15,7 @@ option_list <- list(
     make_option(c("-i", "--indir"), type="character", default=NULL, help="Input subdist directory (required)", metavar="subdist"),
     make_option(c("-o", "--outdir"), type="character", default="mdmr", help="Directory to output MDMR results (this will be within the input subdist directory)", metavar="MDMR"),
     make_option(c("-m", "--model"), type="character", default=NULL, help="Filename of a comma separated file with participant info in R friendly format where column names correspond to formula values... (required)", metavar="csv"),
+    make_option("--usesubs", type="character", default=NULL, help="Filename with a list of subject indices to use from the subject distance matrices (default is to use all of them)", metavar="text-file"),
     make_option("--strata", type="character", default=NULL, help="Only compute permutations within groups, you can specify the name of a column in your '--model' that indicates these groups (optional)", metavar="name"),
     make_option(c("-p", "--permutations"), type="integer", default=4999, help="Number of permutations to conduct for each voxel [default: %default]", metavar="number"),
     make_option("--factors2perm", type="character", default=NULL, help="Which factors to permute from the formula specified [default: all of them]", metavar="comma-separated list"),
@@ -100,7 +101,11 @@ printf("...subject distances")
 ## read
 tmp <- attach.big.matrix(file.path(opts$indir, "subdist_gower.desc"))
 ## copy into memory
-xdist <- deepcopy(tmp)
+if (is.null(opts$usesubs))
+    opts$usesubs <- 1:sqrt(nrow(tmp))
+else
+    opts$usesubs <- as.numeric(read.table(opts$usesubs)[,1])
+xdist <- slice.subdist(tmp, subs=opts$usesubs)  # will create a copy
 rm(tmp); invisible(gc(FALSE))
 ## check
 tmp <- matrix(xdist[,1], sqrt(nrow(xdist)), sqrt(nrow(xdist)))

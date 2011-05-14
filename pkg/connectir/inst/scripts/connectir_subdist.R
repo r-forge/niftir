@@ -50,11 +50,11 @@ if (opts$cores > 1) {
     	stop("Number of -c/--cores specified '", opts$cores, "' is greater than the actual number of cores '", getDoParWorkers(), "'")
 }
 options(cores=opts$cores)
-if (existsFunction("setMKLthreads")) {
+#if (existsFunction("setMKLthreads")) {
 	printf("04. Setting %i MKL threads to be used", opts$threads)
 	printf("...setting number of threads for MKL")
 	Sys.setenv(MKL_NUM_THREADS=opts$threads)
-}
+#}
 
 suppressWarnings(suppressPackageStartupMessages(library("connectir")))
 
