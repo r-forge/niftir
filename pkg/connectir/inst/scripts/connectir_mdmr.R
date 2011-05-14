@@ -119,10 +119,11 @@ printf("...subject distances")
 ## read
 tmp <- attach.big.matrix(file.path(opts$indir, "subdist_gower.desc"))
 ## copy into memory
-if (is.null(opts$usesubs))
+if (is.null(opts$usesubs)) {
     opts$usesubs <- 1:sqrt(nrow(tmp))
-else
+} else {
     opts$usesubs <- as.numeric(read.table(opts$usesubs)[,1])
+}
 xdist <- slice.subdist(tmp, subs=opts$usesubs)  # will create a copy
 rm(tmp); invisible(gc(FALSE))
 ## check
