@@ -22,6 +22,7 @@ option_list <- list(
     make_option(c("-c", "--cores"), type="integer", default=2, help="Number of computer processors to use in parallel [default: %default]", metavar="number"),
     make_option(c("-t", "--threads"), type="integer", default=1, help="Number of computer processors to use in parallel for MKL library [default: %default]", metavar="number"),
     make_option("--blocksize", type="integer", default=0, dest="blocksize", help="How many sets of voxels should used in each iteration of computing the pseudo F-statistics (0 = auto) [default: %default]", metavar="number"),
+    make_option("--memlimit", type="integer", default=6, dest="memlimit", help="If blocksize is set to auto (--blocksize=0), then will set the blocksize to use a maximum of RAM specified by this option  [default: %default]", metavar="number"),
     make_option("--overwrite", action="store_true", default=FALSE, help="Overwrite output if it already exists (default is not to overwrite already existing output)"),
     make_option(c("-v", "--verbose"), action="store_true", default=TRUE, help="Print extra output [default]"),
     make_option(c("-q", "--quiet"), action="store_false", dest="verbose", help="Print little output")
@@ -161,10 +162,9 @@ if (opts$blocksize==0) {
     ) * getDoParWorkers() + mem_used4dmat + mem_used4fperms
     
     # limit in RAM use
-    mem_limit <- Sys.getenv("CONNECTIR_RAM_LIMIT")
-    mem_limit <- ifelse(mem_limit == "", 6, as.numeric(mem_limit))
+    mem_limit <- as.numeric(opts$memlimit)
     if (mem_limit < min_mem_needed)
-        stop(sprintf("You require at least %.2f GB of memory but are limited to %i GB. Please set the environmental variable CONNECTIR_RAM_LIMIT to a higher number to continue.", min_mem_needed, mem_limit))
+        stop(sprintf("You require at least %.2f GB of memory but are limited to %i GB. Please set the --memlimit option to a higher number to continue.", min_mem_needed, mem_limit))
     
     # amount of RAM for mdmr
     mem_used4mdmr <- mem_limit - mem_used4dmat - mem_used4fperms
