@@ -152,7 +152,7 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
         cormaps_list <- vbca_batch(funclist, inds_CHUNK, ztransform=ztransform)
         subdist_CHUNK <- sub.big.matrix(subdist, firstCol=blocks$starts[i], lastCol=blocks$ends[i])
         tmp <- compute_subdist_worker(cormaps_list, inds_CHUNK, subdist_CHUNK)
-        rm(inds_CHUNK, subdist_CHUNK, tmp)
+        rm(inds_CHUNK, subdist_CHUNK, tmp, cormaps_list)
         gc(FALSE)
         return(NULL)
     }

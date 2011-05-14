@@ -41,6 +41,24 @@ if (length(args) < 1) {
 }
 
 ###
+# Parallel processing setup
+###
+printf("03a. Setting %i cores to be used", opts$cores)
+if (opts$cores > 1) {
+    printf("...setting parallel processing with doMC")
+    suppressPackageStartupMessages(library("doMC"))
+    registerDoMC()
+    if (opts$cores > getDoParWorkers())
+    	stop("Number of -c/--cores specified '", opts$cores, "' is greater than the actual number of cores '", getDoParWorkers(), "'")
+}
+options(cores=opts$cores)
+if (existsFunction("setMKLthreads")) {
+	printf("03b. Setting %i MKL threads to be used", opts$threads)
+	printf("...setting number of threads for MKL")
+	Sys.setenv(MKL_NUM_THREADS=opts$threads)
+}
+
+###
 # Check Inputs
 ###
 printf("01. Checking options")
@@ -107,24 +125,6 @@ tmp <- matrix(xdist[,1], sqrt(nrow(xdist)), sqrt(nrow(xdist)))
 check_gmat(tmp)
 rm(tmp); invisible(gc(FALSE))
 
-
-###
-# Parallel processing setup
-###
-printf("03a. Setting %i cores to be used", opts$cores)
-if (opts$cores > 1) {
-    printf("...setting parallel processing with doMC")
-    suppressPackageStartupMessages(library("doMC"))
-    registerDoMC()
-    if (opts$cores > getDoParWorkers())
-    	stop("Number of -c/--cores specified '", opts$cores, "' is greater than the actual number of cores '", getDoParWorkers(), "'")
-}
-options(cores=opts$cores)
-if (existsFunction("setMKLthreads")) {
-	printf("03b. Setting %i MKL threads to be used", opts$threads)
-	printf("...setting number of threads for MKL")
-	setMKLthreads(opts$threads)
-}
 
 ###
 # Block size
