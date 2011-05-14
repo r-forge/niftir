@@ -197,7 +197,7 @@ if (opts$blocksize == 0) {
     
     # limit in RAM use
     mem_limit <- Sys.getenv("CONNECTIR_RAM_LIMIT")
-    mem_limit <- ifelse(mem_limit == "", 6, mem_limit)
+    mem_limit <- ifelse(mem_limit == "", 6, as.numeric(mem_limit))
     if (mem_limit < min_mem_needed)
         stop(sprintf("You require at least %i GB of memory but are limited to %i GB. Please set the environmental variable CONNECTIR_RAM_LIMIT to a higher number to continue.", min_mem_needed, mem_limit))
     
