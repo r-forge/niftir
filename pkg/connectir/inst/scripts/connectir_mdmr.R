@@ -171,7 +171,7 @@ if (opts$blocksize==0) {
     
     # block size
     opts$blocksize <- floor(gb2n(
-        mem_used4mdmr/((2*opts$permutations+nsubs^2)*getDoParWorkers())
+        mem_used4mdmr/((4*opts$permutations+2*nsubs^2)*getDoParWorkers())
     ))
     printf("%i", opts$blocksize)
     
@@ -191,7 +191,7 @@ mem_used4chunk <- n2gb(nsubs^2 * opts$blocksize * getDoParWorkers())
 mem_used <- mem_used4dmat + mem_used4fperms + mem_used4temp + mem_used4chunk
 
 printf("...will be using %.2f GB of RAM", mem_used)
-rm(nsubs, nvoxs, mem_used4dmat, mem_used4fpers, mem_used4temp, mem_used4chunk, mem_used)
+rm(nsubs, nvoxs, mem_used4dmat, mem_used4fperms, mem_used4temp, mem_used4chunk, mem_used)
 invisible(gc(FALSE))
 
 
@@ -202,6 +202,8 @@ printf("05. Computing MDMR")
 start.time <- Sys.time()
 
 res.mdmr <- mdmr(xdist, formula, model, nperms=opts$permutations, factors2perm=opts$factors2perm, block.size=opts$blocksize, verbose=opts$verbose, strata=opts$strata)
+rm(xdist)
+invisible(gc(FALSE))
 
 end.time <- Sys.time()
 printf("MDMR is done! It took: %.2f minutes\n", as.numeric(end.time-start.time, units="mins"))
@@ -212,3 +214,6 @@ printf("MDMR is done! It took: %.2f minutes\n", as.numeric(end.time-start.time, 
 ###
 printf("06. Saving MDMR Results")
 save_mdmr(res.mdmr, opts$indir, opts$outdir, formula, verbose=opts$verbose)
+rm(res.mdmr)
+invisible(gc(FALSE))
+
