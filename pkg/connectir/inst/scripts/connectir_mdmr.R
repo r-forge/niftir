@@ -106,12 +106,6 @@ if (!is.null(opts$factors2perm)) {
 # model
 printf("...model")
 model <- read.csv(opts$model)
-if (!is.null(opts$strata)) {
-    if (is.null(model[[opts$strata]]))
-        stop("Strata given but doesn't match any column in the input model")
-    else
-        opts$strata <- model[[opts$strata]]
-}
 # TODO: check if below works with more than one permuted factor
 if (!is.null(opts$factors2perm) && is.null(model[[opts$factors2perm]]))
     stop("Factors to permute given but doesn't match any column in the input model")
@@ -125,8 +119,9 @@ if (!is.null(opts$expr) && !is.null(opts$usesubs))
     stop("cannot specify both --expr and --usesubs")
 if (!is.null(opts$usesubs)) {
     opts$usesubs <- as.numeric(read.table(opts$usesubs)[,1])
-    if (nrow(model) == sqrt(nrow(tmp)))
+    if (nrow(model) == sqrt(nrow(tmp))) {
         model <- model[opts$usesubs,]
+	}
 } else if (!is.null(opts$expr)) {
     opts$usesubs <- eval(parse(text=sprintf("with(model, which(%s))", opts$expr)))
     if (length(opts$usesubs)==0)
@@ -135,6 +130,13 @@ if (!is.null(opts$usesubs)) {
         model <- model[opts$usesubs,]
 } else {
     opts$usesubs <- 1:sqrt(nrow(tmp))
+}
+## get strata
+if (!is.null(opts$strata)) {
+    if (is.null(model[[opts$strata]]))
+        stop("Strata given but doesn't match any column in the input model")
+    else
+        opts$strata <- model[[opts$strata]]
 }
 ## copy into memory
 xdist <- slice.subdist(tmp, subs=opts$usesubs)  # will create a copy
