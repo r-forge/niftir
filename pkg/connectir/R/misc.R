@@ -23,9 +23,11 @@ create_maskoverlap <- function(mask_fnames) {
     return(overlap)
 }
 
-load_and_mask_func_data <- function(fnames, mask) {
+# check, will check that dims are all same
+load_and_mask_func_data <- function(fnames, mask, check=FALSE) {
     if (is.character(mask))
         mask <- read.mask(mask)
+    
     dat.list <- lapply(fnames, function(f) {
         x <- read.big.nifti4d(f)
         x <- do.mask(x, mask)
@@ -34,6 +36,18 @@ load_and_mask_func_data <- function(fnames, mask) {
         gc(FALSE)
         y
     })
+    
+    if (check) {
+        nr <- nrow(dat.list[[1]])
+        nc <- ncol(dat.list[[1]])
+        for (i in 1:length(dat.list)) {
+            if (nr != nrow(dat.list[[i]]))
+                stop("loading functional data...not all inputs have the same # of 'timepoints'")
+            if (nc != ncol(dat.list[[i]]))
+                stop("loading functional data...not all inputs have the same # of voxels")
+        }
+    }
+    
     gc(FALSE)
     return(dat.list)
 }
