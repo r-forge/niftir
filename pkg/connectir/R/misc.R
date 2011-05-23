@@ -24,7 +24,7 @@ create_maskoverlap <- function(mask_fnames) {
 }
 
 # check, will check that dims are all same
-load_and_mask_func_data <- function(fnames, mask, check=FALSE) {
+load_and_mask_func_data <- function(fnames, mask, check=TRUE) {
     if (is.character(mask))
         mask <- read.mask(mask)
     
