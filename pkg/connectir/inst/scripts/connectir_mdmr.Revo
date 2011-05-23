@@ -110,7 +110,7 @@ if (!is.null(opts$usesubs)) {
         model <- model[opts$usesubs,]
 } else if (!is.null(opts$expr)) {
     opts$usesubs <- eval(parse(text=sprintf("with(model, which(%s))", opts$expr)))
-    if (length(inds)==0)
+    if (length(opts$usesubs)==0)
         stop("--expr led to no rows being left")
     if (nrow(model) == sqrt(nrow(tmp)))
         model <- model[opts$usesubs,]
