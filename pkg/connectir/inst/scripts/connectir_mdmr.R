@@ -16,6 +16,7 @@ option_list <- list(
     make_option(c("-o", "--outdir"), type="character", default="mdmr", help="Directory to output MDMR results (this will be within the input subdist directory)", metavar="MDMR"),
     make_option(c("-m", "--model"), type="character", default=NULL, help="Filename of a comma separated file with participant info in R friendly format where column names correspond to formula values... (required)", metavar="csv"),
     make_option("--usesubs", type="character", default=NULL, help="Filename with a list of subject indices to use from the subject distance matrices (default is to use all of them)", metavar="text-file"),
+    make_option("--expr", type="character", default=NULL, help="An expression based on the model that is used to restrict the subjects examined (can either use this or --usesubs, not both)", metavar="expression"),
     make_option("--strata", type="character", default=NULL, help="Only compute permutations within groups, you can specify the name of a column in your '--model' that indicates these groups (optional)", metavar="name"),
     make_option(c("-p", "--permutations"), type="integer", default=4999, help="Number of permutations to conduct for each voxel [default: %default]", metavar="number"),
     make_option("--factors2perm", type="character", default=NULL, help="Which factors to permute from the formula specified [default: all of them]", metavar="comma-separated list"),
@@ -119,19 +120,29 @@ if (!is.null(opts$factors2perm) && is.null(model[[opts$factors2perm]]))
 printf("...subject distances")
 ## read
 tmp <- attach.big.matrix(file.path(opts$indir, "subdist_gower.desc"))
-## copy into memory
-if (is.null(opts$usesubs)) {
-    opts$usesubs <- 1:sqrt(nrow(tmp))
-} else {
+## restrict which subjects to examine
+if (!is.null(opts$expr) && !is.null(opts$usesubs))
+    stop("cannot specify both --expr and --usesubs")
+else if (!is.null(opts$usesubs)) {
     opts$usesubs <- as.numeric(read.table(opts$usesubs)[,1])
+    if (nrow(model) == sqrt(nrow(tmp)))
+        model <- model[opts$usesubs,]
+} else if (!is.null(opts$expr)) {
+    opts$usesubs <- eval(parse(text=sprintf("with(model, which(%s))", opts$expr)))
+    if (length(inds)==0)
+        stop("--expr led to no rows being left")
+    if (nrow(model) == sqrt(nrow(tmp)))
+        model <- model[opts$usesubs,]
+} else {
+    opts$usesubs <- 1:sqrt(nrow(tmp))
 }
+## copy into memory
 xdist <- slice.subdist(tmp, subs=opts$usesubs)  # will create a copy
 rm(tmp); invisible(gc(FALSE))
 ## check
 tmp <- matrix(xdist[,1], sqrt(nrow(xdist)), sqrt(nrow(xdist)))
 check_gmat(tmp)
 rm(tmp); invisible(gc(FALSE))
-
 
 ###
 # Block size
@@ -145,6 +156,8 @@ gb2n <- function(x) x/8*1024^3
 # general info
 nsubs <- sqrt(nrow(xdist))
 nvoxs <- ncol(xdist)
+if (nrow(model) != nsubs)
+    stop("Number of subjects in distance matrix does not match number of subjects in model")
 
 # RAM for distance matrix
 mem_used4dmat <- n2gb(nsubs^2 * nvoxs)

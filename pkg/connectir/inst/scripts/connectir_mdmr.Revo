@@ -101,12 +101,23 @@ if (!is.null(opts$factors2perm) && is.null(model[[opts$factors2perm]]))
 printf("...subject distances")
 ## read
 tmp <- attach.big.matrix(file.path(opts$indir, "subdist_gower.desc"))
-## copy into memory
-if (is.null(opts$usesubs)) {
-    opts$usesubs <- 1:sqrt(nrow(tmp))
-} else {
+## restrict which subjects to examine
+if (!is.null(opts$expr) && !is.null(opts$usesubs))
+    stop("cannot specify both --expr and --usesubs")
+else if (!is.null(opts$usesubs)) {
     opts$usesubs <- as.numeric(read.table(opts$usesubs)[,1])
+    if (nrow(model) == sqrt(nrow(tmp)))
+        model <- model[opts$usesubs,]
+} else if (!is.null(opts$expr)) {
+    opts$usesubs <- eval(parse(text=sprintf("with(model, which(%s))", opts$expr)))
+    if (length(inds)==0)
+        stop("--expr led to no rows being left")
+    if (nrow(model) == sqrt(nrow(tmp)))
+        model <- model[opts$usesubs,]
+} else {
+    opts$usesubs <- 1:sqrt(nrow(tmp))
 }
+## copy into memory
 xdist <- slice.subdist(tmp, subs=opts$usesubs)  # will create a copy
 rm(tmp); invisible(gc(FALSE))
 ## check
