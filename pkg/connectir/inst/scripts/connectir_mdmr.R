@@ -123,7 +123,7 @@ tmp <- attach.big.matrix(file.path(opts$indir, "subdist_gower.desc"))
 ## restrict which subjects to examine
 if (!is.null(opts$expr) && !is.null(opts$usesubs))
     stop("cannot specify both --expr and --usesubs")
-else if (!is.null(opts$usesubs)) {
+if (!is.null(opts$usesubs)) {
     opts$usesubs <- as.numeric(read.table(opts$usesubs)[,1])
     if (nrow(model) == sqrt(nrow(tmp)))
         model <- model[opts$usesubs,]
