@@ -1,5 +1,5 @@
 vbca <- function(bigmat, cols, ztransform=FALSE, outmat=NULL) {
-    A <- deepcopy(bigmat, cols=cols)
+    A <- deepcopy(bigmat, cols=cols, shared=FALSE)
 #    A <- sub.big.matrix(bigmat, firstCol=firstCol, lastCol=lastCol)
 	B <- bigmat
 	if (is.null(outmat))
