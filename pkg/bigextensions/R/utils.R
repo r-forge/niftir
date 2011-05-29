@@ -6,9 +6,9 @@ deepcopy <- function (inmat, cols = NULL, rows = NULL, outmat=NULL, ...) {
     if (is.null(rows)) 
         rows <- 1:nrow(inmat)
     if (is.null(outmat)) {
-        # note: type, seperated, and shared args cannot be user supplied
+        # note: type and seperated cannot be user supplied
         outmat <- big.matrix(length(rows), length(cols), type = typeof(inmat), 
-            separated = is.separated(inmat), shared = is.shared(inmat), ...)
+            separated = is.separated(inmat), ...)
     }
     
     .Call("BigDeepCopyMain", inmat@address, outmat@address, as.double(rows), 
