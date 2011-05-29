@@ -131,7 +131,7 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
     nterms <- length(H2mats)
     
     # get part of bigmatrix with Gower's centered subject distances
-    Gmat.chunk <- deepcopy(Gmat, cols=inds)
+    Gmat.chunk <- deepcopy(Gmat, cols=inds, shared=FALSE)
     
     # get part of Pmat
     Pmat.chunk <- sub.big.matrix(Pmat, firstRow=firstVox, lastRow=lastVox)
