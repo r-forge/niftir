@@ -251,9 +251,6 @@ invisible(gc(FALSE))
 end.time <- Sys.time()
 printf("Distance computation is done! It took: %.2f minutes\n", as.numeric(end.time-start.time, units="mins"))
 
-if (any(is.na(subdist[2,])))
-    stop("Found NA's in second row of subdist")
-
 ###
 # Save the subdist
 ###
@@ -261,6 +258,11 @@ printf("07. Saving subject distances")
 tmp <- deepcopy(subdist, backingpath=outdir, backingfile="subdist.bin", descriptorfile="subdist.desc")
 rm(tmp)
 invisible(gc(FALSE))
+
+if (any(is.na(subdist[2,]))) {
+    print(subdist[2,])
+    stop("Found NA's in second row of subdist")
+}
 
 
 ###

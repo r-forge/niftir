@@ -260,6 +260,10 @@ tmp <- deepcopy(subdist, backingpath=outdir, backingfile="subdist.bin", descript
 rm(tmp)
 invisible(gc(FALSE))
 
+if (any(is.na(subdist[2,]))) {
+    print(subdist[2,])
+    stop("Found NA's in second row of subdist")
+}
 
 ###
 # Create gower matrix
