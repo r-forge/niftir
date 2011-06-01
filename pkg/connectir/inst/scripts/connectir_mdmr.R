@@ -13,10 +13,9 @@ printf <- function(msg, ..., newline=TRUE) {
 # Make option list
 option_list <- list(
     make_option(c("-i", "--indir"), type="character", default=NULL, help="Input subdist directory (required)", metavar="subdist"),
-    make_option(c("-o", "--outdir"), type="character", default="mdmr", help="Directory to output MDMR results (this will be within the input subdist directory)", metavar="MDMR"),
+    make_option(c("-f", "--formula"), type="character", default=NULL, help="a typical R model formula that specifies the factors or continuous variables that may expain the variance in each voxel's subject distance matrix", metavar="A + B:C"),
     make_option(c("-m", "--model"), type="character", default=NULL, help="Filename of a comma separated file with participant info in R friendly format where column names correspond to formula values... (required)", metavar="csv"),
     make_option("--usesubs", type="character", default=NULL, help="Filename with a list of subject indices to use from the subject distance matrices (default is to use all of them)", metavar="text-file"),
-    make_option("--expr", type="character", default=NULL, help="An expression based on the model that is used to restrict the subjects examined (can either use this or --usesubs, not both)", metavar="expression"),
     make_option("--strata", type="character", default=NULL, help="Only compute permutations within groups, you can specify the name of a column in your '--model' that indicates these groups (optional)", metavar="name"),
     make_option(c("-p", "--permutations"), type="integer", default=4999, help="Number of permutations to conduct for each voxel [default: %default]", metavar="number"),
     make_option("--factors2perm", type="character", default=NULL, help="Which factors to permute from the formula specified [default: all of them]", metavar="comma-separated list"),
@@ -30,7 +29,7 @@ option_list <- list(
 )
     
 # Make class/usage
-parser <- OptionParser(usage = "%prog [options] formula", option_list=option_list, add_help_option=TRUE)
+parser <- OptionParser(usage = "%prog [options] output", option_list=option_list, add_help_option=TRUE)
 
 # Parse
 parser_out <- parse_args(parser, positional_arguments = TRUE)
@@ -38,7 +37,7 @@ args <- parser_out$args
 opts <- parser_out$options
 
 # Check options/arguments
-if (length(args) < 1) {
+if (length(args) != 1) {
     print_help(parser)
     quit(save="no", status=1)
 }
@@ -70,6 +69,8 @@ if (is.null(opts$indir))
     stop("must specify -i/--indir option")
 if (is.null(opts$model))
     stop("must specify -m/--model option")
+if (is.null(opts$formula))
+    stop("must specify -f/--formula option")
 if (opts$overwrite)
     stop("Right now the overwrite function isn't implemented")
 if (opts$permutations < 2)
@@ -81,7 +82,7 @@ opts$indir <- abspath(opts$indir)
 invisible(check_subdist(opts$indir))
 if (!file.exists(opts$model))
     stop("-m/--model ", opts$model, " does not exist")
-opts$outdir <- file.path(opts$indir, opts$outdir)
+opts$outdir <- file.path(opts$indir, args[1])
 if (file.exists(opts$outdir))
     stop("Output mdmr directory '", opts$outdir,  "' already exists")
 if (!file.exists(dirname(opts$outdir)))
@@ -94,7 +95,7 @@ printf("02. Setting up inputs")
 
 # formula
 printf("...formula")
-formula <- as.formula(sprintf(". ~ %s", paste(args, collapse=" ")))
+formula <- as.formula(sprintf(". ~ %s", opts$formula))
 
 # factors2perm
 if (!is.null(opts$factors2perm)) {
