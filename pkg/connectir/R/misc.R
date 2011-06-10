@@ -41,8 +41,8 @@ load_and_mask_func_data <- function(fnames, mask, check=TRUE) {
         nr <- nrow(dat.list[[1]])
         nc <- ncol(dat.list[[1]])
         for (i in 1:length(dat.list)) {
-            if (nr != nrow(dat.list[[i]]))
-                warning("loading functional data...not all inputs have the same # of 'timepoints'")
+            #if (nr != nrow(dat.list[[i]]))
+            #    warning("loading functional data...not all inputs have the same # of 'timepoints'")
             if (nc != ncol(dat.list[[i]]))
                 stop("loading functional data...not all inputs have the same # of voxels")
         }
