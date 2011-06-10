@@ -226,7 +226,9 @@ rm(n2gb, gb2n, mem_used4func, mem_used4dmat, n4onemap)
 
 # create the subdist directory (and get the subject distance matrix)
 printf("...creating subdist directory and files")
-masks <- list(maskoverlap=maskoverlap, preseedmask=preseedmask, prebrainmask=prebrainmask, seedmask=seedmask, brainmask=brainmask)
+masks <- list(maskoverlap=maskoverlap, seedmask=seedmask, brainmask=brainmask)
+if (!is.null(preseedmask)) masks$preseedmask <- preseedmask
+if (!is.null(prebrainmask)) masks$prebrainmask <- prebrainmask
 subdist <- create_subdist(outdir, infiles, masks, opts) # note: this isn't filebacked yet
 
 # clear memory of unneeded stuff + get seedinds

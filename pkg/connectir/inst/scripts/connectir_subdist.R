@@ -214,7 +214,7 @@ if (opts$blocksize == 0) {
     printf("...adjusting blocksize based on # of processors and will use: ", newline=F)
     
     # set block size based on # of processors
-    opts$blocksize <- floor(opts$blocksize/getDoParWorkers)
+    opts$blocksize <- floor(opts$blocksize/getDoParWorkers())
     
     # calculate amount of memory that will be used
     mem_used <- n2gb(opts$blocksize * n4onemap)
@@ -226,7 +226,9 @@ rm(n2gb, gb2n, mem_used4func, mem_used4dmat, n4onemap)
 
 # create the subdist directory (and get the subject distance matrix)
 printf("...creating subdist directory and files")
-masks <- list(maskoverlap=maskoverlap, preseedmask=preseedmask, prebrainmask=prebrainmask, seedmask=seedmask, brainmask=brainmask)
+masks <- list(maskoverlap=maskoverlap, seedmask=seedmask, brainmask=brainmask)
+if (!is.null(preseedmask)) masks$preseedmask <- preseedmask
+if (!is.null(prebrainmask)) masks$prebrainmask <- prebrainmask
 subdist <- create_subdist(outdir, infiles, masks, opts) # note: this isn't filebacked yet
 
 # clear memory of unneeded stuff + get seedinds
