@@ -302,6 +302,11 @@ tryCatch({
   print(ex$call)
   cat("\nSaving options...\n")
   save(args, opts, printf, file="called_options.rda")
+}, interrupt = function(ex) {
+  cat("\nKill signal sent. Trying to clean up...\n")
+  rm(list(ls()))
+  gc(FALSE)
+  cat("...success\n")
 }, finally = {
   cat("\nRemoving everything from memory\n")
   rm(list=ls())
