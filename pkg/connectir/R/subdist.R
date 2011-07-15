@@ -105,10 +105,12 @@ create_subdist <- function(outdir, infiles, masks, opts) {
     dir.create(inmaskdir)
     
     # Create symlinks for the input funcs
-    for (i in 1:length(infiles)) {
-        from <- infiles[i]
-        to <- file.path(infuncdir, sprintf("scan%04i.%s", i, getext(from)))
-        file.symlink(from, to)
+    if (!opts$"no-link-functionals") {
+        for (i in 1:length(infiles)) {
+            from <- infiles[i]
+            to <- file.path(infuncdir, sprintf("scan%04i.%s", i, getext(from)))
+            file.symlink(from, to)
+        }
     }
     
     # Get a header file from the first functional

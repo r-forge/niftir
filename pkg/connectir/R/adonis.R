@@ -33,7 +33,7 @@ mdmr.prepare.model <- function(formula, model, contr.unordered="contr.sum", cont
     rhs <- rhs[, qrhs$pivot, drop = FALSE]
     rhs <- rhs[, 1:qrhs$rank, drop = FALSE]
     
-    # Check if rank deficient
+    # Check if rank deficient?
     solve(t(rhs) %*% rhs)
     
     # Get different groups of variables
@@ -42,15 +42,18 @@ mdmr.prepare.model <- function(formula, model, contr.unordered="contr.sum", cont
     nterms <- length(u.grps) - 1
     factor.names <- attr(attr(rhs.frame, "terms"), "term.labels")[u.grps]
     
-    # Get hat matrix
-    H <- rhs %*% ginv(rhs)
-    IH <- diag(n) - H
-    
-    # Create individual hat matrices that resolve each factor
+    # Get hat matrices
     H2s <- lapply(2:length(u.grps), function(j) {
-        iis <- grps!=u.grps[j]
-        H - rhs[,iis] %*% ginv(rhs[,iis])
+        Xj <- rhs[, grps %in% u.grps[1:j]]
+        qrX <- qr(Xj, tol = TOL)
+        Q <- qr.Q(qrX)
+        tcrossprod(Q[, 1:qrX$rank])
     })
+    H <- H2s[[nterms]]  # complete model
+    IH <- diag(n) - H
+    if (length(H2s) > 1) 
+        for (i in length(H2s):2) H2s[[i]] <- H2s[[i]] - H2s[[i - 
+            1]]
     
     # Get degrees of freedom
     df.Res <- n - qrhs$rank
