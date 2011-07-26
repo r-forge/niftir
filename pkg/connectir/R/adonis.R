@@ -272,7 +272,7 @@ save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE) {
     ## save
     vcat(verbose, "...saving model info")
     save(modelinfo, file=mpath("modelinfo.rda"))
-    ## formula
+    ## formulax
     cat(as.character(formula)[-c(1:2)], file=mpath("formula.txt"))
     ## factors
     vcat(verbose, "...saving factor names")
@@ -296,7 +296,7 @@ save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE) {
     Pmat <- obj$pvals
     for (i in 1:nfactors) {
         fn <- mpath(sprintf("pvals_%s.nii.gz", factornames[i]))
-        write.nifti(Pmat[,i], header, mask, outfile=fn)
+        write.nifti(1 - Pmat[,i], header, mask, outfile=fn)
     }
     
     vcat(verbose, "...saving FDR corrected p-values")
@@ -305,7 +305,7 @@ save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE) {
         fn <- mpath(sprintf("fdr_pvals_%s.nii.gz", factornames[i]))
         tmp <- p.adjust(Pmat[,i], "BH")
         CorrPmat[,i] <- tmp
-        write.nifti(tmp, header, mask, outfile=fn)
+        write.nifti(1 - tmp, header, mask, outfile=fn)
         rm(tmp)
         gc(FALSE)
     }
