@@ -18,6 +18,8 @@ permuted.index <- function (n, strata)
 
 # NOTE: assume that y-intercept exists...need to deal with case when don't have intercept
 mdmr.prepare.model <- function(formula, model, contr.unordered="contr.sum", contr.ordered="contr.poly") {
+    TOL <- 1e-07
+
     n <- nrow(model)
     Terms <- terms(formula, data = model)
     formula[[2]] <- NULL
