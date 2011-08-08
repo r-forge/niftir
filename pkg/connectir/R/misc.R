@@ -24,14 +24,17 @@ create_maskoverlap <- function(mask_fnames) {
 }
 
 # check, will check that dims are all same
-load_and_mask_func_data <- function(fnames, mask, check=TRUE, ...) {
+load_and_mask_func_data <- function(fnames, mask, check=TRUE, type=NULL, ...) {
     if (is.character(mask))
         mask <- read.mask(mask)
     
     dat.list <- lapply(fnames, function(f) {
-        x <- read.big.nifti4d(f, ...)
+        if (is.null(type))
+            x <- read.big.nifti4d(f, ...)
+        else
+            x <- read.big.nifti4d(f, type=type, ...)
         x <- do.mask(x, mask)
-        y <- scale(x, to.copy=T, ...)
+        y <- scale(x, to.copy=T, ...) # fix with update of deepcopy!
         rm(x)
         gc(FALSE)
         y
