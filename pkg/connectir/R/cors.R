@@ -1,9 +1,9 @@
-vbca <- function(bigmat, cols, ztransform=FALSE, outmat=NULL) {
+vbca <- function(bigmat, cols, ztransform=FALSE, outmat=NULL, ...) {
     A <- deepcopy(bigmat, cols=cols, shared=FALSE)
 #    A <- sub.big.matrix(bigmat, firstCol=firstCol, lastCol=lastCol)
 	B <- bigmat
 	if (is.null(outmat))
-	    C <- big.matrix(ncol(A), ncol(B), init=0, type="double")
+	    C <- big.matrix(ncol(A), ncol(B), init=0, type="double", ...)
 	else if (ncol(A)==nrow(outmat) && ncol(B)==ncol(outmat))
 	    C <- outmat
 	else
@@ -15,9 +15,9 @@ vbca <- function(bigmat, cols, ztransform=FALSE, outmat=NULL) {
 	invisible(C)
 }
 
-vbca_batch <- function(subs.bigmats, cols, ztransform=FALSE) {
+vbca_batch <- function(subs.bigmats, cols, ztransform=FALSE, ...) {
     nsubjects <- length(subs.bigmats)
-    lapply(1:nsubjects, function(i) vbca(subs.bigmats[[i]], cols, ztransform))
+    lapply(1:nsubjects, function(i) vbca(subs.bigmats[[i]], cols, ztransform, ...))
 }
 
 gcor <- function(bigmat, blocksize, ztransform=FALSE, verbose=TRUE) {
