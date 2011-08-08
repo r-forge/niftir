@@ -17,7 +17,7 @@ get_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts) {
     }
 
     # amount of RAM used in GB for functionals
-    mem_used4func <- sum(nsubs*nvoxs*subs.ntpts)
+    mem_used4func <- sum(sapply(subs.ntpts, function(x) n2gb(x*nvoxs)))
     
     # amount of RAM used for distance matrix
     mem_used4dmat <- n2gb(nsubs^2 * nvoxs)
