@@ -21,7 +21,7 @@ option_list <- list(
     make_option(c("-t", "--threads"), type="integer", default=1, help="Number of computer processors to use in parallel for MKL library [default: %default]", metavar="number"),
     make_option("--overwrite", action="store_true", default=FALSE, help="Overwrite output that already exists (default is not to overwrite already existing output)"),
     make_option("--no-link-functionals", action="store_true", default=FALSE, help="Will not create soft links to each of the functional images with the subdist directory"),
-    make_option("--check-functionals", action="store_true", default=FALSE, help="This will check if any of the input functional images has a point with a value of zero, which is not allowed"),
+    make_option("--check-functionals", action="store_true", default=FALSE, help="This will check if any of the input functional images has a point with a value equal to or less than zero, which is not allowed"),
     make_option(c("-v", "--verbose"), action="store_true", default=TRUE, help="Print extra output [default]"),
     make_option(c("-q", "--quiet"), action="store_false", dest="verbose", help="Print little output")
 )
@@ -192,9 +192,8 @@ tryCatch({
     for (i in 1:length(funclist)) {
       func <- funclist[[i]]
       x <- colmin(func)
-      if (any(x == 0)) {
-          stop("Masked functional data has points with a value of zero, this is not allowed: ", 
-            infiles[[i]])
+      if (any(x <= 0)) {
+          stop("Masked functional data has points with a value equal or less than zero, this is not allowed: ", infiles[[i]])
       }
     }
   }
