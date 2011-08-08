@@ -176,8 +176,8 @@ tryCatch({
   ntpts <- sapply(infiles, function(x) {
       hdr <- read.nifti.header(x)
       if (length(hdr$dim) != 4)
-        stop("Input functional file must be 4 dimensions: ", x)
-      return(hdr[[4]])
+        stop("Input functional file must be 4 dimensions: ", x, ", but is ", length(hdr$dim))
+      return(hdr$dim[[4]])
   })
   opts <- get_memlimit(opts, nsubs, nvoxs, ntpts)
   
