@@ -221,7 +221,7 @@ tryCatch({
   # Save the subdist
   ###
   printf("07. Saving subject distances")
-  tmp <- deepcopy(subdist, backingpath=outdir, backingfile="subdist.bin", descriptorfile="subdist.desc", shared=use_shared)
+  tmp <- deepcopy(subdist, backingpath=outdir, backingfile="subdist.bin", descriptorfile="subdist.desc")
   rm(tmp)
   invisible(gc(FALSE))
 
@@ -249,7 +249,7 @@ tryCatch({
   # Save gower matrix
   ###
   printf("09. Saving gower's centered matrices")
-  tmp <- deepcopy(gdist, backingpath=outdir, backingfile="subdist_gower.bin", descriptorfile="subdist_gower.desc", shared=use_shared)
+  tmp <- deepcopy(gdist, backingpath=outdir, backingfile="subdist_gower.bin", descriptorfile="subdist_gower.desc")
   rm(tmp, gdist)
   invisible(gc(FALSE))
 
