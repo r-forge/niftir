@@ -175,7 +175,7 @@ tryCatch({
   nvoxs <- sum(brainmask)
   ntpts <- sapply(infiles, function(x) {
       hdr <- read.nifti.header(x)
-      if (length(hdr$dim))
+      if (length(hdr$dim) != 4)
         stop("Input functional file must be 4 dimensions: ", x)
       return(hdr[[4]])
   })
