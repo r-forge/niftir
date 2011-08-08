@@ -150,10 +150,15 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
     dfun <- function(i, ...) {
         if (verbose)
             update(pb, i)
+        print("hey1")
         inds_CHUNK <- seed_inds[blocks$starts[i]:blocks$ends[i]]
+        print("hey2")
         cormaps_list <- vbca_batch(funclist, inds_CHUNK, ztransform=ztransform)
+        print("hey3")
         subdist_CHUNK <- sub.big.matrix(subdist, firstCol=blocks$starts[i], lastCol=blocks$ends[i])
-        tmp <- compute_subdist_worker(cormaps_list, inds_CHUNK, subdist_CHUNK, shared=FALSE)
+        print("hey4")
+        tmp <- compute_subdist_worker(cormaps_list, inds_CHUNK, subdist_CHUNK)
+        print("hey5")
         rm(inds_CHUNK, subdist_CHUNK, tmp, cormaps_list)
         gc(FALSE)
         return(NULL)
@@ -187,11 +192,11 @@ compute_subdist_worker <- function(sub.cormaps, inds, outmat=NULL, type="double"
         stop("length of inds doesn't match nrow of first sub.cormaps element")
     
     if (is.null(outmat))
-        outmat <- big.matrix(nsubs^2, nseeds, type=type, ...)
+        outmat <- big.matrix(nsubs^2, nseeds, type=type, shared=TRUE, ...)
     else if (ncol(outmat) != nseeds || nrow(outmat) != nsubs^2)
         stop("dimensions of outmat do not match nsubs and nseeds values")
     
-    subsMap <- big.matrix(nvoxs-1, nsubs, type=type, ...)
+    subsMap <- big.matrix(nvoxs-1, nsubs, type=type, shared=FALSE, ...)
     ALPHA <- 1/(nvoxs-2)
     voxs <- 1:nvoxs
     for (i in 1:nseeds) {
