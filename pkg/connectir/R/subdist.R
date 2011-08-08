@@ -150,15 +150,10 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
     dfun <- function(i, ...) {
         if (verbose)
             update(pb, i)
-        print("hey1")
         inds_CHUNK <- seed_inds[blocks$starts[i]:blocks$ends[i]]
-        print("hey2")
         cormaps_list <- vbca_batch(funclist, inds_CHUNK, ztransform=ztransform)
-        print("hey3")
         subdist_CHUNK <- sub.big.matrix(subdist, firstCol=blocks$starts[i], lastCol=blocks$ends[i])
-        print("hey4")
         tmp <- compute_subdist_worker(cormaps_list, inds_CHUNK, subdist_CHUNK)
-        print("hey5")
         rm(inds_CHUNK, subdist_CHUNK, tmp, cormaps_list)
         gc(FALSE)
         return(NULL)
