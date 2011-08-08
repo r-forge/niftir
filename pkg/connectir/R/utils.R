@@ -42,9 +42,6 @@ get_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts) {
         # block size
         opts$blocksize <- floor(gb2n(mem_used4conn)/(n4onemap*getDoParWorkers()))
         printf("%i (with RAM limit of %.2f GB)", opts$blocksize, mem_limit)
-
-        # clear variables
-        rm(min_mem_needed, mem_used4conn, mem_limit)
     } else {
         printf("...adjusting blocksize based on # of processors and will use: ", newline=F)
 
@@ -54,9 +51,7 @@ get_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts) {
         # calculate amount of memory that will be used
         mem_used <- n2gb(opts$blocksize * n4onemap)
         printf("%.2f GB of RAM", mem_used)
-        rm(mem_used)
     }
-    rm(n2gb, gb2n, mem_used4func, mem_used4dmat, n4onemap)
     
     return(opts)
 }
