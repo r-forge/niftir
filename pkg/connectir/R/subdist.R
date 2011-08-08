@@ -142,7 +142,7 @@ create_subdist <- function(outdir, infiles, masks, opts, ...) {
     big.matrix(nsubs^2, nvoxs, type="double", ...)
 }
 
-compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform, start=1, verbose=TRUE) {
+compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform, start=1, verbose=TRUE, ...) {
     nseeds <- length(seed_inds)
     blocks <- niftir.split.indices(start, nseeds, by=blocksize)
     
