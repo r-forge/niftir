@@ -142,18 +142,18 @@ create_subdist <- function(outdir, infiles, masks, opts, ...) {
     big.matrix(nsubs^2, nvoxs, type="double", ...)
 }
 
-compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform, start=1, verbose=TRUE, ...) {
+compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform, start=1, verbose=TRUE) {
     nseeds <- length(seed_inds)
     blocks <- niftir.split.indices(start, nseeds, by=blocksize)
     
 #    dfun <- function(i, blocks, seed_inds, funclist, subdist, ztransform, verbose, pb) {
-    dfun <- function(i) {
+    dfun <- function(i, ...) {
         if (verbose)
             update(pb, i)
         inds_CHUNK <- seed_inds[blocks$starts[i]:blocks$ends[i]]
         cormaps_list <- vbca_batch(funclist, inds_CHUNK, ztransform=ztransform)
         subdist_CHUNK <- sub.big.matrix(subdist, firstCol=blocks$starts[i], lastCol=blocks$ends[i])
-        tmp <- compute_subdist_worker(cormaps_list, inds_CHUNK, subdist_CHUNK)
+        tmp <- compute_subdist_worker(cormaps_list, inds_CHUNK, subdist_CHUNK, shared=FALSE)
         rm(inds_CHUNK, subdist_CHUNK, tmp, cormaps_list)
         gc(FALSE)
         return(NULL)

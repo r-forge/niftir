@@ -210,7 +210,7 @@ tryCatch({
   start.time <- Sys.time()
 
   printf("06. Computing subject distances")
-  compute_subdist(funclist, subdist, seed_inds=seedinds, blocksize=opts$blocksize, ztransform=opts$ztransform, verbose=opts$verbose, shared=use_shared)
+  compute_subdist(funclist, subdist, seed_inds=seedinds, blocksize=opts$blocksize, ztransform=opts$ztransform, verbose=opts$verbose)
   rm(funclist)
   invisible(gc(FALSE))
 
