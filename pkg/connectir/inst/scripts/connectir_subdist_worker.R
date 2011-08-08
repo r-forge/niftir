@@ -62,7 +62,7 @@ tryCatch({
   }
   
   # want shared memory or not
-  use_shared = ifelse(opts$cores == 1, TRUE, FALSE)
+  use_shared = ifelse(opts$cores == 1, FALSE, TRUE)
   
   suppressWarnings(suppressPackageStartupMessages(library("connectir")))
 
