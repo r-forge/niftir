@@ -24,14 +24,14 @@ create_maskoverlap <- function(mask_fnames) {
 }
 
 # check, will check that dims are all same
-load_and_mask_func_data <- function(fnames, mask, check=TRUE) {
+load_and_mask_func_data <- function(fnames, mask, check=TRUE, ...) {
     if (is.character(mask))
         mask <- read.mask(mask)
     
     dat.list <- lapply(fnames, function(f) {
-        x <- read.big.nifti4d(f)
+        x <- read.big.nifti4d(f, ...)
         x <- do.mask(x, mask)
-        y <- scale(x, to.copy=T)
+        y <- scale(x, to.copy=T, ...)
         rm(x)
         gc(FALSE)
         y

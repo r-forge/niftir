@@ -92,7 +92,7 @@ check_subdist <- function(sdir) {
 
 # This creates a new subdist directory and relevant files
 # and returns a new subdist object
-create_subdist <- function(outdir, infiles, masks, opts) {
+create_subdist <- function(outdir, infiles, masks, opts, ...) {
     if (file.exists(outdir))
         stop("Output cannot exist")
     
@@ -139,7 +139,7 @@ create_subdist <- function(outdir, infiles, masks, opts) {
     # Want to create subdist matrix
     nsubs <- length(infiles)
     nvoxs <- sum(masks$brainmask)
-    big.matrix(nsubs^2, nvoxs, type="double")
+    big.matrix(nsubs^2, nvoxs, type="double", ...)
 }
 
 compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform, start=1, verbose=TRUE) {
