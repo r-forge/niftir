@@ -184,7 +184,7 @@ tryCatch({
   ## functional data
   printf("...reading and masking the functional data")
   # 1. check if this is ok
-  funclist <- load_and_mask_func_data(infiles, brainmask, shared=use_shared)
+  funclist <- load_and_mask_func_data(infiles, brainmask, shared=use_shared, type="double")
   invisible(gc(FALSE))
 
   # create the subdist directory (and get the subject distance matrix)
