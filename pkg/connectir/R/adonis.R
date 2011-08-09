@@ -142,10 +142,10 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
     Pmat.chunk <- sub.big.matrix(Pmat, firstRow=firstVox, lastRow=lastVox)
     
     # compute error term
-    error.variance <- big.matrix(nperms, nvoxs, type="double")
+    error.variance <- big.matrix(nperms, nvoxs, type="double", shared=FALSE)
     dgemm(C=error.variance, A=IHmat, B=Gmat.chunk, TRANSA='t')
     
-    explained.variance <- big.matrix(nperms, nvoxs, type="double")
+    explained.variance <- big.matrix(nperms, nvoxs, type="double", shared=FALSE)
     for (i in 1:nterms) {
         # compute explained variance
         dgemm(C=explained.variance, A=H2mats[[i]], B=Gmat.chunk, TRANSA='t')
