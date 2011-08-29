@@ -1,4 +1,17 @@
-#include "connectir/connectir.h"
+// don't directly call connectir.h since this causes problems
+// that haven't figured out how to fix
+
+#include "connectir/connectirDefines.h"
+
+#include <string>
+#include "bigmemory/BigMatrix.h"
+#include "bigmemory/MatrixAccessor.hpp"
+#include "bigmemory/bigmemoryDefines.h"
+#include "bigmemory/isna.hpp"
+
+#include <R.h>
+#include <Rinternals.h>
+#include <Rdefines.h>
 
 #define Z_STOP \
     BEGIN_RCPP \
@@ -8,15 +21,14 @@
 
 template<typename CType, typename BMAccessorType>
 SEXP CombineSubMaps(BigMatrix *oneVox_allSubs, SEXP allVoxs_allSubs, index_type seed, double *pVoxs, index_type nvoxs, index_type nsubs) {
+    //using namespace Rcpp;
     
     BMAccessorType outMat( *oneVox_allSubs );
     
-    //BEGIN_RCPP
     if (nsubs != oneVox_allSubs->ncol())
         Rf_error("nsubs must equal oneVox_allSubs->ncol");
     if (nvoxs != oneVox_allSubs->nrow())
         Rf_error("nsubs must equal oneVox_allSubs->ncol");
-    //END_RCPP
     
     // loop through each subject's map
     index_type s = 0;
@@ -33,8 +45,11 @@ SEXP CombineSubMaps(BigMatrix *oneVox_allSubs, SEXP allVoxs_allSubs, index_type 
     BigMatrix *allVoxs_oneSub;
     SEXP Rp;
     SEXP tmp;
+    //RObject RallVoxs_oneSub;
     for (s=0; s < nsubs; ++s) {
         PROTECT(tmp = VECTOR_ELT(allVoxs_allSubs, s));
+        //RallVoxs_oneSub(tmp);
+        //Rp = RallVoxs_oneSub.slot("address");
         PROTECT(Rp = GET_SLOT(tmp, install("address")));
         //tmp = allVoxs_allSubs[s];
         //RObject RallVoxs_oneSub(tmp);

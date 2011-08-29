@@ -55,9 +55,28 @@ create.header <- function(default_header=NULL, ...) {
     return(header)
 }
 
+get_datatype <- function(name) {
+    datatype <- switch(name, 
+        char=2,
+        short=4,
+        int=8,
+        float=32,
+        double=64,
+        "ERROR"
+    )
+    if (datatype == "ERROR")
+        stop("Incorrect datatype ", name)
+    return(datatype)
+}
+
 autocal <- function(x, header) {
     header$cal.min <- min(x)
     header$cal.max <- max(x)
+    header$datatype = switch(typeof(x), 
+        character=2,
+        integer=8,
+        double=64
+    )
     return(header)
 }
 

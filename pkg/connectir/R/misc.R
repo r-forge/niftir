@@ -27,6 +27,8 @@ create_maskoverlap <- function(mask_fnames) {
 load_and_mask_func_data <- function(fnames, mask, check=TRUE, type=NULL, ...) {
     if (is.character(mask))
         mask <- read.mask(mask)
+    if (is.character(fnames))
+        fnames <- list(fnames)
     
     dat.list <- lapply(fnames, function(f) {
         if (is.null(type))
@@ -52,7 +54,11 @@ load_and_mask_func_data <- function(fnames, mask, check=TRUE, type=NULL, ...) {
     }
     
     gc(FALSE)
-    return(dat.list)
+    
+    if (length(fnames) == 1)
+        return(dat.list[[1]])
+    else
+        return(dat.list)
 }
 
 # BORROWED CODE FROM MASS PACKAGE

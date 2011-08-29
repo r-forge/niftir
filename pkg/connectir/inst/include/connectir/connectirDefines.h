@@ -1,6 +1,16 @@
 #ifndef _connectir_DEFINES_H
 #define _connectir_DEFINES_H
 
+// take an 'input' R big matrix variable to an 'output' double armadillo matrix
+#define BM_TO_ARMA(INPUT, OUTPUT) \
+    Rcpp::RObject BM_TO_ARMA_bm(INPUT); \
+    SEXP BM_TO_ARMA_addr = BM_TO_ARMA_bm.slot("address"); \
+    BigMatrix *BM_TO_ARMA_pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(BM_TO_ARMA_addr)); \
+    if (BM_TO_ARMA_pMat->matrix_type() != 8) \
+        Rf_error("Big Matrix must be of type double"); \
+    double *BM_TO_ARMA_ptr_double = reinterpret_cast<double*>(BM_TO_ARMA_pMat->matrix()); \
+    arma::mat OUTPUT(BM_TO_ARMA_ptr_double, BM_TO_ARMA_pMat->nrow(), BM_TO_ARMA_pMat->ncol(), false);
+
 #define SET_ACCESSOR(ptr, mat)                                          \
     if (ptr->separated_columns()) {                                     \
         switch (ptr->matrix_type()) {                                   \

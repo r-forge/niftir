@@ -6,8 +6,8 @@ Date: 2011-04-07
 Author: Zarrar Shehzad <zarrar [dot] shehzad [at] yale.edu> and Jay
     Emerson
 Maintainer: Zarrar Shehzad <zarrar.shehzad@yale.edu>
-Depends: methods, plyr, testthat, foreach, bigmemory, biganalytics, bigalgebra, bigextensions, niftir
-LinkingTo: bigmemory
+Depends: methods, plyr, testthat, foreach, bigmemory, biganalytics, bigalgebra, bigextensions, niftir, Rcpp, RcppArmadillo
+LinkingTo: Rcpp, RcppArmadillo, bigmemory
 Description: Functional connectivity analyses tools.
 License: LGPL-3
 LazyLoad: yes

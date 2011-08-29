@@ -1,5 +1,5 @@
-vcat <- function(verbose, ...) {
-    cat(...)
+vcat <- function(verbose, msg, ...) {
+    cat(sprintf(msg, ...))
     cat("\n")
 }
 
@@ -56,4 +56,10 @@ get_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts) {
     return(opts)
 }
 
+bm_rowsum <- function(bigmat) {
+    as.vector(.Call("bm_rowsum", bigmat, PACKAGE = "connectir"))
+}
 
+bm_rowmean <- function(bigmat) {
+    as.vector(.Call("bm_rowmean", bigmat, PACKAGE = "connectir"))
+}

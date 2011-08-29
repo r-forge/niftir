@@ -157,11 +157,13 @@ check.outfile <- function(outfile, overwrite, header) {
             warning("removing file", outfile)
             file.remove(outfile)
         }
-        # error
+        # whoops
         else {
-            stop("file", outfile, "already exists")
+            warning("output file", outfile, "already exists, NOT OVERWRITING")
         }
     }
+    if (!file.exists(dirname(outfile)))
+        dir.create(dirname(outfile))
     
     return(outfile)
 }
@@ -176,7 +178,8 @@ setGeneric('write.nifti',
 setMethod('write.nifti',
     signature(x='nifti', header='missing', mask='missing'),
     function(x, outfile=NULL, overwrite=FALSE, ...) {
-        header <- create.header(x@header, ...)
+        header <- autocal(x, x@header)
+        header <- create.header(header, ...)
         outfile <- check.outfile(outfile, overwrite, header)
         .Call("write_nifti", header, x@.Data, outfile, PACKAGE="niftir")
     }
@@ -186,8 +189,9 @@ setMethod('write.nifti',
 setMethod('write.nifti',
     signature(x='big.nifti4d', header='missing', mask='missing'),
     function(x, outfile=NULL, overwrite=FALSE, ...) {
-        header <- create.header(x@header, ...)
+        library(biganalytics)
         header <- autocal(x, header)
+        header <- create.header(x@header, ...)
         outfile <- check.outfile(outfile, overwrite, header)
         .Call("write_bignifti", header, x@address, which(x@mask), outfile,
               PACKAGE="niftir")
@@ -198,8 +202,8 @@ setMethod('write.nifti',
 setMethod('write.nifti',
     signature(x='array', header='list', mask='missing'),
     function(x, header, outfile=NULL, overwrite=FALSE, ...) {
-        header <- create.header(header)
         header <- autocal(x, header)
+        header <- create.header(header)
         outfile <- check.outfile(outfile, overwrite, header)
         .Call("write_nifti", header, x, outfile, PACKAGE="niftir")
     }
@@ -212,12 +216,12 @@ setMethod('write.nifti',
         if (sum(mask) != nrow(x))
             stop("number of TRUE elements in mask is not equal to nrow of input x")
         
+        header <- autocal(x, header)
         header <- create.header(header, ...)
         if (prod(header$dim[1:3]) != length(mask))
             stop("dimensions in header attribute do not match the length of x")
         header$dim <- c(header$dim[1:3], ncol(x))
         header$pixdim <- c(header$pixdim[1:3], 1)
-        header <- autocal(x, header)
         
         out <- matrix(NA, prod(header$dim[1:3]), header$dim[4])
         out[mask,] <- t(x)
@@ -236,10 +240,10 @@ setMethod('write.nifti',
         if (sum(mask) != length(x))
             stop("number of TRUE elements in mask is not equal to length of input x")
         
+        header <- autocal(x, header)
         header <- create.header(header, ...)
         if (prod(header$dim) != length(mask))
             stop("dimensions in header attribute do not match the length of x")
-        header <- autocal(x, header)
         
         out <- mask*1
         out[mask] <- x
@@ -255,10 +259,10 @@ setMethod('write.nifti',
 setMethod('write.nifti',
     signature(x='vector', header='list', mask='missing'),
     function(x, header, outfile=NULL, overwrite=FALSE, ...) {
+        header <- autocal(x, header)
         header <- create.header(header, ...)
         if (prod(header$dim) != length(x))
             stop("dimensions in header attribute do not match the length of x")
-        header <- autocal(x, header)
         
         x <- as.double(x)
         dim(x) <- header$dim

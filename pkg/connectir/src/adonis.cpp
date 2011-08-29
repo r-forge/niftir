@@ -35,11 +35,11 @@ SEXP ComputePvalsMain(SEXP Rinmat, SEXP Routmat, SEXP Routcol) {
     double outCol = NUMERIC_DATA(Routcol)[0];
     
     if (inMat->separated_columns() != outMat->separated_columns())
-        error("all big matrices are not the same column separated type");
+        Rf_error("all big matrices are not the same column separated type");
     if (inMat->matrix_type() != outMat->matrix_type())
-        error("all big matrices are not the same matrix type");
+        Rf_error("all big matrices are not the same matrix type");
     if (inMat->ncol() != outMat->nrow())
-        error("inMat # of cols must be the same as outMat # of rows");
+        Rf_error("inMat # of cols must be the same as outMat # of rows");
     
     CALL_BIGFUNCTION_ARGS_THREE(ComputePvals, inMat, outMat, outCol)
     return(ret);

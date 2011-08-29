@@ -1,11 +1,13 @@
 #ifndef _connectir_CONNECTIR
 #define _connectir_CONNECTIR
 
-#include "connectirDefines.h"
-
-//#include <Rcpp.h>
+#include <Rcpp.h>
+#include <RcppArmadillo.h>
 //using namespace Rcpp; 
 //using namespace Rcpp::sugar;
+
+#include "connectirDefines.h"
+
 
 #include <math.h>
 #include <iostream>
@@ -20,7 +22,11 @@
 #include <Rdefines.h>
 
 extern "C" {
-    SEXP CombineSubMapsMain(SEXP LIST_allVoxs_allSubs, SEXP ADDR_oneVox_allSubs, SEXP Rseed_index, SEXP Rvoxindices, SEXP Rnvoxs, SEXP Rnsubs);
     SEXP ComputePvalsMain(SEXP Rinmat, SEXP Routmat, SEXP Routcol);
 }
+
+RcppExport SEXP CombineSubMapsMain(SEXP LIST_allVoxs_allSubs, SEXP ADDR_oneVox_allSubs, SEXP Rseed_index, SEXP Rvoxindices, SEXP Rnvoxs, SEXP Rnsubs);
+RcppExport SEXP bm_rowsum(SEXP Rbigmat);
+RcppExport SEXP bm_rowmean(SEXP Rbigmat);
+
 #endif // _connectir_CONNECTIR
