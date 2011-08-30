@@ -21,7 +21,7 @@ wrap_gcor <- function(func_file, mask_file, out_file=NULL, to_return=FALSE,
     vec <- gcor(bmat, verbose=verbose, ...)
     
     if (!is.null(out_file)) {
-        vcat(verbose, "...writing file '%s'" % out_file)
+        vcat(verbose, "...writing file '%s'", out_file)
         write.nifti(vec, hdr, mask, outfile=out_file, overwrite=overwrite)
     }
     
@@ -56,7 +56,7 @@ wrap_kendall <- function(func_files, mask_file, out_file=NULL, to_return=FALSE,
     vec <- kendall(bmats, ...)
     
     if (!is.null(out_file)) {
-        vcat(verbose, "...writing file '%s'" % out_file)
+        vcat(verbose, "...writing file '%s'", out_file)
         write.nifti(vec, hdr, mask, outfile=out_file, overwrite=overwrite)
     }
     

@@ -222,7 +222,7 @@ mdmr <- function(x, formula, model, nperms=4999, factors2perm=NULL, voxs=1:ncol(
         pb <- progressbar(blocks$n)
     ## loop through
     if (getDoParRegistered() && getDoParWorkers() > 1) {
-        foreach(i=1:blocks$n) %dopar% {
+        foreach(i=1:blocks$n, .packages=c("connectir"), .indorder=TRUE) %dopar% {
             if (verbose)
                 update(pb, i)
             mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms)
@@ -249,7 +249,7 @@ mdmr <- function(x, formula, model, nperms=4999, factors2perm=NULL, voxs=1:ncol(
     )
 }
 
-save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE) {
+save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE, save.perms=FALSE) {
     if (!file.exists(sdir))
         stop("Cannot save MDMR to ", sdir, " since it doesn't exist")
     
@@ -330,14 +330,16 @@ save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE) {
     rm(CorrPmat)
     gc(FALSE)
     
-    vcat(verbose, "...saving permutated F-statistics")
-    Fperms <- obj$fstats
-    for (i in 1:nfactors) {
-        tmp <- deepcopy(Fperms[[i]], backingpath=mdmr.output, 
-            backingfile=sprintf("fperms_%s.bin", factornames[i]), 
-            descriptorfile=sprintf("fperms_%s.desc", factornames[i]))
-        rm(tmp)
-        gc(FALSE)
+    if (save.perms) {
+        vcat(verbose, "...saving permutated F-statistics")
+        Fperms <- obj$fstats
+        for (i in 1:nfactors) {
+            tmp <- deepcopy(Fperms[[i]], backingpath=mdmr.output, 
+                backingfile=sprintf("fperms_%s.bin", factornames[i]), 
+                descriptorfile=sprintf("fperms_%s.desc", factornames[i]))
+            rm(tmp)
+            gc(FALSE)
+        }
     }
 }
 

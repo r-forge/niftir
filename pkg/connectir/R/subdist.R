@@ -167,7 +167,7 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
     if (getDoParRegistered() && getDoParWorkers() > 1) {
         lo <- min(getDoParWorkers()*3, blocks$n)
         superblocks <- niftir.split.indices(1, blocks$n, length.out=lo)
-        foreach(si=1:superblocks$n, .packages=c("connectir"), .inorder=FALSE) %dopar% 
+        foreach(si=1:superblocks$n, .packages=c("connectir"), .inorder=TRUE) %dopar% 
             for(i in superblocks$starts[si]:superblocks$ends[si]) dfun(i)
     }
     else {

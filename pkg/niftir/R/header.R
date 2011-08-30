@@ -69,14 +69,18 @@ get_datatype <- function(name) {
     return(datatype)
 }
 
-autocal <- function(x, header) {
+autocal <- function(x, header, dt=NULL) {
     header$cal.min <- min(x)
     header$cal.max <- max(x)
-    header$datatype = switch(typeof(x), 
-        character=2,
-        integer=8,
-        double=64
-    )
+    if (is.null(dt)) {
+        header$datatype <- switch(typeof(x), 
+            character=2,
+            integer=8,
+            double=64
+        )
+    } else {
+        header$datatype <- get_datatype(dt) 
+    }
     return(header)
 }
 
