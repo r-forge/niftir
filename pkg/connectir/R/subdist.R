@@ -8,8 +8,10 @@ check_dmat <- function(dmat) {
         stop("NAs were present in distance matrix")
     if (all(dmat < TOL))
         stop("All zeros in distance matrix")
-    if (any(diag_dmat>TOL))
+    if (any(diag_dmat>TOL)) {
         warning("Diagonal of distance matrix has non-zeros")
+        print(diag_dmat)
+    }
     if (any(off_dmat<TOL))
         warning("Off-diagonal of distance matrix has some zeros")
 }
