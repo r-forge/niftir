@@ -164,17 +164,29 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
     }
     
     # Test
+    if (verbose) {
+        cat("...running a test\n")
+        pb <- progressbar(i)
+    } else {
+        pb <- NULL
+    }
     i <- round(runif(1, start, nseeds))
     dfun(i)
     check_dmat(matrix(subdist[,i], sqrt(nrow(subdist))))
-    if (testonly)
+    if (verbose)
+        end(pb)
+    if (testonly) {
+        cat("...test only...\n")
         return(NULL)
+    }
     
     # Subdist Calculation
-    if (verbose)
+    if (verbose) {
+        cat("...now the real deal\n")
         pb <- progressbar(blocks$n)
-    else
+    } else {
         pb <- NULL
+    }
     
     if (getDoParRegistered() && getDoParWorkers() > 1) {
         lo <- min(getDoParWorkers()*3, blocks$n)
