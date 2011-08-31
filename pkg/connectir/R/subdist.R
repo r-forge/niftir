@@ -1,12 +1,16 @@
 check_dmat <- function(dmat) {
-    dmat <- as.matrix(dmat)
+    TOL <- .Machine$double.eps ^ 0.5
+    dmat <- abs(as.matrix(dmat))
+    diag_dmat <- diag(dmat)
+    off_dmat <- dmat[lower.tri(dmat)]
+    
     if (any(is.na(dmat)))
         stop("NAs were present in distance matrix")
-    if (all(dmat==0))
+    if (all(dmat < TOL))
         stop("All zeros in distance matrix")
-    if (any(diag(dmat)!=0))
+    if (any(diag_dmat>TOL))
         warning("Diagonal of distance matrix has non-zeros")
-    if (any(dmat[lower.tri(dmat)]==0))
+    if (any(off_dmat<TOL))
         warning("Off-diagonal of distance matrix has some zeros")
 }
 
@@ -14,8 +18,6 @@ check_gmat <- function(gmat) {
     gmat <- as.matrix(gmat)
     if (any(is.na(gmat)))
         stop("NAs were present in gower's centered distance matrix")
-    if (all(gmat==0))
-        stop("All zeros in distance matrix")
 }
 
 # This checks that everything in folder is good
@@ -166,7 +168,7 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
     # Test
     i <- round(runif(1, 1, blocks$n))
     if (verbose) {
-        cat("...running a test\n")
+        cat("...running a test (", blocks$starts[i],  ")\n")
         pb <- progressbar(i)
     } else {
         pb <- NULL
