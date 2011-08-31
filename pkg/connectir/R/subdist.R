@@ -6,12 +6,17 @@ check_dmat <- function(dmat) {
     
     if (any(is.na(dmat)))
         stop("NAs were present in distance matrix")
+    
     if (all(dmat < TOL))
         stop("All zeros in distance matrix")
-    if (any(diag_dmat>TOL)) {
+    
+    if (all(diag_dmat>TOL)) {
+        warning("Diagonal of distance matrix is all non-zeros\n")
+    } else if (any(diag_dmat>TOL)) {
         cat("Diagonal of distance matrix has non-zeros\n")
         print(diag_dmat)
     }
+    
     if (any(off_dmat<TOL))
         cat("Off-diagonal of distance matrix has some zeros\n")
 }
