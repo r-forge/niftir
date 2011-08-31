@@ -24,13 +24,18 @@ create_maskoverlap <- function(mask_fnames) {
 }
 
 # check, will check that dims are all same
-load_and_mask_func_data <- function(fnames, mask, check=TRUE, type=NULL, ...) {
+load_and_mask_func_data <- function(fnames, mask, check=TRUE, type=NULL, verbose=FALSE, ...) {
     if (is.character(mask))
         mask <- read.mask(mask)
-    if (is.character(fnames))
+    if (is.character(fnames) && !is.vector(fnames))
         fnames <- list(fnames)
     
-    dat.list <- lapply(fnames, function(f) {
+    if (opts$verbose)
+        progress="text"
+    else
+        progress="none"
+    
+    dat.list <- llply(fnames, function(f) {
         if (is.null(type))
             x <- read.big.nifti4d(f, ...)
         else
@@ -40,7 +45,7 @@ load_and_mask_func_data <- function(fnames, mask, check=TRUE, type=NULL, ...) {
         rm(x)
         gc(FALSE)
         y
-    })
+    }, .progress=progress)
     
     if (check) {
         nr <- nrow(dat.list[[1]])

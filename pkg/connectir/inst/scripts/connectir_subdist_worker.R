@@ -144,7 +144,7 @@ tryCatch({
   ## overlap mask
   printf("...creating overlap of masks across participants")
   maskoverlap <- create_maskoverlap(inmasks)
-
+  
   ## seed mask
   printf("...creating final seed mask")
   if (!is.null(preseedmask)) {
@@ -185,7 +185,8 @@ tryCatch({
   ## functional data
   printf("...reading and masking the functional data")
   # 1. check if this is ok
-  funclist <- load_and_mask_func_data(infiles, brainmask, shared=use_shared, type="double")
+  funclist <- load_and_mask_func_data(infiles, brainmask, shared=use_shared, type="double", 
+                                      verbose=opts$verbose)
   invisible(gc(FALSE))
   if (opts$"check-functionals") {
     printf("...checking functional data")
