@@ -222,7 +222,7 @@ mdmr <- function(x, formula, model, nperms=4999, factors2perm=NULL, voxs=1:ncol(
         pb <- progressbar(blocks$n)
     ## loop through
     if (getDoParRegistered() && getDoParWorkers() > 1) {
-        foreach(i=1:blocks$n, .packages=c("connectir"), .indorder=TRUE) %dopar% {
+        foreach(i=1:blocks$n, .packages=c("connectir"), .inorder=TRUE) %dopar% {
             if (verbose)
                 update(pb, i)
             mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms)
