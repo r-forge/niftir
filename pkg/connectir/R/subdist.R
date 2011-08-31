@@ -1,17 +1,21 @@
 check_dmat <- function(dmat) {
     dmat <- as.matrix(dmat)
     if (any(is.na(dmat)))
-        stop("NAs were present in inter-subject distance matrix")
+        stop("NAs were present in distance matrix")
+    if (all(dmat==0))
+        stop("All zeros in distance matrix")
     if (any(diag(dmat)!=0))
-        warning("Diagonal of inter-subject distance matrix has non-zeros")
+        warning("Diagonal of distance matrix has non-zeros")
     if (any(dmat[lower.tri(dmat)]==0))
-        warning("Off-diagonal of inter-subject distance matrix has zeros")
+        warning("Off-diagonal of distance matrix has some zeros")
 }
 
 check_gmat <- function(gmat) {
     gmat <- as.matrix(gmat)
     if (any(is.na(gmat)))
-        stop("NAs were present in inter-subject gower's centered distance matrix")
+        stop("NAs were present in gower's centered distance matrix")
+    if (all(gmat==0))
+        stop("All zeros in distance matrix")
 }
 
 # This checks that everything in folder is good
@@ -142,7 +146,7 @@ create_subdist <- function(outdir, infiles, masks, opts, ...) {
     big.matrix(nsubs^2, nvoxs, type="double", ...)
 }
 
-compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform, start=1, verbose=TRUE) {
+compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform, start=1, verbose=TRUE, testonly=FALSE) {
     nseeds <- length(seed_inds)
     blocks <- niftir.split.indices(start, nseeds, by=blocksize)
     
@@ -159,6 +163,14 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
         return(NULL)
     }
     
+    # Test
+    i <- round(runif(1, start, nseeds))
+    dfun(i)
+    check_dmat(matrix(subdist[,i], sqrt(nrow(subdist))))
+    if (testonly)
+        return(NULL)
+    
+    # Subdist Calculation
     if (verbose)
         pb <- progressbar(blocks$n)
     else

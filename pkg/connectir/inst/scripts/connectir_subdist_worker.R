@@ -220,7 +220,7 @@ tryCatch({
   # Compute the subdist
   ###
   start.time <- Sys.time()
-
+  
   printf("06. Computing subject distances")
   compute_subdist(funclist, subdist, seed_inds=seedinds, blocksize=opts$blocksize, ztransform=opts$ztransform, verbose=opts$verbose)
   rm(funclist)
@@ -252,7 +252,10 @@ tryCatch({
   gdist <- gower.subdist(subdist)
   rm(subdist)
   invisible(gc(FALSE))
-
+  printf("...checking")
+  mat <- matrix(gdist[,1], sqrt(nrow(gdist)))
+  check_gmat(mat)
+  
   end.time <- Sys.time()
   printf("Centering of matrices done! It took: %.2f minutes\n", as.numeric(end.time-start.time, units="mins"))
 
