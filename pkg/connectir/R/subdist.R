@@ -164,13 +164,13 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
     }
     
     # Test
+    i <- round(runif(1, start, nseeds))
     if (verbose) {
         cat("...running a test\n")
         pb <- progressbar(i)
     } else {
         pb <- NULL
     }
-    i <- round(runif(1, start, nseeds))
     dfun(i)
     check_dmat(matrix(subdist[,i], sqrt(nrow(subdist))))
     if (verbose)
