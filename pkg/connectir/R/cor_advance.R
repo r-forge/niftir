@@ -47,7 +47,7 @@ kendall_ref <- function(ratings) {
     nr <- ncol(ratings)
     
     ratings.rank <- apply(ratings, 2, rank)
-    coeff <- (12 * var(apply(ratings.rank, 1, sum)) * (ns - 
+    coeff <- (12 * var(rowSums(ratings.rank)) * (ns - 
         1))/(nr^2 * (ns^3 - ns))
         
     return(coeff)
@@ -105,8 +105,8 @@ kendall <- function(subs.bigmats, blocksize, ztransform=FALSE, verbose=TRUE) {
     return(gcor)
 }
 
-reho_worker <- function(bigmat, inds, ...) {
-    return(kendall(bigmat[,inds], ...)$value)
+reho_worker <- function(mat, ...) {
+    return(kendall_ref(mat, ...))
 }
 
 reho <- function(bigmat, nei=1, nei.dist=3, min.nei=0.5, verbose=TRUE, FUN=reho_worker, ...) {
@@ -140,7 +140,7 @@ reho <- function(bigmat, nei=1, nei.dist=3, min.nei=0.5, verbose=TRUE, FUN=reho_
     
     # have list of mask inds
     
-    rfun <- function(i, bm, opts, ...) {
+    rfun <- function(i, ...) {
         if (verbose)
             update(pb, i)
         
@@ -152,22 +152,22 @@ reho <- function(bigmat, nei=1, nei.dist=3, min.nei=0.5, verbose=TRUE, FUN=reho_
         if (length(filt_inds) < opts$min.nei)
             return(0)
         
-        return(FUN(bm[,filt_inds], ...))        
+        return(FUN(bigmat[,filt_inds], ...))        
     }
     
-    if (verbose)
+    if (verbose) {
         pb <- progressbar(nvoxs)
-    else
+    } else {
         pb <- NULL
+    }
     
     if (getDoParRegistered() && getDoParWorkers() > 1) {
         blocks <- niftir.split.indices(1, nvoxs, length.out=getDoParWorkers())
         reho.vals <- foreach(bi=1:blocks$n, .inorder=TRUE) %dopar% 
-            sapply(blocks$starts[bi]:blocks$ends[bi], rfun, bigmat, opts, ...)
+            sapply(blocks$starts[bi]:blocks$ends[bi], rfun, ...)
         reho.vals <- unlist(reho.vals)
-    }
-    else {
-        reho.vals <- sapply(1:nvoxs, rfun, bigmat, opts, ...)
+    } else {
+        reho.vals <- sapply(1:nvoxs, rfun)
     }
     
     if (verbose)
