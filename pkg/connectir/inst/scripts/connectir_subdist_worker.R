@@ -234,23 +234,33 @@ tryCatch({
   ###
   printf("07. Saving subject distances")
   tmp <- deepcopy(subdist, backingpath=outdir, backingfile="subdist.bin", descriptorfile="subdist.desc")
-  rm(tmp)
-  invisible(gc(FALSE))
-
+  
   if (any(is.na(subdist[2,]))) {
       print(subdist[2,])
       stop("Found NA's in second row of subdist")
   }
   
-  printf("...saving 3D image zcheck.nii.gz")
+  printf("...saving 3D image zcheck1.nii.gz")
   zcheck <- (subdist[2,]!=0)*1 + 1
   hdr <- read.nifti.header(infiles[1])
   hdr$dim <- hdr$dim[1:3]; hdr$pixdim <- hdr$pixdim[1:3]
-  write.nifti(zcheck, hdr, brainmask, outfile=file.path(outdir, "zcheck.nii.gz"))
+  write.nifti(zcheck, hdr, brainmask, outfile=file.path(outdir, "zcheck1.nii.gz"))
   rm(brainmask)
   if (any(zcheck==1))
-    fprintf("There are some bad voxels...see zcheck.nii.gz")
+    fprintf("There are some bad voxels...see zcheck1.nii.gz")
   
+  printf("...saving 3D image zcheck2.nii.gz")
+  zcheck <- (tmp[2,]!=0)*1 + 1
+  hdr <- read.nifti.header(infiles[1])
+  hdr$dim <- hdr$dim[1:3]; hdr$pixdim <- hdr$pixdim[1:3]
+  write.nifti(zcheck, hdr, brainmask, outfile=file.path(outdir, "zcheck2.nii.gz"))
+  rm(brainmask)
+  if (any(zcheck==1))
+    fprintf("There are some bad voxels...see zcheck2.nii.gz")
+  
+  rm(tmp)
+  invisible(gc(FALSE))
+
   
   ###
   # Create gower matrix
