@@ -60,7 +60,7 @@ get_datatype <- function(name) {
         char=2,
         short=4,
         int=8,
-        float=32,
+        float=16,
         double=64,
         "ERROR"
     )
