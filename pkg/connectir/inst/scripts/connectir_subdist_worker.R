@@ -248,7 +248,10 @@ tryCatch({
   hdr$dim <- hdr$dim[1:3]; hdr$pixdim <- hdr$pixdim[1:3]
   write.nifti(zcheck, hdr, brainmask, outfile=file.path(outdir, "zcheck.nii.gz"))
   rm(brainmask)
-
+  if (any(zcheck==1))
+    fprintf("There are some bad voxels...see zcheck.nii.gz")
+  
+  
   ###
   # Create gower matrix
   ###
