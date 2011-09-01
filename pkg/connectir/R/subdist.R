@@ -167,8 +167,8 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
     dfun <- function(i, ...) {
         if (verbose) {
             update(pb, i)
-            msg <- sprintf("\nblock %i with voxels %i:%i\n", i, blocks$starts[i], blocks$ends[i])
-            cat(msg)
+            #msg <- sprintf("\nblock %i with voxels %i:%i\n", i, blocks$starts[i], blocks$ends[i])
+            #cat(msg)
         }
         inds_CHUNK <- seed_inds[blocks$starts[i]:blocks$ends[i]]
         cormaps_list <- vbca_batch(funclist, inds_CHUNK, ztransform=ztransform, shared=FALSE)
