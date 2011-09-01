@@ -22,9 +22,13 @@ check_dmat <- function(dmat) {
 }
 
 check_gmat <- function(gmat) {
-    gmat <- as.matrix(gmat)
+    TOL <- .Machine$double.eps ^ 0.5
+    dmat <- abs(as.matrix(gmat))
+    
     if (any(is.na(gmat)))
         stop("NAs were present in gower's centered distance matrix")
+    if (all(dmat < TOL))
+        stop("All zeros in gower's centered distance matrix")
 }
 
 # This checks that everything in folder is good
@@ -161,8 +165,11 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
     
 #    dfun <- function(i, blocks, seed_inds, funclist, subdist, ztransform, verbose, pb) {
     dfun <- function(i, ...) {
-        if (verbose)
+        if (verbose) {
             update(pb, i)
+            msg <- sprint("\nblock %i with voxels %i:%i\n" % i, blocks$starts[i], blocks$ends[i])
+            cat(msg)
+        }
         inds_CHUNK <- seed_inds[blocks$starts[i]:blocks$ends[i]]
         cormaps_list <- vbca_batch(funclist, inds_CHUNK, ztransform=ztransform, shared=FALSE)
         subdist_CHUNK <- sub.big.matrix(subdist, firstCol=blocks$starts[i], lastCol=blocks$ends[i])
@@ -173,7 +180,7 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
     }
     
     # Test
-    i <- round(runif(1, 1, blocks$n))
+    i <- 1
     if (verbose) {
         cat("...running a test (", blocks$starts[i],  ")\n")
         pb <- progressbar(i)
@@ -182,6 +189,7 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
     }
     dfun(i)
     check_dmat(matrix(subdist[,blocks$starts[i]], sqrt(nrow(subdist))))
+    check_dmat(matrix(subdist[,blocks$ends[i]], sqrt(nrow(subdist))))
     if (verbose)
         end(pb)
     if (testonly) {
@@ -198,13 +206,13 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
     }
     
     if (getDoParRegistered() && getDoParWorkers() > 1) {
-        lo <- min(getDoParWorkers()*3, blocks$n)
-        superblocks <- niftir.split.indices(1, blocks$n, length.out=lo)
+        lo <- min(getDoParWorkers()*3, blocks$n-1)
+        superblocks <- niftir.split.indices(2, blocks$n, length.out=lo)
         foreach(si=1:superblocks$n, .packages=c("connectir"), .inorder=TRUE) %dopar% 
             for(i in superblocks$starts[si]:superblocks$ends[si]) dfun(i)
     }
     else {
-        for (i in 1:blocks$n)
+        for (i in 2:blocks$n)
             dfun(i)
     }
     

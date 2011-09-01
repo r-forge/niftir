@@ -13,8 +13,13 @@ test.vbca <- function() {
     tmp1 <- vbca(bm, 10:15)
     tmp2 <- cor(mat[,1:15])
     
-    expect_equal(as.vector(tmp1[,10:15]), as.vector(tmp2[10:15,10:15]))
+    return(list(as.vector(tmp1[,10:15]), as.vector(tmp2[10:15,10:15])))
 }
+
+test_that("vbca basics", {
+    ret <- test.vbca()
+    expect_equal(ret[[1]], ret[[2]])
+})
 
 test.batch.vbca <- function() {
     require(connectir)
@@ -31,9 +36,13 @@ test.batch.vbca <- function() {
     system.time(cormaps_list <- vbca_batch(subs.bigmats, 4:8))
     system.time(comp <- lapply(1:nsubs, function(i) cor(subs.bigmats[[i]][,4:8], subs.bigmats[[i]][,])))
     
-    expect_equal(as.vector(cormaps_list[[1]][,]), as.vector(comp[[1]]))
+    return(list(as.vector(cormaps_list[[1]][,]), as.vector(comp[[1]])))
 }
 
+test_that("vbca batch", {
+    ret <- test.batch.vbca()
+    expect_equal(ret[[1]], ret[[2]])
+})
 
 test.combine.submaps <- function() {
     require(connectir)
@@ -57,6 +66,8 @@ test.combine.submaps <- function() {
     out.mat <- scale(out.mat)  
     expect_equal(as.vector(out.mat), as.vector(out.bigmat[,]))   
 }
+
+test_that("combining submaps", test.combine.submaps)
 
 compare.subdist <- function(sub.cormaps, cols, outmat=NULL, FUN=cor, ...) {
     sapply(1:length(cols), function(i) {
