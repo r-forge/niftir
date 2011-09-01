@@ -167,7 +167,7 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
     dfun <- function(i, ...) {
         if (verbose) {
             update(pb, i)
-            msg <- sprint("\nblock %i with voxels %i:%i\n" % i, blocks$starts[i], blocks$ends[i])
+            msg <- sprint("\nblock %i with voxels %i:%i\n", i, blocks$starts[i], blocks$ends[i])
             cat(msg)
         }
         inds_CHUNK <- seed_inds[blocks$starts[i]:blocks$ends[i]]
