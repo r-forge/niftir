@@ -209,7 +209,7 @@ tryCatch({
   
   # clear memory of unneeded stuff + get seedinds
   seedinds <- which(seedmask[brainmask])
-  rm(masks, maskoverlap, preseedmask, prebrainmask, seedmask, brainmask)
+  rm(masks, maskoverlap, preseedmask, prebrainmask, seedmask)   # save brainmask
   invisible(gc(F))
 
   end.time <- Sys.time()
@@ -241,7 +241,13 @@ tryCatch({
       print(subdist[2,])
       stop("Found NA's in second row of subdist")
   }
-
+  
+  printf("...saving 3D image zcheck.nii.gz")
+  zcheck <- (subdist[2,]!=0)*1 + 1
+  hdr <- read.nifti.header(infiles[1])
+  hdr$dim <- hdr$dim[1:3]; hdr$pixdim <- hdr$pixdim[1:3]
+  write.nifti(zcheck, hdr, brainmask, outfile=file.path(outdir, "zcheck.nii.gz"))
+  rm(brainmask)
 
   ###
   # Create gower matrix

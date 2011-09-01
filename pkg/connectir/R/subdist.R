@@ -131,7 +131,7 @@ create_subdist <- function(outdir, infiles, masks, opts, ...) {
     }
     
     # Get a header file from the first functional
-    header <- read.nifti.header(infiles[i])
+    header <- read.nifti.header(infiles[1])
     header$dim <- header$dim[1:3]
     header$pixdim <- header$pixdim[1:3]
     
@@ -167,7 +167,7 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
     dfun <- function(i, ...) {
         if (verbose) {
             update(pb, i)
-            msg <- sprint("\nblock %i with voxels %i:%i\n", i, blocks$starts[i], blocks$ends[i])
+            msg <- sprintf("\nblock %i with voxels %i:%i\n", i, blocks$starts[i], blocks$ends[i])
             cat(msg)
         }
         inds_CHUNK <- seed_inds[blocks$starts[i]:blocks$ends[i]]
