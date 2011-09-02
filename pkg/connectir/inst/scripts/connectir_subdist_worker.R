@@ -245,20 +245,16 @@ tryCatch({
   hdr <- read.nifti.header(infiles[1])
   hdr$dim <- hdr$dim[1:3]; hdr$pixdim <- hdr$pixdim[1:3]
   write.nifti(zcheck, hdr, brainmask, outfile=file.path(outdir, "zcheck1.nii.gz"))
-  rm(brainmask)
   if (any(zcheck==1))
     fprintf("There are some bad voxels...see zcheck1.nii.gz")
   
   printf("...saving 3D image zcheck2.nii.gz")
   zcheck <- (tmp[2,]!=0)*1 + 1
-  hdr <- read.nifti.header(infiles[1])
-  hdr$dim <- hdr$dim[1:3]; hdr$pixdim <- hdr$pixdim[1:3]
   write.nifti(zcheck, hdr, brainmask, outfile=file.path(outdir, "zcheck2.nii.gz"))
-  rm(brainmask)
   if (any(zcheck==1))
     fprintf("There are some bad voxels...see zcheck2.nii.gz")
   
-  rm(tmp)
+  rm(brainmask); rm(tmp)
   invisible(gc(FALSE))
 
   
