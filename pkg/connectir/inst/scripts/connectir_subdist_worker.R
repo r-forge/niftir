@@ -264,7 +264,7 @@ tryCatch({
   start.time <- Sys.time()
 
   printf("08. Creating gower's centered matrices")
-  gdist <- gower.subdist(subdist)
+  gdist <- gower.subdist(subdist, shared=FALSE)
   rm(subdist)
   invisible(gc(FALSE))
   printf("...checking")
