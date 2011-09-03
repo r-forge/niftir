@@ -26,7 +26,16 @@ extern "C" {
 }
 
 RcppExport SEXP CombineSubMapsMain(SEXP LIST_allVoxs_allSubs, SEXP ADDR_oneVox_allSubs, SEXP Rseed_index, SEXP Rvoxindices, SEXP Rnvoxs, SEXP Rnsubs);
+
+// utils.cpp
 RcppExport SEXP bm_rowsum(SEXP Rbigmat);
 RcppExport SEXP bm_rowmean(SEXP Rbigmat);
+
+// qlm.cpp
+RcppExport SEXP big_qlm_rank(SEXP Xr);
+RcppExport SEXP big_qlm_dd(SEXP Xr);
+RcppExport SEXP big_qlm_fit(SEXP yr, SEXP Xr, SEXP coefr, SEXP residr, SEXP mser, SEXP nr, SEXP kr, SEXP mr);
+RcppExport SEXP big_qlm_contrasts(SEXP fit_coefr, SEXP fit_mser, SEXP conr, SEXP ddr, SEXP coefr, SEXP ser, SEXP tvalr, SEXP mr);
+
 
 #endif // _connectir_CONNECTIR

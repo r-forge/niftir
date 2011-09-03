@@ -2,14 +2,32 @@
 #define _connectir_DEFINES_H
 
 // take an 'input' R big matrix variable to an 'output' double armadillo matrix
-#define BM_TO_ARMA(INPUT, OUTPUT) \
-    Rcpp::RObject BM_TO_ARMA_bm(INPUT); \
-    SEXP BM_TO_ARMA_addr = BM_TO_ARMA_bm.slot("address"); \
-    BigMatrix *BM_TO_ARMA_pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(BM_TO_ARMA_addr)); \
-    if (BM_TO_ARMA_pMat->matrix_type() != 8) \
-        Rf_error("Big Matrix must be of type double"); \
-    double *BM_TO_ARMA_ptr_double = reinterpret_cast<double*>(BM_TO_ARMA_pMat->matrix()); \
-    arma::mat OUTPUT(BM_TO_ARMA_ptr_double, BM_TO_ARMA_pMat->nrow(), BM_TO_ARMA_pMat->ncol(), false);
+#define BM_TO_ARMA_ONCE(INPUT, OUTPUT) \
+    Rcpp::RObject bm(INPUT); \
+    SEXP addr = bm.slot("address"); \
+    BigMatrix *pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(addr)); \
+    if (pMat->matrix_type() != 8) \
+        ::Rf_error("Big Matrix must be of type double"); \
+    index_type offset = pMat->nrow() * pMat->col_offset(); \
+    double *ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset; \
+    arma::mat OUTPUT(ptr_double, pMat->nrow(), pMat->ncol(), false);
+
+#define BM_TO_ARMA_INIT()   \
+    Rcpp::RObject bm;       \
+    SEXP addr;              \
+    BigMatrix *pMat;        \
+    index_type offset;      \
+    double *ptr_double;
+
+#define BM_TO_ARMA_MULTIPLE(INPUT, OUTPUT) \
+    bm = INPUT; \
+    addr = bm.slot("address"); \
+    pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(addr)); \
+    if (pMat->matrix_type() != 8) \
+        ::Rf_error("Big Matrix must be of type double"); \
+    offset = pMat->nrow() * pMat->col_offset(); \
+    ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset; \
+    arma::mat OUTPUT(ptr_double, pMat->nrow(), pMat->ncol(), false);
 
 #define SET_ACCESSOR(ptr, mat)                                          \
     if (ptr->separated_columns()) {                                     \

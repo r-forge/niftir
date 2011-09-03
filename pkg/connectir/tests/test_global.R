@@ -1,4 +1,3 @@
-library(connectir)
 library(testthat)
 library(stringr)
 library(bigmemory)

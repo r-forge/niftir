@@ -1,6 +1,5 @@
 # This assumes that connectir_subdist has been run once (annoying I know)
 
-library(connectir)
 load("options.rda")
 
 printf <- function(msg, ..., newline=TRUE) {
