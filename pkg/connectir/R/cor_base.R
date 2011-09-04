@@ -23,6 +23,15 @@ vbca_batch <- function(subs.bigmats, cols, ztransform=FALSE, ...) {
 
 ## NEW CODE USING ARMADILLO
 
+big_cor <- function(A, B, C, C_firstCol=1, C_ncol=ncol(C)) {
+    .Call("big_cor", A, B, C, as.double(C_firstCol), as.double(C_ncol), PACKAGE = "connectir")
+}
+
+big_tcor <- function(A, B, C, C_firstCol=1, C_ncol=ncol(C)) {
+    .Call("big_tcor", A, B, C, as.double(C_firstCol), as.double(C_ncol), PACKAGE = "connectir")
+}
+
+
 vbca2 <- function(bigmat, cols, ztransform=FALSE, outmat=NULL, ...) {
         A <- deepcopy(bigmat, cols=cols)
     #    A <- sub.big.matrix(bigmat, firstCol=firstCol, lastCol=lastCol)
@@ -33,7 +42,7 @@ vbca2 <- function(bigmat, cols, ztransform=FALSE, outmat=NULL, ...) {
     	    C <- outmat
     	else
     	    stop("dimensions of outmat are out of whack")
-    	.Call("big_cor", A, B, C, PACKAGE = "connectir")
+    	big_cor(A, B, C)
     	if (ztransform)
     	     .Call("big_ztransform", C, PACKAGE = "connectir")
     	invisible(C)

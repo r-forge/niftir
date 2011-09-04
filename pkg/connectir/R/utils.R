@@ -98,35 +98,3 @@ bm_rowsum <- function(bigmat) {
 bm_rowmean <- function(bigmat) {
     as.vector(.Call("bm_rowmean", bigmat, PACKAGE = "connectir"))
 }
-
-sub.big.matrix_wrapper <- function(x, firstRow=1, lastRow=NULL, firstCol=1, lastCol=NULL, backingpath=NULL)
-{
-    if (is.shared(x))
-        sub.big.matrix(x, firstRow, lastRow, firstCol, lastCol, backingpath)
-    else
-        sub.big.matrix_nonshared(x, firstRow, lastRow, firstCol, lastCol)
-}
-
-sub.big.matrix_nonshared <- function(x, firstRow=1, lastRow=NULL, firstCol=1, lastCol=NULL)
-{
-  rowOffset <- firstRow-1
-  colOffset <- firstCol-1
-  rbm <- x
-  if (is.null(lastRow)) lastRow <- nrow(rbm)
-  if (is.null(lastCol)) lastCol <- ncol(rbm)
-  numCols <- lastCol-firstCol+1
-  numRows <- lastRow-firstRow+1
-  if (colOffset < 0 || rowOffset < 0 || numCols < 1 || numRows < 1 ||
-      colOffset+numCols > ncol(rbm) || rowOffset+numRows > nrow(rbm))
-  {
-    stop(paste("A sub.big.matrix object could not be created",
-               "with the specified parameters"))
-  }
-  .Call("SetRowOffsetInfo", rbm@address, 
-        as.double(rowOffset + .Call("GetRowOffset", rbm@address)), 
-        as.double(numRows), PACKAGE="bigmemory" )
-  .Call("SetColumnOffsetInfo", rbm@address, 
-        as.double(colOffset + .Call("GetColOffset", rbm@address)),
-        as.double(numCols), PACKAGE="bigmemory")
-  return(rbm)
-}

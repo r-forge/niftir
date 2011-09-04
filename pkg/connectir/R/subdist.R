@@ -170,12 +170,12 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
             #msg <- sprintf("\nblock %i with voxels %i:%i\n", i, blocks$starts[i], blocks$ends[i])
             #cat(msg)
         }
-        inds_CHUNK <- seed_inds[blocks$starts[i]:blocks$ends[i]]
-        cormaps_list <- vbca_batch(funclist, inds_CHUNK, ztransform=ztransform, shared=FALSE)
-        subdist_CHUNK <- sub.big.matrix_wrapper(subdist, firstCol=blocks$starts[i], lastCol=blocks$ends[i])
-        tmp <- compute_subdist_worker(cormaps_list, inds_CHUNK, subdist_CHUNK)
-        rm(inds_CHUNK, subdist_CHUNK, tmp, cormaps_list)
-        gc(FALSE)
+        dist_inds_CHUNK <- blocks$starts[i]:blocks$ends[i]
+        scor_inds_CHUNK <- seed_inds[dist_inds_CHUNK]
+        cormaps_list <- vbca_batch(funclist, scor_inds_CHUNK, ztransform=ztransform, shared=FALSE)        
+        tmp <- compute_subdist_worker(cormaps_list, scor_inds_CHUNK, subdist, dist_inds_CHUNK)
+        rm(dist_inds_CHUNK, scor_inds_CHUNK, cormaps_list, tmp)
+        gc(FALSE, TRUE)
         return(NULL)
     }
     
@@ -220,24 +220,24 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
         end(pb)
 }
 
-compute_subdist_worker <- function(sub.cormaps, inds, outmat=NULL, type="double", ...) {
+compute_subdist_worker <- function(sub.cormaps, cor_inds, outmat, dist_inds, type="double", ...) {
     nsubs <- length(sub.cormaps)
     nvoxs <- ncol(sub.cormaps[[1]])
     nseeds <- nrow(sub.cormaps[[1]])
-    if (nseeds != length(inds))
+    if (nseeds != length(cor_inds) || nseeds != length(dist_inds))
         stop("length of inds doesn't match nrow of first sub.cormaps element")
     
-    if (is.null(outmat))
-        outmat <- big.matrix(nsubs^2, nseeds, type=type, ...)
-    else if (ncol(outmat) != nseeds || nrow(outmat) != nsubs^2)
-        stop("dimensions of outmat do not match nsubs and nseeds values")
+    #if (is.null(outmat))
+    #    outmat <- big.matrix(nsubs^2, nseeds, type=type, ...)
+    #else if (ncol(outmat) != nseeds || nrow(outmat) != nsubs^2)
+    #    stop("dimensions of outmat do not match nsubs and nseeds values")
     
     subsMap <- big.matrix(nvoxs-1, nsubs, type=type, shared=FALSE, ...)
     ALPHA <- 1/(nvoxs-2)
     voxs <- 1:nvoxs
     for (i in 1:nseeds) {
-        .Call("CombineSubMapsMain", sub.cormaps, subsMap@address, as.double(i), as.double(voxs[-inds[i]]), as.double(nvoxs-1), as.double(nsubs))
-        col <- sub.big.matrix_wrapper(outmat, firstCol=i, lastCol=i)
+        .Call("CombineSubMapsMain", sub.cormaps, subsMap@address, as.double(i), as.double(voxs[-cor_inds[i]]), as.double(nvoxs-1), as.double(nsubs))
+        col <- sub.big.matrix(outmat, firstCol=dist_inds[i], lastCol=dist_inds[i])
         dgemm(C=col, A=subsMap, B=subsMap, TRANSA='t', ALPHA=ALPHA, LDC=as.double(nsubs))
         .Call("BigSubtractScalarMain", col@address, as.double(1), TRUE);
     }
@@ -337,12 +337,13 @@ compute_subdist2 <- function(funclist, subdist, seed_inds, blocksize, ztransform
                 #msg <- sprintf("\nblock %i with voxels %i:%i\n", i, blocks$starts[i], blocks$ends[i])
                 #cat(msg)
             }
-            inds_CHUNK <- seed_inds[blocks$starts[i]:blocks$ends[i]]
-            cormaps_list <- vbca_batch2(funclist, inds_CHUNK, ztransform=ztransform, shared=FALSE)
-            subdist_CHUNK <- sub.big.matrix_wrapper(subdist, firstCol=blocks$starts[i], 
-                                                    lastCol=blocks$ends[i])
-            tmp <- compute_subdist_worker2(cormaps_list, inds_CHUNK, subdist_CHUNK)
-            rm(inds_CHUNK, subdist_CHUNK, tmp, cormaps_list)
+            
+            dist_inds_CHUNK <- blocks$starts[i]:blocks$ends[i]
+            scor_inds_CHUNK <- seed_inds[dist_inds_CHUNK]
+            cormaps_list <- vbca_batch2(funclist, scor_inds_CHUNK, ztransform=ztransform, shared=FALSE)        
+            tmp <- compute_subdist_worker2(cormaps_list, scor_inds_CHUNK, subdist, dist_inds_CHUNK)
+            
+            rm(dist_inds_CHUNK, scor_inds_CHUNK, cormaps_list, tmp)
             gc(FALSE)
             return(NULL)
         }
@@ -353,13 +354,14 @@ compute_subdist2 <- function(funclist, subdist, seed_inds, blocksize, ztransform
                 #msg <- sprintf("\nblock %i with voxels %i:%i\n", i, blocks$starts[i], blocks$ends[i])
                 #cat(msg)
             }
-            inds_CHUNK <- seed_inds[blocks$starts[i]:blocks$ends[i]]
-            cormaps_list <- vbca_batch2(funclist, inds_CHUNK, ztransform=ztransform, shared=FALSE)
-            subdist_CHUNK <- sub.big.matrix_wrapper(subdist, firstCol=blocks$starts[i], 
-                                                    lastCol=blocks$ends[i])
-            tmp <- compute_subdist_worker2_regress(cormaps_list, inds_CHUNK, design_matrix, 
-                                                    subdist_CHUNK)
-            rm(inds_CHUNK, subdist_CHUNK, tmp, cormaps_list)
+            dist_inds_CHUNK <- blocks$starts[i]:blocks$ends[i]
+            scor_inds_CHUNK <- seed_inds[dist_inds_CHUNK]
+            cormaps_list <- vbca_batch2(funclist, scor_inds_CHUNK, ztransform=ztransform, 
+                                        shared=FALSE)        
+            tmp <- compute_subdist_worker2_regress(cormaps_list, scor_inds_CHUNK, subdist, 
+                                                   dist_inds_CHUNK, design_matrix)
+            
+            rm(dist_inds_CHUNK, scor_inds_CHUNK, cormaps_list, tmp)
             gc(FALSE)
             return(NULL)
         }
@@ -406,25 +408,27 @@ compute_subdist2 <- function(funclist, subdist, seed_inds, blocksize, ztransform
         end(pb)
 }
 
-compute_subdist_worker2 <- function(sub.cormaps, inds, outmat=NULL, type="double", ...) {
+compute_subdist_worker2 <- function(sub.cormaps, cor_inds, outmat, dist_inds, type="double", ...) {
     nsubs <- length(sub.cormaps)
     nvoxs <- ncol(sub.cormaps[[1]])
     nseeds <- nrow(sub.cormaps[[1]])
-    if (nseeds != length(inds))
+    if (nseeds != length(cor_inds) || nseeds != length(dist_inds))
         stop("length of inds doesn't match nrow of first sub.cormaps element")
     
-    if (is.null(outmat))
-        outmat <- big.matrix(nsubs^2, nseeds, type=type, ...)
-    else if (ncol(outmat) != nseeds || nrow(outmat) != nsubs^2)
-        stop("dimensions of outmat do not match nsubs and nseeds values")
+    #if (is.null(outmat))
+    #    outmat <- big.matrix(nsubs^2, nseeds, type=type, ...)
+    #else if (ncol(outmat) != nseeds || nrow(outmat) != nsubs^2)
+    #    stop("dimensions of outmat do not match nsubs and nseeds values")
     
     subsMap <- big.matrix(nvoxs-1, nsubs, type=type, shared=FALSE, ...)
+    ALPHA <- 1/(nvoxs-2)
     voxs <- 1:nvoxs
     for (i in 1:nseeds) {
-        .Call("CombineSubMapsMain", sub.cormaps, subsMap@address, as.double(i), as.double(voxs[-inds[i]]), as.double(nvoxs-1), as.double(nsubs))
-        col <- sub.big.matrix_wrapper(outmat, firstCol=i, lastCol=i)
-        .Call("big_cor", subsMap, subsMap, col, PACKAGE = "connectir")
-        .Call("BigSubtractScalarMain", col@address, as.double(1), TRUE)
+        .Call("CombineSubMapsMain", sub.cormaps, subsMap@address, as.double(i), 
+              as.double(voxs[-cor_inds[i]]), as.double(nvoxs-1), as.double(nsubs))
+        big_cor(subsMap, subsMap, outmat, dist_inds[i], 1)
+        .Call("big_add_scalar", outmat, as.double(1), dist_inds[i], -1);
+        rm(col); gc(F, TRUE)
     }
     
     rm(subsMap)
@@ -433,33 +437,33 @@ compute_subdist_worker2 <- function(sub.cormaps, inds, outmat=NULL, type="double
     return(outmat)
 }
 
-compute_subdist_worker2_regress <- function(sub.cormaps, inds, design_mat, outmat=NULL, 
-                                            type="double", ...) 
+compute_subdist_worker2_regress <- function(sub.cormaps, cor_inds, outmat, dist_inds,  
+                                            design_mat, type="double", ...) 
 {
     nsubs <- length(sub.cormaps)
     nvoxs <- ncol(sub.cormaps[[1]])
     nseeds <- nrow(sub.cormaps[[1]])
-    if (nseeds != length(inds))
+    if (nseeds != length(cor_inds) || nseeds != length(dist_inds))
         stop("length of inds doesn't match nrow of first sub.cormaps element")
     
-    if (is.null(outmat))
-        outmat <- big.matrix(nsubs^2, nseeds, type=type, ...)
-    else if (ncol(outmat) != nseeds || nrow(outmat) != nsubs^2)
-        stop("dimensions of outmat do not match nsubs and nseeds values")
+    #if (is.null(outmat))
+    #    outmat <- big.matrix(nsubs^2, nseeds, type=type, ...)
+    #else if (ncol(outmat) != nseeds || nrow(outmat) != nsubs^2)
+    #    stop("dimensions of outmat do not match nsubs and nseeds values")
     
     subsMap <- big.matrix(nsubs, nvoxs-1, type=type, shared=FALSE, ...)
     r_subsMap <- big.matrix(nsubs, nvoxs-1, type=type, shared=FALSE, ...)   # residuals
     voxs <- 1:nvoxs
     for (i in 1:nseeds) {
-        .Call("CombineSubMapsTransMain", sub.cormaps, subsMap@address, as.double(i), as.double(voxs[-inds[i]]), as.double(nvoxs-1), as.double(nsubs), PACKAGE="connectir")
+        .Call("CombineSubMapsMain", sub.cormaps, subsMap@address, as.double(i), 
+              as.double(voxs[-cor_inds[i]]), as.double(nvoxs-1), as.double(nsubs))
         qlm_residuals(subsMap, design_mat, FALSE, r_subsMap)
-        col <- sub.big.matrix_wrapper(outmat, firstCol=i, lastCol=i)
-        .Call("big_tcor", subsMap, subsMap, col, PACKAGE="connectir")
-        .Call("BigSubtractScalarMain", col@address, as.double(1), TRUE)
+        big_tcor(subsMap, subsMap, outmat, dist_inds[i], 1)
+        .Call("big_add_scalar", outmat, as.double(1), dist_inds[i], -1);
     }
     
-    rm(subsMap); rm(r_subsMap)
-    gc(F, T)
+    rm(subsMap)
+    gc(F)
     
     return(outmat)
 }
