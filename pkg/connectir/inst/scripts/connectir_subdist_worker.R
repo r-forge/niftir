@@ -189,7 +189,7 @@ tryCatch({
   if (!is.null(preseedmask)) masks$preseedmask <- preseedmask
   if (!is.null(prebrainmask)) masks$prebrainmask <- prebrainmask
   # note: this subdist isn't filebacked yet
-  subdist <- create_subdist(outdir, infiles, masks, opts) 
+  subdist <- create_subdist(outdir, infiles, masks, opts, shared=use_shared)
   
   # clear memory of unneeded stuff + get seedinds
   seedinds <- which(seedmask[brainmask])
