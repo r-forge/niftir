@@ -8,7 +8,6 @@
 
 #include "connectirDefines.h"
 
-
 #include <math.h>
 #include <iostream>
 
