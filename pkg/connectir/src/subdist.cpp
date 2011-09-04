@@ -86,7 +86,7 @@ SEXP CombineSubMaps(BigMatrix *oneVox_allSubs, SEXP allVoxs_allSubs, index_type 
 }
 
 template<typename CType, typename BMAccessorType>
-SEXP CombineSubMapsTrans(BigMatrix *oneVox_allSubs, SEXP allVoxs_allSubs, index_type seed, double *pVoxs, index_type nvoxs, index_type nsubs) {
+SEXP CombineSubMapsTransSimple(BigMatrix *oneVox_allSubs, SEXP allVoxs_allSubs, index_type seed, double *pVoxs, index_type nvoxs, index_type nsubs) {
     //using namespace Rcpp;
     
     BMAccessorType outMat( *oneVox_allSubs );
@@ -124,27 +124,9 @@ SEXP CombineSubMapsTrans(BigMatrix *oneVox_allSubs, SEXP allVoxs_allSubs, index_
         UNPROTECT(2);
         BMAccessorType inMat( *allVoxs_oneSub );
         
-//        inCol = inMat[seed];
-        delta = mean = M2 = stdev = 0;
-        for (v=0; v < nvoxs; ++v) {
-            // todo: add checking for NaN...but shouldn't really have any!
-            // maybe can also pass the exact list of voxs to loop through!
-            // if (!ISNAN(pColumn[curj]))
-            // NA_REAL
-            vv = static_cast<index_type>(pVoxs[v]-1);
-            x = static_cast<LDOUBLE>(inMat[vv][seed]);
-            delta = x - mean;
-            mean = mean + delta/static_cast<LDOUBLE>(v+1);
-            M2 = M2 + delta*(x - mean);
-        }
-        stdev = sqrt(M2/(static_cast<LDOUBLE>(nvoxs-1)));
-        //printf("mean: %f; stdev: %f\n", mean, stdev);
-        
-        //outCol = outMat[s];
         for (v=0; v < nvoxs; ++v) {
             vv = static_cast<index_type>(pVoxs[v]-1);
-            scaled_x = (static_cast<LDOUBLE>(inMat[vv][seed])-mean)/stdev;
-            outMat[v][s] = static_cast<CType>(scaled_x);
+            outMat[v][s] = static_cast<CType>(inMat[vv][seed]);
         }
     }
     
@@ -166,14 +148,14 @@ SEXP CombineSubMapsMain(SEXP LIST_allVoxs_allSubs, SEXP ADDR_oneVox_allSubs, SEX
         return(ret);
 }
 
-SEXP CombineSubMapsTransMain(SEXP LIST_allVoxs_allSubs, SEXP ADDR_oneVox_allSubs, SEXP Rseed_index, SEXP Rvoxindices, SEXP Rnvoxs, SEXP Rnsubs) {
+SEXP CombineSubMapsTransSimpleMain(SEXP LIST_allVoxs_allSubs, SEXP ADDR_oneVox_allSubs, SEXP Rseed_index, SEXP Rvoxindices, SEXP Rnvoxs, SEXP Rnsubs) {
         BigMatrix *oneVox_allSubs = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(ADDR_oneVox_allSubs));
         index_type seed = static_cast<index_type>(NUMERIC_DATA(Rseed_index)[0]) - 1;
         double *pVoxs = NUMERIC_DATA(Rvoxindices);
         index_type nvoxs = static_cast<index_type>(NUMERIC_DATA(Rnvoxs)[0]);
         index_type nsubs = static_cast<index_type>(NUMERIC_DATA(Rnsubs)[0]);
         
-        CALL_BIGFUNCTION_ARGS_SIX(CombineSubMapsTrans, oneVox_allSubs, LIST_allVoxs_allSubs, seed, pVoxs, nvoxs, nsubs)
+        CALL_BIGFUNCTION_ARGS_SIX(CombineSubMapsTransSimple, oneVox_allSubs, LIST_allVoxs_allSubs, seed, pVoxs, nvoxs, nsubs)
         
         return(ret);
 }

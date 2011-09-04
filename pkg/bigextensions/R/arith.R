@@ -35,6 +35,26 @@ setMethod("scale",
         scale.default(x, center, scale)
 )
 
+scale_fast <- function(x, to.copy, byrows=FALSE, cols=1:ncol(x), rows=1:nrow(x), ...) {
+    if (!is.big.matrix(x))
+        stop("input must be a big matrix")
+    
+    # Copy
+    if (to.copy)
+        y <- deepcopy(x, ...)
+    else
+        y <- x
+    
+    if (byrows)
+        .Call("BigTransScaleMain", y@address, as.double(rows), as.double(cols), 
+                PACKAGE="bigextensions")
+    else
+        .Call("BigScaleMain", y@address, as.double(rows), as.double(cols), 
+                PACKAGE="bigextensions")
+    
+    return(y)
+}
+
 #' @nord
 setGeneric("do.operator",
     function(x, y, operator, z, ...)

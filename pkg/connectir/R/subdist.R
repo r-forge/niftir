@@ -453,10 +453,11 @@ compute_subdist_worker2_regress <- function(sub.cormaps, cor_inds, outmat, dist_
     r_subsMap <- big.matrix(nsubs, nvoxs-1, type=type, shared=FALSE, ...)   # residuals
     voxs <- 1:nvoxs
     for (i in 1:nseeds) {
-        .Call("CombineSubMapsTransMain", sub.cormaps, subsMap@address, as.double(i), 
+        .Call("CombineSubMapsTransSimpleMain", sub.cormaps, subsMap@address, as.double(i), 
               as.double(voxs[-cor_inds[i]]), as.double(nvoxs-1), as.double(nsubs))
         qlm_residuals(subsMap, design_mat, FALSE, r_subsMap)
-        big_tcor(subsMap, subsMap, outmat, dist_inds[i], 1)
+        scale_fast(r_subsMap, to.copy=FALSE, byrows=TRUE)
+        big_tcor(r_subsMap, r_subsMap, outmat, dist_inds[i], 1)
         .Call("big_add_scalar_left", outmat, as.double(-1), as.double(dist_inds[i]), as.double(1));
     }
     

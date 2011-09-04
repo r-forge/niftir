@@ -125,6 +125,54 @@ void BigScale(BigMatrix *pMat, SEXP rowIndices, SEXP colIndices) {
     return;
 }
 
+template<typename CType, typename BMAccessorType>
+void BigTransScale(BigMatrix *pMat, SEXP rowIndices, SEXP colIndices) {
+    BMAccessorType m( *pMat );
+    
+    double *pRows = NUMERIC_DATA(rowIndices);
+    double *pCols = NUMERIC_DATA(colIndices);
+    index_type numRows = GET_LENGTH(rowIndices);
+    index_type numCols = GET_LENGTH(colIndices);
+    
+    index_type i=0;
+    index_type j=0;
+    index_type ci=0;
+    index_type ri=0;
+    CType *pColumn;
+    
+    LDOUBLE x = 0;
+    LDOUBLE delta = 0;
+    LDOUBLE mean = 0;
+    LDOUBLE M2 = 0;
+    LDOUBLE stdev = 0;
+    LDOUBLE scaled_x;
+    
+    for (j = 0; j < numRows; ++j) {
+        ri = static_cast<index_type>(pRows[j])-1;
+        
+        // First pass to get mean and sd
+        delta = mean = M2 = stdev = 0;
+        for (i = 0; i < numCols; ++i) {
+            ci = static_cast<index_type>(pCols[i])-1;            
+            x = static_cast<LDOUBLE>(m[ci][ri]);
+            delta = x - mean;
+            mean = mean + delta/static_cast<LDOUBLE>(i+1);
+            M2 = M2 + delta*(x - mean);
+        }
+        stdev = sqrt(M2/(static_cast<LDOUBLE>(numCols-1)));
+        
+        // Second pass to scale
+        for (i = 0; i < numCols; ++i) {
+            ci = static_cast<index_type>(pCols[i]-1);
+            scaled_x = (static_cast<LDOUBLE>(m[ci][ri])-mean)/stdev;
+            m[ci][ri] = static_cast<CType>(scaled_x);
+        }
+        
+    }
+    
+    return;
+}
+
 extern "C" {
     
     SEXP BigTransposeMain(SEXP origAddr, SEXP newAddr) {
@@ -384,7 +432,53 @@ extern "C" {
         }
         
         return R_NilValue;
-    }    
+    }
+    
+    SEXP BigTransScaleMain(SEXP addr, SEXP rowIndices, SEXP colIndices) {
+        BigMatrix *pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(addr));
+        if (pMat->separated_columns()) {
+            switch (pMat->matrix_type()) {
+                case 1:
+                    BigTransScale<char, SepMatrixAccessor<char> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+                case 2:
+                    BigTransScale<short, SepMatrixAccessor<short> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+                case 4:
+                    BigTransScale<int, SepMatrixAccessor<int> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+                case 8:
+                    BigTransScale<double, SepMatrixAccessor<double> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+            }
+        }
+        else {
+            switch (pMat->matrix_type()) {
+                case 1:
+                    BigTransScale<char, MatrixAccessor<char> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+                case 2:
+                    BigTransScale<short, MatrixAccessor<short> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+                case 4:
+                    BigTransScale<int, MatrixAccessor<int> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+                case 8:
+                    BigTransScale<double, MatrixAccessor<double> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+            }
+        }
+        
+        return R_NilValue;
+    }
 }   // End extern "C"
 
 #endif //BIGEXTENSIONS_UTILS
