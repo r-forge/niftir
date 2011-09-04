@@ -41,7 +41,7 @@ SEXP big_tcor(SEXP As, SEXP Bs, SEXP Cs, SEXP Cicol, SEXP Cncol) {
         BM_TO_ARMA_INIT()
         BM_TO_ARMA_MULTIPLE(As, A)
         BM_TO_ARMA_MULTIPLE(Bs, B)
-        double df = pMat->nrow() - 1;
+        double df = pMat->ncol() - 1;
         
         bm = Cs;
         addr = bm.slot("address");
