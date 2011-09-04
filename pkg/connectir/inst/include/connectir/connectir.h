@@ -27,7 +27,8 @@ extern "C" {
 RcppExport SEXP CombineSubMapsMain(SEXP LIST_allVoxs_allSubs, SEXP ADDR_oneVox_allSubs, SEXP Rseed_index, SEXP Rvoxindices, SEXP Rnvoxs, SEXP Rnsubs);
 
 // utils.cpp
-RcppExport SEXP big_add_scalar(SEXP Sbigmat, SEXP Svalue, SEXP Sicol, SEXP Sncol);
+RcppExport SEXP big_add_scalar_right(SEXP Sbigmat, SEXP Svalue, SEXP Sicol, SEXP Sncol);
+RcppExport SEXP big_add_scalar_left(SEXP Sbigmat, SEXP Svalue, SEXP Sicol, SEXP Sncol);
 RcppExport SEXP bm_rowsum(SEXP Rbigmat);
 RcppExport SEXP bm_rowmean(SEXP Rbigmat);
 

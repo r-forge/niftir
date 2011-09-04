@@ -427,7 +427,7 @@ compute_subdist_worker2 <- function(sub.cormaps, cor_inds, outmat, dist_inds, ty
         .Call("CombineSubMapsMain", sub.cormaps, subsMap@address, as.double(i), 
               as.double(voxs[-cor_inds[i]]), as.double(nvoxs-1), as.double(nsubs))
         big_cor(subsMap, subsMap, outmat, dist_inds[i], 1)
-        .Call("big_add_scalar", outmat, as.double(-1), as.double(dist_inds[i]), as.double(1));
+        .Call("big_add_scalar_left", outmat, as.double(-1), as.double(dist_inds[i]), as.double(1));
     }
     rm(subsMap)
     gc(F)
@@ -457,7 +457,7 @@ compute_subdist_worker2_regress <- function(sub.cormaps, cor_inds, outmat, dist_
               as.double(voxs[-cor_inds[i]]), as.double(nvoxs-1), as.double(nsubs))
         qlm_residuals(subsMap, design_mat, FALSE, r_subsMap)
         big_tcor(subsMap, subsMap, outmat, dist_inds[i], 1)
-        .Call("big_add_scalar", outmat, as.double(-1), as.double(dist_inds[i]), as.double(1));
+        .Call("big_add_scalar_left", outmat, as.double(-1), as.double(dist_inds[i]), as.double(1));
     }
     
     rm(subsMap)
