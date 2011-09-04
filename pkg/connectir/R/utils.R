@@ -50,18 +50,25 @@ get_subdist_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts) {
     printf("...%.2f GB of memory used for one voxel's connectivity map across subjects", 
             n2gb(n4onemap))
     
+    # functionals and 2 subject distances not held in memory @ same time
+    mem_dat <- ifelse(mem_used4func > (mem_used4dmat/2), 
+                        mem_used4func + mem_used4func, 
+                        mem_used4dmat)
+    
     # set blocksize if auto
     if (opts$blocksize == 0) {
         # minimum amount of RAM needed
         ## mem_used4func + memory for 2 connectivity maps per subjects
-        min_mem_needed <- n2gb(n4onemap*2*getDoParWorkers()) + mem_used4func + mem_used4dmat
+        min_mem_needed <- n2gb(n4onemap*2*getDoParWorkers()) + mem_dat
         
         # limit in RAM use
         mem_limit <- as.numeric(opts$memlimit)
-        if (mem_limit < min_mem_needed)
-            stop(sprintf("You require at least %.2f GB of memory but are limited to %i GB. Please set the --memlimit option to a higher number in order to continue.", min_mem_needed, mem_limit))
-        else
-            printf("...memory limit is %.2f GB", mem_limit)
+        if (mem_limit < min_mem_needed) {
+            vstop("You require at least %.2f GB of memory but are limited to %i GB. Please set the --memlimit option to a higher number in order to continue.", min_mem_needed, mem_limit)
+        } else {
+            printf("...memory limit is %.2f GB and a minimum of %.2f GB needed", 
+                    mem_limit, min_mem_needed)
+        }
         
         # amount of RAM for connectivity matrix
         mem_used4conn <- mem_limit - mem_used4func - mem_used4dmat
@@ -77,7 +84,7 @@ get_subdist_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts) {
         opts$blocksize <- floor(opts$blocksize/getDoParWorkers())
 
         # calculate amount of memory that will be used
-        mem_used <- n2gb(opts$blocksize * n4onemap)
+        mem_used <- n2gb(opts$blocksize * n4onemap * getDoParWorkers()) + mem_dat
         printf("%.2f GB of RAM", mem_used)
     }
     
