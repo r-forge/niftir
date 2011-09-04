@@ -44,25 +44,9 @@ tryCatch({
   ###
   # Parallel processing setup
   ###
-  printf("04. Setting %i cores to be used", opts$cores)
-  if (opts$cores > 1) {
-      printf("...setting parallel processing with doMC")
-      suppressPackageStartupMessages(library("doMC"))
-      registerDoMC()
-      if (opts$cores > getDoParWorkers())
-      	stop("Number of -c/--cores specified '", opts$cores, "' is greater than the actual number of cores '", getDoParWorkers(), "'")
-  }
-  options(cores=opts$cores)
-	
-	printf("04. Setting %i MKL threads to be used", opts$threads)
-	printf("...setting number of threads for MKL")
-  if (existsFunction("setMKLthreads")) {
-  	setMKLthreads(opts$threads)
-  } else {
-  	Sys.setenv(MKL_NUM_THREADS=opts$threads)
-  }
+  set_parallel_procs(opts$cores, opts$threads, opts$verbose)
   
-  # want shared memory or not
+  # use foreach parallelization and shared memory?
   use_shared = ifelse(opts$cores == 1, FALSE, TRUE)
   
   suppressWarnings(suppressPackageStartupMessages(library("connectir")))
@@ -180,7 +164,7 @@ tryCatch({
         stop("Input functional file must be 4 dimensions: ", x, ", but is ", length(hdr$dim))
       return(hdr$dim[[4]])
   })
-  opts <- get_memlimit(opts, nsubs, nvoxs, ntpts)
+  opts <- get_subdist_memlimit(opts, nsubs, nvoxs, ntpts)
   
   ## functional data
   printf("...reading and masking the functional data")

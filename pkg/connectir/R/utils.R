@@ -1,6 +1,34 @@
-vcat <- function(verbose, msg, ...) {
-    cat(sprintf(msg, ...))
-    cat("\n")
+vcat <- function(verbose, msg, ..., newline=TRUE) {
+    if (verbose) {
+        cat(sprintf(msg, ...))
+        if (newline) cat("\n")
+    }
+}
+
+vstop <- function(msg, ...) stop(sprintf(msg, ...))
+
+set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE) {
+    vcat(verbose, "Setting %i parallel forks", nforks)
+    suppressPackageStartupMessages(library("doMC"))
+    registerDoMC()
+    nprocs <- getDoParWorkers()
+    if (nforks > nprocs)
+        vstop("# of forks %i is greater than the actual # of processors (%i)", nforks, nprocs)
+    options(cores=nforks)
+    
+    vcat(verbose, "Setting %i threads to be used for matrix algebra operations", nthreads)
+    if (nthreads > nprocs)
+        vstop("# of threads %i is greater than the actual # of processors (%i)", nthreads, nprocs)
+    if (existsFunction("setMKLthreads")) {
+        setMKLthreads(nthreads)
+    } else {
+        # cover all our bases
+        Sys.setenv(MKL_NUM_THREADS=nthreads)
+        Sys.setenv(GOTO_NUM_THREADS=nthreads)
+        Sys.setenv(OMP_NUM_THREADS=nthreads)
+    }
+    
+    invisible(TRUE)
 }
 
 n2gb <- function(x) x*8/1024^3
@@ -8,19 +36,14 @@ gb2n <- function(x) x/8*1024^3
 
 # opts => list(blocksize=0, memlimit=6, verbose=TRUE)
 # return opts
-get_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts) {
-    printf <- function(msg, ..., newline=TRUE) {
-        if (opts$verbose) {
-            cat(sprintf(msg, ...))
-            if (newline) cat("\n")
-        }
-    }
-
+get_subdist_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts) {
+    printf <- function(msg, ..., newline=TRUE) vcat(opts$verbose, msg, ..., newline=newline)
+    
     # amount of RAM used in GB for functionals
     mem_used4func <- sum(sapply(subs.ntpts, function(x) n2gb(x*nvoxs)))
     
     # amount of RAM used for distance matrix
-    mem_used4dmat <- n2gb(nsubs^2 * nvoxs)
+    mem_used4dmat <- n2gb(nsubs^2 * nvoxs)*2    # *2 cuz copies are made (e.g. saving & gower)
     n4onemap <- nvoxs * nsubs
     
     # set blocksize if auto
@@ -35,6 +58,8 @@ get_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts) {
         mem_limit <- as.numeric(opts$memlimit)
         if (mem_limit < min_mem_needed)
             stop(sprintf("You require at least %.2f GB of memory but are limited to %i GB. Please set the --memlimit option to a higher number in order to continue.", min_mem_needed, mem_limit))
+        else
+            printf("memory limit is %.2f GB", mem_limit)
         
         # amount of RAM for connectivity matrix
         mem_used4conn <- mem_limit - mem_used4func - mem_used4dmat

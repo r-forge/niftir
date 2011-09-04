@@ -177,9 +177,9 @@ setMethod('is.big.nifti4d',
 #'  # TODO
 #' 
 #' @keywords methods
-read.big.nifti4d <- function(fname, ...) {
+read.big.nifti4d <- function(file, ...) {
     # Read in header and pointer to nifti class
-    x <- .Call("read_bignifti_header", abspath(fname))
+    x <- .Call("read_bignifti_header", abspath(file))
     
     # Get new 2d dimensions for data
     idim <- x$header$dim
