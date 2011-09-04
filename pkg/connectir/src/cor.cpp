@@ -11,15 +11,14 @@ SEXP big_cor(SEXP As, SEXP Bs, SEXP Cs, SEXP Cicol, SEXP Cncol) {
         BM_TO_ARMA_MULTIPLE(Bs, B)
         double df = pMat->nrow() - 1;
         
-        BM_TO_ARMA_MULTIPLE(Cs, C)
-        Rcpp::RObject bm(Cs);
-        SEXP addr = bm.slot("address");
-        BigMatrix *pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(addr));
+        bm = Cs;
+        addr = bm.slot("address");
+        pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(addr));
         if (pMat->matrix_type() != 8)
             ::Rf_error("Big Matrix must be of type double");
-        index_type offset = pMat->nrow() * pMat->col_offset();
-        double *ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset + icol;
-        arma::mat amat(ptr_double, pMat->nrow(), ncol, false);
+        offset = pMat->nrow() * pMat->col_offset();
+        ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset + icol;
+        arma::mat C(ptr_double, pMat->nrow(), ncol, false);
         
         C = (arma::trans(A) * B)/df;
         
@@ -44,15 +43,14 @@ SEXP big_tcor(SEXP As, SEXP Bs, SEXP Cs, SEXP Cicol, SEXP Cncol) {
         BM_TO_ARMA_MULTIPLE(Bs, B)
         double df = pMat->nrow() - 1;
         
-        BM_TO_ARMA_MULTIPLE(Cs, C)
-        Rcpp::RObject bm(Cs);
-        SEXP addr = bm.slot("address");
-        BigMatrix *pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(addr));
+        bm = Cs;
+        addr = bm.slot("address");
+        pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(addr));
         if (pMat->matrix_type() != 8)
             ::Rf_error("Big Matrix must be of type double");
-        index_type offset = pMat->nrow() * pMat->col_offset();
-        double *ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset + icol;
-        arma::mat amat(ptr_double, pMat->nrow(), ncol, false);
+        offset = pMat->nrow() * pMat->col_offset();
+        ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset + icol;
+        arma::mat C(ptr_double, pMat->nrow(), ncol, false);
         
         C = (A * arma::trans(B))/df;
 
