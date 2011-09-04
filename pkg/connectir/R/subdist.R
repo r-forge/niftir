@@ -172,7 +172,7 @@ compute_subdist <- function(funclist, subdist, seed_inds, blocksize, ztransform,
         }
         inds_CHUNK <- seed_inds[blocks$starts[i]:blocks$ends[i]]
         cormaps_list <- vbca_batch(funclist, inds_CHUNK, ztransform=ztransform, shared=FALSE)
-        subdist_CHUNK <- sub.big.matrix.wrapper(subdist, firstCol=blocks$starts[i], lastCol=blocks$ends[i])
+        subdist_CHUNK <- sub.big.matrix_wrapper(subdist, firstCol=blocks$starts[i], lastCol=blocks$ends[i])
         tmp <- compute_subdist_worker(cormaps_list, inds_CHUNK, subdist_CHUNK)
         rm(inds_CHUNK, subdist_CHUNK, tmp, cormaps_list)
         gc(FALSE)
@@ -237,7 +237,7 @@ compute_subdist_worker <- function(sub.cormaps, inds, outmat=NULL, type="double"
     voxs <- 1:nvoxs
     for (i in 1:nseeds) {
         .Call("CombineSubMapsMain", sub.cormaps, subsMap@address, as.double(i), as.double(voxs[-inds[i]]), as.double(nvoxs-1), as.double(nsubs))
-        col <- sub.big.matrix.wrapper(outmat, firstCol=i, lastCol=i)
+        col <- sub.big.matrix_wrapper(outmat, firstCol=i, lastCol=i)
         dgemm(C=col, A=subsMap, B=subsMap, TRANSA='t', ALPHA=ALPHA, LDC=as.double(nsubs))
         .Call("BigSubtractScalarMain", col@address, as.double(1), TRUE);
     }
@@ -339,7 +339,7 @@ compute_subdist2 <- function(funclist, subdist, seed_inds, blocksize, ztransform
             }
             inds_CHUNK <- seed_inds[blocks$starts[i]:blocks$ends[i]]
             cormaps_list <- vbca_batch2(funclist, inds_CHUNK, ztransform=ztransform, shared=FALSE)
-            subdist_CHUNK <- sub.big.matrix.wrapper(subdist, firstCol=blocks$starts[i], 
+            subdist_CHUNK <- sub.big.matrix_wrapper(subdist, firstCol=blocks$starts[i], 
                                                     lastCol=blocks$ends[i])
             tmp <- compute_subdist_worker2(cormaps_list, inds_CHUNK, subdist_CHUNK)
             rm(inds_CHUNK, subdist_CHUNK, tmp, cormaps_list)
@@ -355,7 +355,7 @@ compute_subdist2 <- function(funclist, subdist, seed_inds, blocksize, ztransform
             }
             inds_CHUNK <- seed_inds[blocks$starts[i]:blocks$ends[i]]
             cormaps_list <- vbca_batch2(funclist, inds_CHUNK, ztransform=ztransform, shared=FALSE)
-            subdist_CHUNK <- sub.big.matrix.wrapper(subdist, firstCol=blocks$starts[i], 
+            subdist_CHUNK <- sub.big.matrix_wrapper(subdist, firstCol=blocks$starts[i], 
                                                     lastCol=blocks$ends[i])
             tmp <- compute_subdist_worker2_regress(cormaps_list, inds_CHUNK, design_matrix, 
                                                     subdist_CHUNK)
@@ -422,7 +422,7 @@ compute_subdist_worker2 <- function(sub.cormaps, inds, outmat=NULL, type="double
     voxs <- 1:nvoxs
     for (i in 1:nseeds) {
         .Call("CombineSubMapsMain", sub.cormaps, subsMap@address, as.double(i), as.double(voxs[-inds[i]]), as.double(nvoxs-1), as.double(nsubs))
-        col <- sub.big.matrix.wrapper(outmat, firstCol=i, lastCol=i)
+        col <- sub.big.matrix_wrapper(outmat, firstCol=i, lastCol=i)
         .Call("big_cor", subsMap, subsMap, col, PACKAGE = "connectir")
         .Call("BigSubtractScalarMain", col@address, as.double(1), TRUE)
     }
@@ -453,8 +453,8 @@ compute_subdist_worker2_regress <- function(sub.cormaps, inds, design_mat, outma
     for (i in 1:nseeds) {
         .Call("CombineSubMapsTransMain", sub.cormaps, subsMap@address, as.double(i), as.double(voxs[-inds[i]]), as.double(nvoxs-1), as.double(nsubs), PACKAGE="connectir")
         qlm_residuals(subsMap, design_mat, FALSE, r_subsMap)
-        col <- sub.big.matrix.wrapper(outmat, firstCol=i, lastCol=i)
-        cpp_tcor(subsMap, subsMap, col)
+        col <- sub.big.matrix_wrapper(outmat, firstCol=i, lastCol=i)
+        .Call("big_tcor", subsMap, subsMap, col, PACKAGE="connectir")
         .Call("BigSubtractScalarMain", col@address, as.double(1), TRUE)
     }
     

@@ -99,15 +99,15 @@ bm_rowmean <- function(bigmat) {
     as.vector(.Call("bm_rowmean", bigmat, PACKAGE = "connectir"))
 }
 
-sub.big.matrix.wrapper <- function(x, firstRow=1, lastRow=NULL, firstCol=1, lastCol=NULL, backingpath=NULL)
+sub.big.matrix_wrapper <- function(x, firstRow=1, lastRow=NULL, firstCol=1, lastCol=NULL, backingpath=NULL)
 {
     if (is.shared(x))
         sub.big.matrix(x, firstRow, lastRow, firstCol, lastCol, backingpath)
     else
-        sub.big.matrix.nonshared(x, firstRow, lastRow, firstCol, lastCol)
+        sub.big.matrix_nonshared(x, firstRow, lastRow, firstCol, lastCol)
 }
 
-sub.big.matrix.nonshared <- function(x, firstRow, lastRow, firstCol, lastCol)
+sub.big.matrix_nonshared <- function(x, firstRow=1, lastRow=NULL, firstCol=1, lastCol=NULL)
 {
   rowOffset <- firstRow-1
   colOffset <- firstCol-1
@@ -119,7 +119,6 @@ sub.big.matrix.nonshared <- function(x, firstRow, lastRow, firstCol, lastCol)
   if (colOffset < 0 || rowOffset < 0 || numCols < 1 || numRows < 1 ||
       colOffset+numCols > ncol(rbm) || rowOffset+numRows > nrow(rbm))
   {
-    rm(rbm)
     stop(paste("A sub.big.matrix object could not be created",
                "with the specified parameters"))
   }
