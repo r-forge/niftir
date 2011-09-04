@@ -452,7 +452,7 @@ compute_subdist_worker2_regress <- function(sub.cormaps, inds, design_mat, outma
     voxs <- 1:nvoxs
     for (i in 1:nseeds) {
         .Call("CombineSubMapsTransMain", sub.cormaps, subsMap@address, as.double(i), as.double(voxs[-inds[i]]), as.double(nvoxs-1), as.double(nsubs), PACKAGE="connectir")
-        qlm_residuals(subsMap, design_mat, r_subsMap)
+        qlm_residuals(subsMap, design_mat, FALSE, r_subsMap)
         col <- sub.big.matrix.wrapper(outmat, firstCol=i, lastCol=i)
         cpp_tcor(subsMap, subsMap, col)
         .Call("BigSubtractScalarMain", col@address, as.double(1), TRUE)

@@ -87,7 +87,7 @@ setMethod('qlm_fit',
 
 # Residuals
 setGeneric('qlm_residuals', 
-    function(y, X, check.rank=FALSE, ...)
+    function(y, X, check.rank=FALSE, residuals=NULL, ...)
         standardGeneric('qlm_residuals')
 )
 
