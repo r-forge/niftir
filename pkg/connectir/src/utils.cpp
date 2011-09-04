@@ -19,7 +19,7 @@
 SEXP big_add_scalar(SEXP Sbigmat, SEXP Svalue, SEXP Sicol, SEXP Sncol) {
     try {        
         double value = DOUBLE_DATA(Svalue)[0];
-        index_type icol = static_cast<index_type>(DOUBLE_DATA(Sicol)[0]);
+        index_type icol = static_cast<index_type>(DOUBLE_DATA(Sicol)[0] - 1);
         index_type ncol = static_cast<index_type>(DOUBLE_DATA(Sncol)[0]);
         
         Rcpp::RObject bm(Sbigmat);

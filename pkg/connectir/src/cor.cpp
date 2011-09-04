@@ -3,7 +3,7 @@
 // Cs <- (t(As) %*% Bs)/(nrow(Bs)-1)
 SEXP big_cor(SEXP As, SEXP Bs, SEXP Cs, SEXP Cicol, SEXP Cncol) {    
     try {
-        index_type icol = static_cast<index_type>(DOUBLE_DATA(Cicol)[0]);
+        index_type icol = static_cast<index_type>(DOUBLE_DATA(Cicol)[0] - 1);
         index_type ncol = static_cast<index_type>(DOUBLE_DATA(Cncol)[0]);
         
         BM_TO_ARMA_INIT()
@@ -35,7 +35,7 @@ SEXP big_cor(SEXP As, SEXP Bs, SEXP Cs, SEXP Cicol, SEXP Cncol) {
 // Cs <- (As %*% t(Bs))/(nrow(As)-1)
 SEXP big_tcor(SEXP As, SEXP Bs, SEXP Cs, SEXP Cicol, SEXP Cncol) {  
     try {
-        index_type icol = static_cast<index_type>(DOUBLE_DATA(Cicol)[0]);
+        index_type icol = static_cast<index_type>(DOUBLE_DATA(Cicol)[0] - 1);
         index_type ncol = static_cast<index_type>(DOUBLE_DATA(Cncol)[0]);
         
         BM_TO_ARMA_INIT()
