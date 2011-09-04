@@ -79,6 +79,35 @@ setMethod('qlm_fit',
     }
 )
 
+# Residuals
+setGeneric('qlm_residuals', 
+    function(y, X, check.rank=FALSE, ...)
+        standardGeneric('qlm_residuals')
+)
+
+setMethod('qlm_residuals',
+    signature(y='big.matrix', X='big.matrix'),
+    function(y, X, check.rank=FALSE, residuals=NULL, ...) {
+        n = nrow(X); k = ncol(X); m = ncol(y)
+        
+        if (check.rank) {
+            Xrank <- qlm_rank(X)
+            if (Xrank < k)
+                stop("design matrix is rank deficient.")
+        }
+        
+        if (is.null(residuals)) {
+            residuals = big.matrix(nrow(y), ncol(y), type="double", ...)
+        } else if (nrow(residuals) != n && ncol(residuals) != m)
+            stop("size mismatch for output residuals")
+        }
+        
+        .Call("big_qlm_residuals", y, X, residuals, PACKAGE = "connectir")
+        
+        return(residuals)
+    }
+)
+
 # Gets tvals for given contrasts from qlm_fit results
 setGeneric('qlm_contrasts', 
     function(inputs, contrasts, dd, ...)

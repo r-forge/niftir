@@ -45,7 +45,7 @@ plugin_bigmemory <- function() {
 }
 registerPlugin("bigmemory", plugin_bigmemory)
 
-
+# c <- (t(A) %*% B)/(nrow(B)-1)
 cpp_cor <- cxxfunction( signature(As="object", Bs="object", Cs="object"), 
 '
   try{
@@ -76,6 +76,47 @@ cpp_cor <- cxxfunction( signature(As="object", Bs="object", Cs="object"),
     arma::mat C(ptr_double, pMat->nrow(), pMat->ncol(), false);
     
     C = (arma::trans(A) * B)/df;
+    
+    return R_NilValue;
+  } catch( std::exception &ex ) {
+  forward_exception_to_r( ex );
+  } catch(...) { 
+  ::Rf_error( "c++ exception (unknown reason)" ); 
+  }
+  return R_NilValue; // -Wall
+', plugin = "bigmemory")
+
+# c <- (A %*% t(B))/(nrow(A)-1)
+cpp_tcor <- cxxfunction( signature(As="object", Bs="object", Cs="object"), 
+'
+  try{
+    using namespace Rcpp;
+    
+    SEXP addr; BigMatrix *pMat; index_type offset; double *ptr_double;
+    
+    RObject Abm(As);
+    addr = Abm.slot("address");
+    pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(addr));
+    offset = pMat->nrow() * pMat->col_offset();
+    ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset;
+    arma::mat A(ptr_double, pMat->nrow(), pMat->ncol(), false);
+    
+    RObject Bbm(Bs);
+    addr = Bbm.slot("address");
+    pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(addr));
+    offset = pMat->nrow() * pMat->col_offset();
+    ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset;
+    arma::mat B(ptr_double, pMat->nrow(), pMat->ncol(), false);
+    double df = pMat->nrow() - 1;
+    
+    RObject Cbm(Cs);
+    addr = Cbm.slot("address");
+    pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(addr));
+    offset = pMat->nrow() * pMat->col_offset();
+    ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset;
+    arma::mat C(ptr_double, pMat->nrow(), pMat->ncol(), false);
+    
+    C = (A * arma::trans(B))/df;
     
     return R_NilValue;
   } catch( std::exception &ex ) {

@@ -160,7 +160,7 @@ load_and_mask_func_data2 <- function(xs, read_fun, mask=NULL, verbose=FALSE, par
                 w <- paste(which(col.nas), collapse=", ")
                 stop(sprintf("%s has NaNs in nodes %s", fname, w))
             }
-        }, .progress=progress, .parallel=parallel)
+        }, .progress=progress)
     }
     
     gc(FALSE, TRUE)
