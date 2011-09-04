@@ -41,15 +41,17 @@ get_subdist_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts) {
     
     # amount of RAM used in GB for functionals
     mem_used4func <- sum(sapply(subs.ntpts, function(x) n2gb(x*nvoxs)))
+    printf("...%.2f GB of memory used for functional data", mem_used4func)
     
     # amount of RAM used for distance matrix
     mem_used4dmat <- n2gb(nsubs^2 * nvoxs)*2    # *2 cuz copies are made (e.g. saving & gower)
+    printf("...%.2f GB of memory used for 2 distance matrices", mem_used4dmat)
     n4onemap <- nvoxs * nsubs
+    printf("...%.2f GB of memory used for one voxel's connectivity map across subjects", 
+            n2gb(n4onemap))
     
     # set blocksize if auto
     if (opts$blocksize == 0) {
-        printf("...autosetting blocksize to -> ", newline=F)
-
         # minimum amount of RAM needed
         ## mem_used4func + memory for 2 connectivity maps per subjects
         min_mem_needed <- n2gb(n4onemap*2*getDoParWorkers()) + mem_used4func + mem_used4dmat
@@ -59,12 +61,13 @@ get_subdist_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts) {
         if (mem_limit < min_mem_needed)
             stop(sprintf("You require at least %.2f GB of memory but are limited to %i GB. Please set the --memlimit option to a higher number in order to continue.", min_mem_needed, mem_limit))
         else
-            printf("memory limit is %.2f GB", mem_limit)
+            printf("...memory limit is %.2f GB", mem_limit)
         
         # amount of RAM for connectivity matrix
         mem_used4conn <- mem_limit - mem_used4func - mem_used4dmat
 
         # block size
+        printf("...autosetting blocksize to -> ", newline=F)
         opts$blocksize <- floor(gb2n(mem_used4conn)/(n4onemap*getDoParWorkers()))
         printf("%i (with RAM limit of %.2f GB)", opts$blocksize, mem_limit)
     } else {

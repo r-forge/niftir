@@ -7,6 +7,12 @@
 
 setOldClass(c("qfit", "qcontrasts"))
 
+formula_to_mat <- function(formula, data) {
+    mf <- model.frame(formula=formula, data=data)
+    X <- model.matrix(attr(mf, "terms"), data=mf)
+    return(X)
+}
+
 # Check if design matrix is rank deficient
 setGeneric('qlm_rank', 
     function(X)
