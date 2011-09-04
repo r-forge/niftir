@@ -28,7 +28,7 @@ SEXP CombineSubMaps(BigMatrix *oneVox_allSubs, SEXP allVoxs_allSubs, index_type 
     if (nsubs != oneVox_allSubs->ncol())
         Rf_error("nsubs must equal oneVox_allSubs->ncol");
     if (nvoxs != oneVox_allSubs->nrow())
-        Rf_error("nsubs must equal oneVox_allSubs->ncol");
+        Rf_error("nsubs must equal oneVox_allSubs->nrow");
     
     // loop through each subject's map
     index_type s = 0;
@@ -92,9 +92,9 @@ SEXP CombineSubMapsTrans(BigMatrix *oneVox_allSubs, SEXP allVoxs_allSubs, index_
     BMAccessorType outMat( *oneVox_allSubs );
     
     if (nvoxs != oneVox_allSubs->ncol())
-        ::Rf_error("nsubs must equal oneVox_allSubs->ncol");
+        ::Rf_error("nvoxs must equal oneVox_allSubs->ncol");
     if (nsubs != oneVox_allSubs->nrow())
-        ::Rf_error("nsubs must equal oneVox_allSubs->ncol");
+        ::Rf_error("nsubs must equal oneVox_allSubs->nrow");
     
     // loop through each subject's map
     index_type s = 0;
