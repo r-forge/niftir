@@ -98,7 +98,7 @@ setMethod('qlm_residuals',
         
         if (is.null(residuals)) {
             residuals = big.matrix(nrow(y), ncol(y), type="double", ...)
-        } else if (nrow(residuals) != n && ncol(residuals) != m)
+        } else if (nrow(residuals) != n && ncol(residuals) != m) {
             stop("size mismatch for output residuals")
         }
         

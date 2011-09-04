@@ -67,22 +67,15 @@ SEXP big_qlm_residuals(SEXP yr, SEXP Xr, SEXP residr) {
         BM_TO_ARMA_INIT()
         BM_TO_ARMA_MULTIPLE(yr, y)
         BM_TO_ARMA_MULTIPLE(Xr, X)
-        BM_TO_ARMA_MULTIPLE(coefr, coef)
         BM_TO_ARMA_MULTIPLE(residr, resid)
-        BM_TO_ARMA_MULTIPLE(mser, mse)
-        
-        //NumericVector nc(nr);
-        //NumericVector kc(kr);
-        //NumericVector mc(mr);
-        double n = DOUBLE_DATA(nr)[0];
-        double k = DOUBLE_DATA(kr)[0];
-        double m = DOUBLE_DATA(mr)[0];
         
         // fit model y ~ X
         arma::mat coef = arma::solve(X, y);
         
         // residuals
         resid = y - X*coef;
+        
+        return R_NilValue;
     } catch(std::exception &ex) {
         forward_exception_to_r(ex);
     } catch(...) {
