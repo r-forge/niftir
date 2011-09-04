@@ -38,8 +38,8 @@ RcppExport SEXP big_qlm_fit(SEXP yr, SEXP Xr, SEXP coefr, SEXP residr, SEXP mser
 RcppExport SEXP big_qlm_contrasts(SEXP fit_coefr, SEXP fit_mser, SEXP conr, SEXP ddr, SEXP coefr, SEXP ser, SEXP tvalr, SEXP mr);
 
 // cor.cpp
-SEXP big_cor(SEXP As, SEXP Bs, SEXP Cs);
-SEXP big_tcor(SEXP As, SEXP Bs, SEXP Cs);
-SEXP big_ztransform(SEXP Cs);
+RcppExport SEXP big_cor(SEXP As, SEXP Bs, SEXP Cs);
+RcppExport SEXP big_tcor(SEXP As, SEXP Bs, SEXP Cs);
+RcppExport SEXP big_ztransform(SEXP Cs);
 
 #endif // _connectir_CONNECTIR
