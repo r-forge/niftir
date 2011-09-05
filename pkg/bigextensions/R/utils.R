@@ -1,21 +1,3 @@
-deepcopy <- function (inmat, cols = NULL, rows = NULL, outmat=NULL, ...) {
-    if (!is.big.matrix(inmat)) 
-        stop("input must be a big.matrix")
-    if (is.null(cols)) 
-        cols <- 1:ncol(inmat)
-    if (is.null(rows)) 
-        rows <- 1:nrow(inmat)
-    if (is.null(outmat)) {
-        # note: type and seperated cannot be user supplied
-        outmat <- big.matrix(length(rows), length(cols), type = typeof(inmat), 
-            separated = is.separated(inmat), ...)
-    }
-    
-    .Call("BigDeepCopyMain", inmat@address, outmat@address, as.double(rows), 
-        as.double(cols))
-    return(outmat)
-}
-
 #' @nord
 setMethod('diag', 
     signature(x="big.matrix"),
