@@ -34,52 +34,19 @@
 //}
 
 // Return row sum of big matrix (must be of type double)
-// Yvalue = Xmat + Yvalue
-SEXP big_add_scalar_right(SEXP Sbigmat, SEXP Svalue, SEXP Sicol, SEXP Sncol) {
+// mat = A*mat + B
+SEXP big_add_scalar(SEXP Sbigmat, SEXP Sa, SEXP Sb, SEXP SfirstCol, SEXP SlastCol) {
     try {        
-        double value = DOUBLE_DATA(Svalue)[0];
-        index_type icol = static_cast<index_type>(DOUBLE_DATA(Sicol)[0] - 1);
-        index_type ncol = static_cast<index_type>(DOUBLE_DATA(Sncol)[0]);
+        double a = DOUBLE_DATA(Sa)[0];
+        double b = DOUBLE_DATA(Sb)[0];
         
-        Rcpp::RObject bm(Sbigmat);
-        SEXP addr = bm.slot("address");
-        BigMatrix *pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(addr));
-        if (pMat->matrix_type() != 8)
-            ::Rf_error("Big Matrix must be of type double");
-        index_type offset = pMat->nrow() * pMat->col_offset();
-        double *ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset + icol;
-        arma::mat amat(ptr_double, pMat->nrow(), ncol, false);
+        BM_COL_INIT(SfirstCol, firstCol)
+        BM_COL_INIT(SlastCol, lastCol)
         
-        amat += value;
+        BM_TO_ARMA_INIT()
+        SUB_BM_TO_ARMA_MULTIPLE(Sbigmat, bigmat, firstCol, lastCol)
         
-        return R_NilValue;
-    } catch(std::exception &ex) {
-        forward_exception_to_r(ex);
-    } catch(...) {
-        ::Rf_error("c++ exception (unknown reason)");
-    }
-    
-    return R_NilValue;
-}
-
-// Return row sum of big matrix (must be of type double)
-// Yvalue = Yvalue + Xmat
-SEXP big_add_scalar_left(SEXP Sbigmat, SEXP Svalue, SEXP Sicol, SEXP Sncol) {
-    try {        
-        double value = DOUBLE_DATA(Svalue)[0];
-        index_type icol = static_cast<index_type>(DOUBLE_DATA(Sicol)[0] - 1);
-        index_type ncol = static_cast<index_type>(DOUBLE_DATA(Sncol)[0]);
-        
-        Rcpp::RObject bm(Sbigmat);
-        SEXP addr = bm.slot("address");
-        BigMatrix *pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(addr));
-        if (pMat->matrix_type() != 8)
-            ::Rf_error("Big Matrix must be of type double");
-        index_type offset = pMat->nrow() * pMat->col_offset();
-        double *ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset + icol;
-        arma::mat amat(ptr_double, pMat->nrow(), ncol, false);
-        
-        amat = value + amat;
+        bigmat = a*bigmat + b;
         
         return R_NilValue;
     } catch(std::exception &ex) {

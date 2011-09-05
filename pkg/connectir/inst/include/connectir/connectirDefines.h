@@ -35,6 +35,8 @@
     arma::mat OUTPUT(ptr_double, pMat->nrow(), ncol, false);
 
 #define SUB_BM_TO_ARMA_MULTIPLE(INPUT, OUTPUT, COL_FIRST, COL_LAST) \
+    if (COL_LAST < COL_FIRST) \
+        ::Rf_error("last column smaller than first column"); \
     bm = INPUT; \
     addr = bm.slot("address"); \
     pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(addr)); \

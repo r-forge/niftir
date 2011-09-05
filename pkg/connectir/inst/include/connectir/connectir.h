@@ -30,7 +30,7 @@ RcppExport SEXP CombineSubMapsTransSimpleMain(SEXP LIST_allVoxs_allSubs, SEXP AD
 
 
 // utils.cpp
-RcppExport SEXP big_add_scalar_right(SEXP Sbigmat, SEXP Svalue, SEXP Sicol, SEXP Sncol);
+RcppExport SEXP big_add_scalar(SEXP Sbigmat, SEXP Sa, SEXP Sb, SEXP SfirstCol, SEXP SlastCol);
 RcppExport SEXP big_add_scalar_left(SEXP Sbigmat, SEXP Svalue, SEXP Sicol, SEXP Sncol);
 RcppExport SEXP bm_rowsum(SEXP Rbigmat);
 RcppExport SEXP bm_rowmean(SEXP Rbigmat);

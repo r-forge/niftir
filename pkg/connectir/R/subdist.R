@@ -425,13 +425,13 @@ compute_subdist_worker2 <- function(sub.cormaps, cor_inds, outmat, dist_inds, ty
     #    stop("dimensions of outmat do not match nsubs and nseeds values")
     
     subsMap <- big.matrix(nvoxs-1, nsubs, type=type, shared=FALSE, ...)
-    ALPHA <- 1/(nvoxs-2)
     voxs <- 1:nvoxs
     for (i in 1:nseeds) {
         .Call("CombineSubMapsMain", sub.cormaps, subsMap@address, as.double(i), 
               as.double(voxs[-cor_inds[i]]), as.double(nvoxs-1), as.double(nsubs))
         big_cor(x=subsMap, z=outmat, z_firstCol=dist_inds[i], z_lastCol=dist_inds[i])
-        .Call("big_add_scalar_left", outmat, as.double(-1), as.double(dist_inds[i]), as.double(1));
+        .Call("big_add_scalar", outmat, as.double(-1), as.double(1), 
+                as.double(dist_inds[i]), as.double(dist_inds[i]));
     }
     rm(subsMap)
     gc(F)
@@ -463,7 +463,8 @@ compute_subdist_worker2_regress <- function(sub.cormaps, cor_inds, outmat, dist_
         scale_fast(r_subsMap, to.copy=FALSE, byrows=TRUE)
         big_cor(x=r_subsMap, byrows=TRUE, z=outmat, 
                 z_firstCol=dist_inds[i], z_lastCol=dist_inds[i])
-        .Call("big_add_scalar_left", outmat, as.double(-1), as.double(dist_inds[i]), as.double(1));
+        .Call("big_add_scalar", outmat, as.double(-1), as.double(1), 
+                as.double(dist_inds[i]), as.double(dist_inds[i]));
     }
     
     rm(subsMap)
