@@ -160,16 +160,3 @@ update.txtProgressBar <- function(pb, i) setTxtProgressBar(pb, i)
 #'
 #' @seealso \code{\link{progressbar}} \code{\link{update.txtProgressBar}}
 end.txtProgressBar <- function(pb) { cat("\n"); close(pb) }
-
-#' Convenient method to specify default elements to your list
-#; 
-#' @title Set defaults of a list
-#'
-#' @param x list of values (elements in list should also have names associated)
-#' @param def list of defaults
-#' 
-#' @return list with any default elements added
-#'
-#' @note this code drew inspiration from an equivalent function in the plyr
-#'  package
-defaults <- function(x, def) c(x, def[setdiff(names(def), names(x))])
