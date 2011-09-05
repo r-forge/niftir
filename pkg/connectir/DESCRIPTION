@@ -1,8 +1,8 @@
 Package: connectir
 Type: Package
-Title: connectir 0.1
-Version: 0.1
-Date: 2011-04-07
+Title: connectir 0.2.1
+Version: 0.2.1
+Date: 2011-09-01
 Author: Zarrar Shehzad <zarrar [dot] shehzad [at] yale.edu> and Jay
     Emerson
 Maintainer: Zarrar Shehzad <zarrar.shehzad@yale.edu>

@@ -15,6 +15,7 @@ option_list <- list(
     make_option("--ztransform", action="store_true", default=FALSE, dest="ztransform", help="Fischer Z-Transform the correlations before calculating the distance between participants"),
     make_option("--seedmask", type="character", default=NULL, help="Mask to select the voxels that will be used to correlate with each voxel in the rest of the brain (or anything within the specified --brainmask)", metavar="file"),
     make_option("--brainmask", type="character", default=NULL, help="When computing each whole-brain connectivity map, this mask will restrict which parts of the whole-brain are to be considered", metavar="file"),
+    make_option("--bg", type="character", default=NULL, help="Background image (e.g., MNI152 standard brain) upon which later results might be overlaid", metavar="file"), 
     make_option("--blocksize", type="integer", default=0, help="How many sets of voxels should be used in each iteration of computing the correlation (0 = auto) [default: %default]", metavar="number"),
     make_option("--memlimit", type="integer", default=6, dest="memlimit", help="If blocksize is set to auto (--blocksize=0), then will set the blocksize to use a maximum of RAM specified by this option  [default: %default]", metavar="number"),
     make_option(c("-c", "--cores"), type="integer", default=1, help="Number of computer processors to use in parallel [default: %default]", metavar="number"),
@@ -88,17 +89,12 @@ tryCatch({
   # Check Options
   ###
   printf("02. Checking optional inputs")
-  if (!is.null(opts$seedmask)) {
-      if(!file.exists(opts$seedmask))
-          stop("--seedmask file ", opts$seedmask, " does not exist")
-      opts$seedmask <- abspath(opts$seedmask)
-  }
-  if (!is.null(opts$brainmask)) {
-      if(!file.exists(opts$brainmask))
-          stop("--brainmask file ", opts$rowmask, " does not exist")
-      opts$brainmask <- abspath(opts$brainmask)
-  }
-
+  lapply(c("seedmask", "brainmask", "bg"), function(optname) {
+      arg <- opts[[optname]]
+      if(!file.exists(arg))
+          vstop("--%s file '%s' does not exist", optname, arg)
+      opts[[optname]] <- abspath(arg)
+  })
 
   ###
   # Read in inputs

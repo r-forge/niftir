@@ -142,11 +142,9 @@ create_subdist <- function(outdir, infiles, masks, opts, ...) {
         write.nifti(masks[[i]], header, outfile=outfile)
     }
     
-    # Copy over standard brains
-    std2 <- system.file("data/standard_2mm.nii.gz", package="connectir")
-    std4 <- system.file("data/standard_4mm.nii.gz", package="connectir")
-    file.copy(std2, file.path(outdir, "standard_2mm.nii.gz"))
-    file.copy(std4, file.path(outdir, "standard_4mm.nii.gz"))
+    # Copy over standard brain
+    if (!is.null(opts$bg))
+        file.copy(opts$bg, file.path(outdir, "bg_image.nii.gz"))
     
     # Save options
     opts$outdir <- outdir
