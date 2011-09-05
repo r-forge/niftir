@@ -325,6 +325,7 @@ slice.subdist <- function(bigmat, subs=1:sqrt(nrow(bigmat)), voxs=1:ncol(bigmat)
 
 ### NEW CODE USING ARMADILLO
 
+# check that seed_inds is continuous!
 compute_subdist2 <- function(funclist, subdist, seed_inds, blocksize, ztransform, start=1, verbose=TRUE, testonly=FALSE, design_matrix=NULL) {
     nseeds <- length(seed_inds)
     blocks <- niftir.split.indices(start, nseeds, by=blocksize)
@@ -339,11 +340,13 @@ compute_subdist2 <- function(funclist, subdist, seed_inds, blocksize, ztransform
             }
             
             dist_inds_CHUNK <- blocks$starts[i]:blocks$ends[i]
-            scor_inds_CHUNK <- seed_inds[dist_inds_CHUNK]
-            cormaps_list <- vbca_batch2(funclist, scor_inds_CHUNK, ztransform=ztransform, shared=FALSE)        
+            scor_incols_CHUNK <- seed_inds[c(blocks$starts[i], blocks$ends[i])]
+            scor_inds_CHUNK <- scor_incols_CHUNK[1]:scor_incols_CHUNK[2]
+            cormaps_list <- vbca_batch2(funclist, scor_incols_CHUNK, ztransform=ztransform, 
+                                        shared=FALSE)
             tmp <- compute_subdist_worker2(cormaps_list, scor_inds_CHUNK, subdist, dist_inds_CHUNK)
             
-            rm(dist_inds_CHUNK, scor_inds_CHUNK, cormaps_list, tmp)
+            rm(dist_inds_CHUNK, scor_incols_CHUNK, scor_inds_CHUNK, cormaps_list, tmp)
             gc(FALSE)
             return(NULL)
         }
@@ -355,13 +358,14 @@ compute_subdist2 <- function(funclist, subdist, seed_inds, blocksize, ztransform
                 #cat(msg)
             }
             dist_inds_CHUNK <- blocks$starts[i]:blocks$ends[i]
-            scor_inds_CHUNK <- seed_inds[dist_inds_CHUNK]
-            cormaps_list <- vbca_batch2(funclist, scor_inds_CHUNK, ztransform=ztransform, 
-                                        shared=FALSE)        
+            scor_incols_CHUNK <- seed_inds[c(blocks$starts[i], blocks$ends[i])]
+            scor_inds_CHUNK <- scor_incols_CHUNK[1]:scor_incols_CHUNK[2]
+            cormaps_list <- vbca_batch2(funclist, scor_incols_CHUNK, ztransform=ztransform, 
+                                        shared=FALSE)
             tmp <- compute_subdist_worker2_regress(cormaps_list, scor_inds_CHUNK, subdist, 
                                                    dist_inds_CHUNK, design_matrix)
             
-            rm(dist_inds_CHUNK, scor_inds_CHUNK, cormaps_list, tmp)
+            rm(dist_inds_CHUNK, scor_incols_CHUNK, scor_inds_CHUNK, cormaps_list, tmp)
             gc(FALSE)
             return(NULL)
         }
