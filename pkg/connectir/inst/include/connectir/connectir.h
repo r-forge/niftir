@@ -34,6 +34,8 @@ RcppExport SEXP big_add_scalar_right(SEXP Sbigmat, SEXP Svalue, SEXP Sicol, SEXP
 RcppExport SEXP big_add_scalar_left(SEXP Sbigmat, SEXP Svalue, SEXP Sicol, SEXP Sncol);
 RcppExport SEXP bm_rowsum(SEXP Rbigmat);
 RcppExport SEXP bm_rowmean(SEXP Rbigmat);
+//BigMatrix* rbm_to_bm_xd(SEXP Sbm);
+//RcppExport SEXP test_func(SEXP Sbm);
 
 // qlm.cpp
 RcppExport SEXP big_qlm_rank(SEXP Xr);
@@ -43,8 +45,8 @@ RcppExport SEXP big_qlm_residuals(SEXP yr, SEXP Xr, SEXP residr);
 RcppExport SEXP big_qlm_contrasts(SEXP fit_coefr, SEXP fit_mser, SEXP conr, SEXP ddr, SEXP coefr, SEXP ser, SEXP tvalr, SEXP mr);
 
 // cor.cpp
-RcppExport SEXP big_cor(SEXP As, SEXP Bs, SEXP Cs, SEXP Cicol, SEXP Cncol);
-RcppExport SEXP big_tcor(SEXP As, SEXP Bs, SEXP Cs, SEXP Cicol, SEXP Cncol);
-RcppExport SEXP big_ztransform(SEXP Cs);
+RcppExport SEXP test_sub_matrix(SEXP As, SEXP As_firstCol, SEXP As_lastCol);
+RcppExport SEXP big_cor(SEXP As, SEXP Bs, SEXP Cs, SEXP A_firstCol, SEXP A_lastCol, SEXP B_firstCol, SEXP B_lastCol, SEXP C_firstCol, SEXP C_lastCol);
+RcppExport SEXP big_tcor(SEXP As, SEXP Bs, SEXP Cs, SEXP A_firstCol, SEXP A_lastCol, SEXP B_firstCol, SEXP B_lastCol, SEXP C_firstCol, SEXP C_lastCol);
 
 #endif // _connectir_CONNECTIR

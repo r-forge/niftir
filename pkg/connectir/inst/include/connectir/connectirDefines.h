@@ -12,11 +12,15 @@
     double *ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset; \
     arma::mat OUTPUT(ptr_double, pMat->nrow(), pMat->ncol(), false);
 
+#define BM_COL_INIT(INPUT, OUTPUT)  \
+    index_type OUTPUT = static_cast<index_type>(DOUBLE_DATA(INPUT)[0] - 1);
+
 #define BM_TO_ARMA_INIT()   \
     Rcpp::RObject bm;       \
     SEXP addr;              \
     BigMatrix *pMat;        \
     index_type offset;      \
+    index_type ncol;        \
     double *ptr_double;
 
 #define BM_TO_ARMA_MULTIPLE(INPUT, OUTPUT) \
@@ -27,7 +31,19 @@
         ::Rf_error("Big Matrix must be of type double"); \
     offset = pMat->nrow() * pMat->col_offset(); \
     ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset; \
-    arma::mat OUTPUT(ptr_double, pMat->nrow(), pMat->ncol(), false);
+    ncol = pMat->ncol() - pMat->col_offset(); \
+    arma::mat OUTPUT(ptr_double, pMat->nrow(), ncol, false);
+
+#define SUB_BM_TO_ARMA_MULTIPLE(INPUT, OUTPUT, COL_FIRST, COL_LAST) \
+    bm = INPUT; \
+    addr = bm.slot("address"); \
+    pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(addr)); \
+    if (pMat->matrix_type() != 8) \
+        ::Rf_error("Big Matrix must be of type double"); \
+    offset = pMat->nrow() * (pMat->col_offset() + COL_FIRST); \
+    ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset; \
+    ncol = COL_LAST - pMat->col_offset() - COL_FIRST + 1; \
+    arma::mat OUTPUT(ptr_double, pMat->nrow(), ncol, false);
 
 #define SET_ACCESSOR(ptr, mat)                                          \
     if (ptr->separated_columns()) {                                     \
