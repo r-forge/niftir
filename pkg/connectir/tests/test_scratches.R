@@ -41,3 +41,10 @@ test_that("parts of compute_subdist_worker2 works", {
     mref <- 1-cor(ref)
     expect_that(m, equals(mref))
 })
+
+
+library(connectir)
+bm <- big.matrix(4, 4, init=2, type="double")
+m <- .Call("test_func", bm)
+m[,]
+bm[,]

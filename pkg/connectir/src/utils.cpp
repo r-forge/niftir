@@ -1,21 +1,86 @@
 #include "connectir/connectir.h"
 
-//BigMatrix* rbm_to_bm_xd(SEXP Sbm) {
-//    try {  
-//        Rcpp::RObject Rbm(Sbm);
-//        SEXP addr = Rbm.slot("address");
-//        BigMatrix *pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(addr));
-//    
-//        if (pMat->matrix_type() != 8)
-//            Rf_error("Big Matrix must be of type double");
-//        
-//        return pMat;        
-//    } catch(std::exception &ex) {
-//        forward_exception_to_r(ex);
-//    } catch(...) {
-//        ::Rf_error("c++ exception (unknown reason)");
-//    }
-//}
+BigMatrix* sbm_to_bm(SEXP Sbm) {
+    try {  
+        Rcpp::RObject Rbm(Sbm);
+        SEXP addr = Rbm.slot("address");
+        BigMatrix *pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(addr));
+        return pMat;        
+    } catch(std::exception &ex) {
+        forward_exception_to_r(ex);
+    } catch(...) {
+        ::Rf_error("c++ exception (unknown reason)");
+    }
+    return NULL;
+}
+
+void sbm_to_arma_xd(SEXP SbM, arma::mat& M) {
+    try {
+        BigMatrix *pMat = sbm_to_bm(SbM);
+        if (pMat->matrix_type() != 8)
+            Rf_error("big matrix must be of type double");
+        if (pMat->row_offset() > 0 && pMat->ncol() > 1)
+            Rf_error("big matrix cannot have a row offset and more than one column");
+        
+        index_type offset = pMat->nrow() * pMat->col_offset();
+        double *ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset;
+        
+        arma::access::rw(M.mem) = ptr_double;
+        arma::access::rw(M.n_rows) = pMat->nrow();
+        arma::access::rw(M.n_cols) = pMat->ncol();
+        arma::access::rw(M.n_elem) = pMat->nrow() * pMat->ncol();
+    } catch(std::exception &ex) {
+        forward_exception_to_r(ex);
+    } catch(...) {
+        Rf_error("c++ exception (unknown reason)");
+    }
+}
+
+SEXP test_func(SEXP SbM) {
+    try {
+        arma::mat M;
+        sbm_to_arma_xd(SbM, M);
+        M = M * 2;
+        return Rcpp::wrap( M );
+    } catch(std::exception &ex) {
+        forward_exception_to_r(ex);
+    } catch(...) {
+        Rf_error("c++ exception (unknown reason)");
+    }
+    return R_NilValue;
+}
+
+void sub_sbm_to_arma_xd(SEXP SbM, arma::mat& M, SEXP SfirstCol, SEXP SlastCol) 
+{
+    try {
+        index_type firstCol = static_cast<index_type>(DOUBLE_DATA(SfirstCol)[0] - 1);
+        index_type lastCol = static_cast<index_type>(DOUBLE_DATA(SlastCol)[0] - 1);
+        if (firstCol > lastCol)
+            Rf_error("first column cannot be greater than the last column");
+        index_type ncol = lastCol - firstCol + 1;
+        
+        BigMatrix *pMat = sbm_to_bm(SbM);
+        if (pMat->matrix_type() != 8)
+            Rf_error("big matrix must be of type double");
+        if (pMat->row_offset() > 0 && pMat->ncol() > 1)
+            Rf_error("big matrix cannot have a row offset and more than one column");
+        if (lastCol > pMat->ncol())
+            Rf_error("last column cannot be greater than # of columns in big matrix");
+        
+        index_type offset = pMat->nrow() * (pMat->col_offset() + firstCol);
+        double *ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset;
+        
+        arma::access::rw(M.mem) = ptr_double;
+        arma::access::rw(M.n_rows) = pMat->nrow();
+        arma::access::rw(M.n_cols) = ncol;
+        arma::access::rw(M.n_elem) = pMat->nrow() * ncol;
+    } catch(std::exception &ex) {
+        forward_exception_to_r(ex);
+    } catch(...) {
+        Rf_error("c++ exception (unknown reason)");
+    }
+}
+
 //
 //SEXP test_func(SEXP Sbm) {
 //    try {
@@ -23,7 +88,7 @@
 //        index_type offset = pMat->nrow() * pMat->col_offset();
 //        double *ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset;
 //        arma::mat amat(ptr_double, pMat->nrow(), pMat->ncol() - offset, false);
-//        amat * 2;
+//        amat = amat * 2;
 //        return R_NilValue;
 //    } catch(std::exception &ex) {
 //        forward_exception_to_r(ex);
@@ -32,69 +97,3 @@
 //    }
 //    return R_NilValue;
 //}
-
-// Return row sum of big matrix (must be of type double)
-// Y = a*X + b
-SEXP big_add_multiply_scalar(SEXP SX, SEXP SY,  
-                             SEXP Sa, SEXP Sb, 
-                             SEXP SX_firstCol, SEXP SX_lastCol, 
-                             SEXP SY_firstCol, SEXP SY_lastCol) 
-{
-    try {        
-        double a = DOUBLE_DATA(Sa)[0];
-        double b = DOUBLE_DATA(Sb)[0];
-        
-        BM_COL_INIT(SX_firstCol, X_firstCol)
-        BM_COL_INIT(SX_lastCol, X_lastCol)
-        BM_COL_INIT(SY_firstCol, Y_firstCol)
-        BM_COL_INIT(SY_lastCol, Y_lastCol)
-        
-        BM_TO_ARMA_INIT()
-        SUB_BM_TO_ARMA_MULTIPLE(SX, X, X_firstCol, X_lastCol)
-        SUB_BM_TO_ARMA_MULTIPLE(SY, Y, Y_firstCol, Y_lastCol)
-        
-        Y = a*X + b;
-        
-        return R_NilValue;
-    } catch(std::exception &ex) {
-        forward_exception_to_r(ex);
-    } catch(...) {
-        ::Rf_error("c++ exception (unknown reason)");
-    }
-    
-    return R_NilValue;
-}
-
-// Return row sum of big matrix (must be of type double)
-SEXP bm_rowsum(SEXP Rbigmat) {
-    SEXP res = R_NilValue;
-    
-    try {
-        BM_TO_ARMA_ONCE(Rbigmat, amat)
-        using namespace arma;
-        res = Rcpp::wrap(sum(amat, 1));
-    } catch(std::exception &ex) {
-        forward_exception_to_r(ex);
-    } catch(...) {
-        ::Rf_error("c++ exception (unknown reason)");
-    }
-    
-    return res;
-}
-
-// Return row mean of big matrix (must be of type double)
-SEXP bm_rowmean(SEXP Rbigmat) {
-    SEXP res = R_NilValue;
-    
-    try {
-        BM_TO_ARMA_ONCE(Rbigmat, amat)
-        using namespace arma;
-        res = Rcpp::wrap(mean(amat, 1));
-    } catch(std::exception &ex) {
-        forward_exception_to_r(ex);
-    } catch(...) {
-        ::Rf_error("c++ exception (unknown reason)");
-    }
-    
-    return res;
-}

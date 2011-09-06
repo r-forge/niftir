@@ -28,16 +28,23 @@ RcppExport SEXP CombineSubMapsMain(SEXP LIST_allVoxs_allSubs, SEXP ADDR_oneVox_a
 
 RcppExport SEXP CombineSubMapsTransSimpleMain(SEXP LIST_allVoxs_allSubs, SEXP ADDR_oneVox_allSubs, SEXP Rseed_index, SEXP Rvoxindices, SEXP Rnvoxs, SEXP Rnsubs);
 
-
 // utils.cpp
+BigMatrix* sbm_to_bm(SEXP Sbm);
+void sbm_to_arma_xd(SEXP SbM, arma::mat& M);
+void sub_sbm_to_arma_xd(SEXP SbM, arma::mat& M, SEXP SfirstCol, SEXP SlastCol);
+RcppExport SEXP test_func(SEXP Sbm);
+
+// arith.cpp
 RcppExport SEXP big_add_multiply_scalar(SEXP SX, SEXP SX,  
                                         SEXP Sa, SEXP Sb, 
                                         SEXP SX_firstCol, SEXP SX_lastCol, 
                                         SEXP SY_firstCol, SEXP SY_lastCol);
-RcppExport SEXP bm_rowsum(SEXP Rbigmat);
-RcppExport SEXP bm_rowmean(SEXP Rbigmat);
-//BigMatrix* rbm_to_bm_xd(SEXP Sbm);
-//RcppExport SEXP test_func(SEXP Sbm);
+
+// summary_stats.cpp
+RcppExport SEXP big_rowsum(SEXP SX, SEXP SX_firstCol, SEXP SX_lastCol);
+RcppExport SEXP big_rowmean(SEXP SX, SEXP SX_firstCol, SEXP SX_lastCol);
+RcppExport SEXP big_colsum(SEXP SX, SEXP SX_firstCol, SEXP SX_lastCol);
+RcppExport SEXP big_colmean(SEXP SX, SEXP SX_firstCol, SEXP SX_lastCol);
 
 // qlm.cpp
 RcppExport SEXP big_qlm_rank(SEXP Xr);
