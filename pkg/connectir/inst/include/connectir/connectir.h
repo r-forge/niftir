@@ -35,7 +35,7 @@ void sub_sbm_to_arma_xd(SEXP SbM, arma::mat& M, SEXP SfirstCol, SEXP SlastCol);
 RcppExport SEXP test_func(SEXP Sbm);
 
 // arith.cpp
-RcppExport SEXP big_add_multiply_scalar(SEXP SX, SEXP SX,  
+RcppExport SEXP big_add_multiply_scalar(SEXP SX, SEXP SY,  
                                         SEXP Sa, SEXP Sb, 
                                         SEXP SX_firstCol, SEXP SX_lastCol, 
                                         SEXP SY_firstCol, SEXP SY_lastCol);
