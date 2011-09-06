@@ -355,10 +355,6 @@ gower.subdist <- function(bigmat, gower.bigmat=NULL, verbose=TRUE, ...) {
     return(gower.bigmat)
 }
 
-# apply slow function
-# will loop through and apply something in blocks
-# frees memory every so often if need be?
-
 gower.subdist2 <- function(inmat, outmat=NULL, 
                            blocksize=floor(ncol(inmat)/getDoParWorkers()), 
                            verbose=TRUE, parallel=FALSE, ...) 
@@ -388,7 +384,7 @@ gower.subdist2 <- function(inmat, outmat=NULL,
         si <- blocks$starts[i]
         ei <- blocks$ends[i]
         .Call("big_gower", inmat, outmat, as.double(si), as.double(ei), 
-              as.double(si), as.double(ei))
+              as.double(si), as.double(ei), PACKAGE="connectir")
     }, .progress=progress, .parallel=parallel)
     
     return(outmat)
