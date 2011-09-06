@@ -34,19 +34,26 @@
 //}
 
 // Return row sum of big matrix (must be of type double)
-// mat = A*mat + B
-SEXP big_add_scalar(SEXP Sbigmat, SEXP Sa, SEXP Sb, SEXP SfirstCol, SEXP SlastCol) {
+// Y = a*X + b
+SEXP big_add_multiply_scalar(SEXP SX, SEXP SY,  
+                             SEXP Sa, SEXP Sb, 
+                             SEXP SX_firstCol, SEXP SX_lastCol, 
+                             SEXP SY_firstCol, SEXP SY_lastCol) 
+{
     try {        
         double a = DOUBLE_DATA(Sa)[0];
         double b = DOUBLE_DATA(Sb)[0];
         
-        BM_COL_INIT(SfirstCol, firstCol)
-        BM_COL_INIT(SlastCol, lastCol)
+        BM_COL_INIT(SX_firstCol, X_firstCol)
+        BM_COL_INIT(SX_lastCol, X_lastCol)
+        BM_COL_INIT(SY_firstCol, Y_firstCol)
+        BM_COL_INIT(SY_lastCol, Y_lastCol)
         
         BM_TO_ARMA_INIT()
-        SUB_BM_TO_ARMA_MULTIPLE(Sbigmat, bigmat, firstCol, lastCol)
+        SUB_BM_TO_ARMA_MULTIPLE(SX, X, X_firstCol, X_lastCol)
+        SUB_BM_TO_ARMA_MULTIPLE(SY, Y, Y_firstCol, Y_lastCol)
         
-        bigmat = a*bigmat + b;
+        Y = a*X + b;
         
         return R_NilValue;
     } catch(std::exception &ex) {

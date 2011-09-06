@@ -98,3 +98,10 @@ bm_rowsum <- function(bigmat) {
 bm_rowmean <- function(bigmat) {
     as.vector(.Call("bm_rowmean", bigmat, PACKAGE = "connectir"))
 }
+
+# x = a*x + b
+big_add_multiply_scalar <- function(x, a=1, b=0, firstCol=1, lastCol=ncol(x)) {
+    .Call("big_add_multiply_scalar", x, as.double(a), as.double(b), 
+          as.double(firstCol), as.double(lastCol), PACKAGE="connectir")
+    invisible(x)
+}

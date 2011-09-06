@@ -30,8 +30,10 @@ RcppExport SEXP CombineSubMapsTransSimpleMain(SEXP LIST_allVoxs_allSubs, SEXP AD
 
 
 // utils.cpp
-RcppExport SEXP big_add_scalar(SEXP Sbigmat, SEXP Sa, SEXP Sb, SEXP SfirstCol, SEXP SlastCol);
-RcppExport SEXP big_add_scalar_left(SEXP Sbigmat, SEXP Svalue, SEXP Sicol, SEXP Sncol);
+RcppExport SEXP big_add_multiply_scalar(SEXP SX, SEXP SX,  
+                                        SEXP Sa, SEXP Sb, 
+                                        SEXP SX_firstCol, SEXP SX_lastCol, 
+                                        SEXP SY_firstCol, SEXP SY_lastCol);
 RcppExport SEXP bm_rowsum(SEXP Rbigmat);
 RcppExport SEXP bm_rowmean(SEXP Rbigmat);
 //BigMatrix* rbm_to_bm_xd(SEXP Sbm);
@@ -48,5 +50,10 @@ RcppExport SEXP big_qlm_contrasts(SEXP fit_coefr, SEXP fit_mser, SEXP conr, SEXP
 RcppExport SEXP test_sub_matrix(SEXP As, SEXP As_firstCol, SEXP As_lastCol);
 RcppExport SEXP big_cor(SEXP As, SEXP Bs, SEXP Cs, SEXP A_firstCol, SEXP A_lastCol, SEXP B_firstCol, SEXP B_lastCol, SEXP C_firstCol, SEXP C_lastCol);
 RcppExport SEXP big_tcor(SEXP As, SEXP Bs, SEXP Cs, SEXP A_firstCol, SEXP A_lastCol, SEXP B_firstCol, SEXP B_lastCol, SEXP C_firstCol, SEXP C_lastCol);
+
+// subdist2.cpp
+RcppExport SEXP big_gower(SEXP SX, SEXP SY,  
+                          SEXP SX_firstCol, SEXP SX_lastCol, 
+                          SEXP SY_firstCol, SEXP SY_lastCol);
 
 #endif // _connectir_CONNECTIR
