@@ -31,7 +31,7 @@ set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE) {
         # cover all our blases
         vcat(verbose, "...using GOTOBLAS or Other")
         blas_set_num_threads(nthreads)
-        omp_set_num_procs(nthreads)
+        omp_set_num_threads(nthreads)
     }
     
     invisible(TRUE)
