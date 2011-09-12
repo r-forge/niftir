@@ -28,9 +28,6 @@ set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE) {
         setMKLthreads(nthreads)
     } else {
         # cover all our blases
-        Sys.setenv(MKL_NUM_THREADS=nthreads)
-        Sys.setenv(GOTO_NUM_THREADS=nthreads)
-        Sys.setenv(OMP_NUM_THREADS=nthreads)
         blas_set_num_procs(nthreads)
         omp_set_num_procs(nthreads)
     }

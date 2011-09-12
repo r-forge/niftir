@@ -9,8 +9,8 @@ option_list <- list(
     make_option("--bg", type="character", default=NULL, help="Background image (e.g., MNI152 standard brain) upon which later results might be overlaid", metavar="file"), 
     make_option("--blocksize", type="integer", default=0, help="How many sets of voxels should be used in each iteration of computing the correlation (0 = auto) [default: %default]", metavar="number"),
     make_option("--memlimit", type="integer", default=6, dest="memlimit", help="If blocksize is set to auto (--blocksize=0), then will set the blocksize to use a maximum of RAM specified by this option  [default: %default]", metavar="number"),
-    make_option("--forks", type="integer", default=1, help="Number of computer processors to use in parallel by forking the complete processing stream [default: %default]", metavar="number"),
-    make_option("--threads", type="integer", default=1, help="Number of computer processors to use in parallel by multi-threading matrix algebra operations [default: %default]", metavar="number"),
+    make_option(c("-c", "--forks"), type="integer", default=1, help="Number of computer processors to use in parallel by forking the complete processing stream [default: %default]", metavar="number"),
+    make_option(c("-t", "--threads"), type="integer", default=1, help="Number of computer processors to use in parallel by multi-threading matrix algebra operations [default: %default]", metavar="number"),
     make_option("--overwrite", action="store_true", default=FALSE, help="Overwrite output that already exists (default is not to overwrite already existing output)"),
     make_option("--no-link-functionals", action="store_true", default=FALSE, help="Will not create soft links to each of the functional images with the subdist directory"),
     make_option(c("-q", "--quiet"), action="store_false", dest="verbose", help="Print little output"), 
@@ -33,14 +33,13 @@ if (length(args) < 1) {
 
 tryCatch({
 
+  # load connectir
+  suppressWarnings(suppressPackageStartupMessages(library("connectir")))
+
   # parallel processing setup
   set_parallel_procs(opts$forks, opts$threads, opts$verbose)  
   # use foreach parallelization and shared memory?
   parallel_forks = ifelse(opts$cores == 1, FALSE, TRUE)
-  
-  # load connectir
-  suppressWarnings(suppressPackageStartupMessages(library("connectir")))
-
 
   ###
   # Check/Setup Required Inputs
