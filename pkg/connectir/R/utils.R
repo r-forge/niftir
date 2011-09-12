@@ -18,17 +18,19 @@ set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE) {
               nforks, nprocs)
     options(cores=nforks)
     
-    vcat(verbose, "Setting %i threads used for matrix algebra operations", 
+    vcat(verbose, "Setting %i threads for matrix algebra operations", 
          nthreads)
     nprocs <- omp_get_max_threads()
     if (nthreads > nprocs)
         vstop("# of threads %i is greater than the actual # of processors (%i)", 
               nthreads, nprocs)
     if (existsFunction("setMKLthreads")) {
+        vcat(verbose, "...using Intel's MKL")
         setMKLthreads(nthreads)
     } else {
         # cover all our blases
-        blas_set_num_procs(nthreads)
+        vcat(verbose, "...using GOTOBLAS or Other")
+        blas_set_num_threads(nthreads)
         omp_set_num_procs(nthreads)
     }
     
