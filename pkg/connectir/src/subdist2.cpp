@@ -28,7 +28,7 @@ SEXP subdist_combine_and_scale_submaps(SEXP Slist_corMaps, SEXP Sseed, SEXP Svox
             delta = mean = M2 = stdev = 0;
             for (voxi=0; voxi < nvoxs; ++voxi) {
                 // todo: add checking for NaN...but shouldn't really have any!
-                vox = static_cast<index_type>(voxInds[voxi]-1);
+                vox = static_cast<index_type>(voxInds(voxi)-1);
                 x = static_cast<LDOUBLE>(subCorMaps(seed,vox));
                 delta = x - mean;
                 mean = mean + delta/static_cast<LDOUBLE>(voxi+1);
@@ -38,7 +38,7 @@ SEXP subdist_combine_and_scale_submaps(SEXP Slist_corMaps, SEXP Sseed, SEXP Svox
             
             seedMap = const_cast<double *>(seedCorMaps.colptr(sub));
             for (voxi=0; voxi < nvoxs; ++voxi) {
-                vox = static_cast<index_type>(voxInds[voxi]-1);
+                vox = static_cast<index_type>(voxInds(voxi)-1);
                 scaled_x = (static_cast<LDOUBLE>(subCorMaps(seed,vox))-mean)/stdev;
                 seedMap[voxi] = static_cast<double>(scaled_x);
             }
@@ -84,7 +84,7 @@ SEXP subdist_combine_submaps(SEXP Slist_corMaps, SEXP Sseed, SEXP SvoxInds,
             
             seedMap = const_cast<double *>(seedCorMaps.colptr(sub));
             for (voxi=0; voxi < nvoxs; ++voxi) {
-                vox = static_cast<index_type>(voxInds[voxi]-1);
+                vox = static_cast<index_type>(voxInds(voxi)-1);
                 seedMap[voxi] = subCorMaps(seed,vox);
             }
         }
@@ -128,7 +128,7 @@ SEXP subdist_combine_and_trans_submaps(SEXP Slist_corMaps, SEXP Sseed, SEXP Svox
             UNPROTECT(1);
             
             for (voxi=0; voxi < nvoxs; ++voxi) {
-                vox = static_cast<index_type>(voxInds[voxi]-1);
+                vox = static_cast<index_type>(voxInds(voxi)-1);
                 seedCorMaps(sub,voxi) = subCorMaps(seed,vox);
             }
         }
