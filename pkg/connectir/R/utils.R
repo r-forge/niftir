@@ -147,7 +147,7 @@ get_subdist_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts) {
     # calculate amount of memory that will be used
     d <- opts$superblocksize
     s <- opts$blocksize
-    m <- f(d, s); mem_used <- mem_limit - m
+    m <- f(d, s*nforks); mem_used <- mem_limit - m
     if (mem_used > mem_limit) {
         vstop("You require %.2f GB of memory but have a limit of %.2f GB", 
               mem_used, mem_limit)
@@ -266,7 +266,7 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
     # calculate amount of memory that will be used
     v <- opts$superblocksize
     p <- opts$blocksize
-    m <- f(v, p); mem_used <- mem_limit - m
+    m <- f(v, p*nforks); mem_used <- mem_limit - m
     if (mem_used > mem_limit) {
         vstop("You require %.2f GB of memory but have a limit of %.2f GB", 
               mem_used, mem_limit)
