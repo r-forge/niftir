@@ -44,7 +44,7 @@ SEXP subdist_combine_and_scale_submaps(SEXP Slist_corMaps, SEXP Sseed, SEXP Svox
             }
         }
         
-        seedMap <- NULL;
+        seedMap = NULL;
         free_arma(seedCorMaps, old_mptr);
         free_arma(subCorMaps, old_sptr);
         
@@ -89,7 +89,7 @@ SEXP subdist_combine_submaps(SEXP Slist_corMaps, SEXP Sseed, SEXP SvoxInds,
             }
         }
         
-        seedMap <- NULL;
+        seedMap = NULL;
         free_arma(seedCorMaps, old_mptr);
         free_arma(subCorMaps, old_sptr);
         
@@ -157,7 +157,8 @@ SEXP subdist_pearson_distance(SEXP SseedCorMaps, SEXP Sdmats, SEXP Sdcol,
                 
         arma::mat dmat(1,1);
         const double* old_dptr = sub_sbm_to_arma_xd(Sdmats, dmat, Sdcol, Sdcol);
-        index_type nsubs = sqrt(dmat.n_rows);
+        index_type nsubs = static_cast<index_type>(
+                                sqrt(static_cast<double>(dmat.n_rows)));
         dmat.reshape(nsubs, nsubs);
         
         Rcpp::LogicalVector istrans(Sistrans);
@@ -197,7 +198,8 @@ SEXP big_gower(SEXP SX, SEXP SY,
                 
         if (X.n_rows != Y.n_rows || X.n_cols != Y.n_cols)
             Rf_error("dimension mismatch between input and output matrices");
-        double n = sqrt(static_cast<double>(Y.n_rows));
+        index_type n = static_cast<index_type>(sqrt(
+                        static_cast<double>(Y.n_rows)));
         
         using namespace arma;
         
