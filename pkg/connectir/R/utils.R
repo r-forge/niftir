@@ -21,9 +21,10 @@ set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE) {
     vcat(verbose, "Setting %i threads for matrix algebra operations", 
          nthreads)
     nprocs <- omp_get_max_threads()
-    if (nthreads > nprocs)
+    if (nthreads > nprocs) {
         vstop("# of threads %i is greater than the actual # of processors (%i)", 
               nthreads, nprocs)
+    }
     if (existsFunction("setMKLthreads")) {
         vcat(verbose, "...using Intel's MKL")
         setMKLthreads(nthreads)
