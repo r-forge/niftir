@@ -156,9 +156,9 @@ tryCatch({
   
   vcat(opts$verbose, "Loading and masking functional data")
   reader <- gen_big_reader("nifti4d")
-  load_and_mask_func_data2(infiles, reader, mask=brainmask, 
-                           verbose=opts$verbose, parallel=parallel_forks, 
-                           type="double", shared=parallel_forks)
+  funclist <- load_and_mask_func_data2(infiles, reader, mask=brainmask, 
+                                       verbose=opts$verbose, parallel=parallel_forks, 
+                                       type="double", shared=parallel_forks)
   invisible(gc(FALSE, TRUE))
   
   
