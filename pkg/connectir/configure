@@ -22,5 +22,7 @@ else
   echo "yes"
 fi
 
+LIBS="${LIBS} -lRlapack"
+
 echo "${FLAGS}" > src/Makevars
 echo "${LIBS}" >> src/Makevars
