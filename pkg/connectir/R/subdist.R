@@ -111,18 +111,20 @@ check_subdist <- function(sdir) {
 # and returns a new subdist object
 create_subdist <- function(outdir, infiles, masks, opts, ...) {
     if (file.exists(outdir))
-        stop("Output cannot exist")
+        stop("output directory cannot exist")
     
     infuncdir <- file.path(outdir, "input_funcs")
     inmaskdir <- file.path(outdir, "input_masks")
     
     # Create directories
+    vcat(opts$verbose, "...creating directories")
     dir.create(outdir)
     dir.create(infuncdir)
     dir.create(inmaskdir)
     
     # Create symlinks for the input funcs
     if (!opts$"no-link-functionals") {
+        vcat(opts$verbose, "...creating soft links to subject functional data")
         for (i in 1:length(infiles)) {
             from <- infiles[i]
             to <- file.path(infuncdir, sprintf("scan%04i.%s", i, getext(from)))
@@ -131,178 +133,259 @@ create_subdist <- function(outdir, infiles, masks, opts, ...) {
     }
     
     # Get a header file from the first functional
-    header <- read.nifti.header(infiles[1])
-    header$dim <- header$dim[1:3]
-    header$pixdim <- header$pixdim[1:3]
+    hdr <- read.nifti.header(infiles[1])
+    hdr$dim <- hdr$dim[1:3]
+    hdr$pixdim <- hdr$pixdim[1:3]
     
     # Write the brain masks
+    vcat(opts$verbose, "...saving masks")
     tmpnames <- names(masks)
     for (i in 1:length(masks)) {
         outfile <- file.path(inmaskdir, sprintf("%s.nii.gz", tmpnames[[i]]))
-        write.nifti(masks[[i]], header, outfile=outfile)
+        write.nifti(masks[[i]], hdr, outfile=outfile, odt="char")
     }
     
     # Copy over standard brain
+    vcat(opts$verbose, "...copying background image")
     if (!is.null(opts$bg))
         file.copy(opts$bg, file.path(outdir, "bg_image.nii.gz"))
     
     # Save options
+    vcat(opts$verbose, "...saving options")
     opts$outdir <- outdir
     opts$infiles <- infiles
     save(opts, file=file.path(outdir, "options.rda"))
     
-    # Want to create subdist matrix
+    # Create file-backed subject distances and gower matrices
+    vcat(opts$verbose, "...creating file-backed distance matrices")
     nsubs <- length(infiles)
     nvoxs <- sum(masks$brainmask)
-    big.matrix(nsubs^2, nvoxs, type="double", ...)
+    sdist <- big.matrix(nsubs^2, nvoxs, type="double", 
+                        backingpath=outdir, 
+                        backingfile="subdist.bin", 
+                        descriptorfile="subdist.desc")
+    gdist <- big.matrix(nsubs^2, nvoxs, type="double", 
+                        backingpath=outdir, 
+                        backingfile="subdist_gower.bin", 
+                        descriptorfile="subdist_gower.desc")
+    
+    # Create temporary subject distances matrix
+    
+    list(sdist=sdist, gdist=gdist, bpath=outdir)
 }
 
-# check that seed_inds is continuous!
-compute_subdist2 <- function(funclist, subdist, seed_inds, blocksize, ztransform, start=1, verbose=TRUE, testonly=FALSE, design_matrix=NULL) {
-    nseeds <- length(seed_inds)
-    blocks <- niftir.split.indices(start, nseeds, by=blocksize)
+compute_subdist_wrapper <- function(sub.funcs, list.dists, 
+                                    blocksize, superblocksize, 
+                                    design_mat=NULL, 
+                                    verbose=1, parallel=FALSE, ...)
+{
+    verbosity <- verbose
+    verbose <- as.logical(verbose)
+    sdist <- list.dists$sdist
+    gdist <- list.dists$gdist
+    bpath <- list.dists$bpath
+    zcheck1 <- c(); zcheck2 <- c()
     
-#    dfun <- function(i, blocks, seed_inds, funclist, subdist, ztransform, verbose, pb) {
-    if (is.null(design_matrix)) {
-        dfun <- function(i, ...) {
-            if (verbose) {
-                update(pb, i)
-                #msg <- sprintf("\nblock %i with voxels %i:%i\n", i, blocks$starts[i], blocks$ends[i])
-                #cat(msg)
-            }
-            
-            dist_inds_CHUNK <- blocks$starts[i]:blocks$ends[i]
-            scor_incols_CHUNK <- seed_inds[c(blocks$starts[i], blocks$ends[i])]
-            scor_inds_CHUNK <- scor_incols_CHUNK[1]:scor_incols_CHUNK[2]
-            cormaps_list <- vbca_batch2(funclist, scor_incols_CHUNK, ztransform=ztransform, 
-                                        shared=FALSE)
-            tmp <- compute_subdist_worker2(cormaps_list, scor_inds_CHUNK, subdist, dist_inds_CHUNK)
-            
-            rm(dist_inds_CHUNK, scor_incols_CHUNK, scor_inds_CHUNK, cormaps_list, tmp)
-            gc(FALSE)
+    nsubs <- length(sub.funcs)
+    nvoxs <- ncol(sdist)
+    superblocks <- niftir.split.indices(1, nvoxs, by=superblocksize)
+    
+    vcat(verbose, "will run through %i blocks", superblocks$n)
+    for (i in 1:superblocks$n) {
+        vcat(verbose, "block %i", i)
+        start.time <- Sys.time()
+        
+        firstSeed <- superblocks$start[i]; lastSeed <- superblocks$ends[i]
+        firstDist <- 1; lastDist <- lastSeed - firstSeed + 1
+        ncol <- lastDist
+        
+        # create temporary RAM-based matrix
+        vcat(verbose, "...creating temporary distance matrices")
+        tmp_sdist <- big.matrix(nsubs^2, ncol, type="double", shared=parallel)
+        
+        # subdist
+        vcat(verbose, "...compute distances")
+        compute_subdist2(sub.funcs, firstSeed, lastSeed, 
+                         tmp_sdist, firstDist, lastDist, 
+                         blocksize=blocksize, design_mat=design_mat, 
+                         verbose=verbosity, parallel=parallel, type="double", 
+                         ...)
+        
+        # save subdist
+        vcat(verbose, "...saving distances")
+        firstCol <- superblocks$start[i]; lastCol <- superblocks$ends[i]
+        sub_sdist <- sub.big.matrix(sdist, firstCol=firstCol, lastCol=lastCol)
+        deepcopy(x=tmp_sdist, y=sub_sdist)
+        ## checks
+        tmp <- (sub_sdist[2,]!=0)*1 + 1
+        zcheck1 <- c(zcheck1, tmp)
+        if (any(tmp==2))
+            vcat(verbose, "...there are %i bad voxels", sum(tmp==2))
+        ## clear file-backed RAM usage
+        flush(sub_sdist); flush(sdist)
+        rm(sub_sdist); gc(FALSE, TRUE)
+        sdist <- free.memory(sdist, bpath)
+        
+        # gower centered matrices
+        vcat(verbose, "...gower centering")
+        sub_gdist <- sub.big.matrix(gdist, firstCol=firstCol, lastCol=lastCol)
+        gower.subdist2 <- function(tmp_sdist, outmat=sub_gdist,  
+                                   verbose=verbosity, parallel=parallel)
+        ## checks
+        tmp <- (sub_gdist[2,]!=0)*1 + 1
+        zcheck2 <- c(zcheck2, tmp)
+        if (any(tmp==2))
+            vcat(verbose, "...there are %i bad voxels", sum(tmp==2))
+        ## clear file-backed RAM usage
+        flush(sub_gdist); flush(gdist)
+        rm(sub_gdist); gc(FALSE, TRUE)
+        gdist <- free.memory(gdist, bpath)
+        
+        # remove temporary matrix
+        rm(tmp_sdist); gc(FALSE, TRUE)
+        
+        # how long?
+        end.time <- Sys.time()
+        time.total <- as.numeric(end.time-start.time, units="mins")
+        time.left <- time.total*(superblocks$n-i)
+        vcat(verbose, "...took %.1f minutes (%.1f minutes left)\n", 
+             time.total, time.left)
+    }
+    
+    list(sdist=zcheck1, gdist=zcheck2)
+}
+
+compute_subdist2 <- function(sub.funcs, firstSeed, lastSeed, 
+                             dmats, firstDist, lastDist, 
+                             blocksize=floor(ncol(dmats)/getDoParWorkers()), 
+                             design_mat=NULL, verbose=1, parallel=FALSE, 
+                             ...)
+{
+    nseeds <- lastSeed - firstSeed + 1
+    ndists <- lastDist - firstDist + 1
+    if (nseeds != ndists)
+        stop("length mismatch between # of seeds  and # of distance matrices")
+    seeds <- firstSeed:lastSeed
+    dists <- firstDist:lastDist
+    
+    blocks <- niftir.split.indices(2, nseeds-1, by=blocksize)
+    use_shared <- ifelse(parallel, TRUE, FALSE)
+    progress <- ifelse(as.logical(verbose), "text", "none")
+    inform <- verbose==2
+    verbose <- as.logical(verbose)
+    
+    if (!is.big.matrix(sub.funcs[[1]]) || !is.big.matrix(dmats))
+        stop("inputs and outputs must be big matrices")
+    if (parallel && (!is.shared(sub.funcs[[1]]) || !is.shared(dmats)))
+        stop("if running in parallel inputs and outputs must be of type shared")
+    
+    if (is.null(design_mat)) {
+        dfun <- function(starti, lasti, ...) {
+            sub.firstSeed <- seeds[starti]; sub.lastSeed <- seeds[lasti]
+            sub.firstDist <- dists[starti]; sub.lastDist <- dists[lasti]
+            compute_subdist_worker2(sub.funcs, sub.firstSeed, sub.lastSeed, 
+                                    dmats, sub.firstDist, sub.lastDist, 
+                                    shared=use_shared, ...)
             return(NULL)
         }
     } else {
-        dfun <- function(i, ...) {
-            if (verbose) {
-                update(pb, i)
-                #msg <- sprintf("\nblock %i with voxels %i:%i\n", i, blocks$starts[i], blocks$ends[i])
-                #cat(msg)
-            }
-            dist_inds_CHUNK <- blocks$starts[i]:blocks$ends[i]
-            scor_incols_CHUNK <- seed_inds[c(blocks$starts[i], blocks$ends[i])]
-            scor_inds_CHUNK <- scor_incols_CHUNK[1]:scor_incols_CHUNK[2]
-            cormaps_list <- vbca_batch2(funclist, scor_incols_CHUNK, ztransform=ztransform, 
-                                        shared=FALSE)
-            tmp <- compute_subdist_worker2_regress(cormaps_list, scor_inds_CHUNK, subdist, 
-                                                   dist_inds_CHUNK, design_matrix)
-            
-            rm(dist_inds_CHUNK, scor_incols_CHUNK, scor_inds_CHUNK, cormaps_list, tmp)
-            gc(FALSE)
+        dfun <- function(starti, lasti, ...) {
+            sub.firstSeed <- seeds[starti]; sub.lastSeed <- seeds[lasti]
+            sub.firstDist <- dists[starti]; sub.lastDist <- dists[lasti]
+            compute_subdist_worker2_regress(sub.funcs, sub.firstSeed, sub.lastSeed, 
+                                            dmats, sub.firstDist, sub.lastDist, 
+                                            design_mat, 
+                                            shared=use_shared, ...)
             return(NULL)
         }
     }
     
     # Test
-    i <- 1
-    if (verbose) {
-        cat("...running a test (", blocks$starts[i],  ")\n")
-        pb <- progressbar(i)
-    } else {
-        pb <- NULL
-    }
-    dfun(i)
-    check_dmat(matrix(subdist[,blocks$starts[i]], sqrt(nrow(subdist))))
-    check_dmat(matrix(subdist[,blocks$ends[i]], sqrt(nrow(subdist))))
-    if (verbose)
-        end(pb)
-    if (testonly) {
-        cat("...test only...\n")
-        return(NULL)
-    }
+    vcat(verbose, "...running a test on first seed")
+    dfun(1, 1, ...)
+    check_dmat(matrix(dmats[,dists[1]], sqrt(nrow(dmats))))
+    vcat(verbose, "...running a test on last seed")
+    dfun(ndists, ndists, ...)
+    check_dmat(matrix(dmats[,dists[ndists]], sqrt(nrow(dmats))))
     
     # Subdist Calculation
-    if (verbose) {
-        cat("...now the real deal\n")
-        pb <- progressbar(blocks$n)
-    } else {
-        pb <- NULL
-    }
+    vcat(verbose, "...now the real deal with %i blocks and %i seeds", blocks$n, nseeds-2)
+    llply(1:blocks$n, function(i, ...) {
+        starti <- blocks$starts[i]; lasti <- blocks$ends[i]
+        dfun(starti, lasti, ...)
+    }, ..., .progress=progress, .parallel=parallel, .inform=inform)
     
-    if (getDoParRegistered() && getDoParWorkers() > 1) {
-        lo <- min(getDoParWorkers()*3, blocks$n-1)
-        superblocks <- niftir.split.indices(2, blocks$n, length.out=lo)
-        foreach(si=1:superblocks$n, .packages=c("connectir"), .inorder=TRUE) %dopar% 
-            for(i in superblocks$starts[si]:superblocks$ends[si]) dfun(i)
-    }
-    else {
-        for (i in 2:blocks$n)
-            dfun(i)
-    }
-    
-    if (verbose)
-        end(pb)
+    invisible(TRUE)
 }
 
-compute_subdist_worker2 <- function(sub.cormaps, cor_inds, outmat, dist_inds, type="double", ...) {
-    nsubs <- length(sub.cormaps)
-    nvoxs <- ncol(sub.cormaps[[1]])
-    nseeds <- nrow(sub.cormaps[[1]])
-    if (nseeds != length(cor_inds) || nseeds != length(dist_inds))
-        stop("length of inds doesn't match nrow of first sub.cormaps element")
-    
-    #if (is.null(outmat))
-    #    outmat <- big.matrix(nsubs^2, nseeds, type=type, ...)
-    #else if (ncol(outmat) != nseeds || nrow(outmat) != nsubs^2)
-    #    stop("dimensions of outmat do not match nsubs and nseeds values")
-    
-    subsMap <- big.matrix(nvoxs-1, nsubs, type=type, shared=FALSE, ...)
-    voxs <- 1:nvoxs
-    for (i in 1:nseeds) {
-        .Call("CombineSubMapsMain", sub.cormaps, subsMap@address, as.double(i), 
-              as.double(voxs[-cor_inds[i]]), as.double(nvoxs-1), as.double(nsubs))
-        big_cor(x=subsMap, z=outmat, z_firstCol=dist_inds[i], z_lastCol=dist_inds[i])
-        .Call("big_add_scalar", outmat, as.double(-1), as.double(1), 
-                as.double(dist_inds[i]), as.double(dist_inds[i]));
-    }
-    rm(subsMap)
-    gc(F)
-    
-    return(outmat)
-}
-
-compute_subdist_worker2_regress <- function(sub.cormaps, cor_inds, outmat, dist_inds,  
-                                            design_mat, type="double", ...) 
+compute_subdist_worker2 <- function(sub.funcs, firstSeed, lastSeed, 
+                                    dmats, firstDist, lastDist, 
+                                    ztransform=FALSE, method="pearson", 
+                                    type="double", shared=FALSE, ...)
 {
-    nsubs <- length(sub.cormaps)
-    nvoxs <- ncol(sub.cormaps[[1]])
-    nseeds <- nrow(sub.cormaps[[1]])
-    if (nseeds != length(cor_inds) || nseeds != length(dist_inds))
-        stop("length of inds doesn't match nrow of first sub.cormaps element")
-    
-    #if (is.null(outmat))
-    #    outmat <- big.matrix(nsubs^2, nseeds, type=type, ...)
-    #else if (ncol(outmat) != nseeds || nrow(outmat) != nsubs^2)
-    #    stop("dimensions of outmat do not match nsubs and nseeds values")
-    
-    subsMap <- big.matrix(nsubs, nvoxs-1, type=type, shared=FALSE, ...)
-    r_subsMap <- big.matrix(nsubs, nvoxs-1, type=type, shared=FALSE, ...)   # residuals
+    nsubs <- length(sub.funcs)
+    nvoxs <- ncol(sub.funcs[[1]])
+    nseeds <- lastSeed - firstSeed + 1
+    ndists <- lastDist - firstDist + 1
+    if (nseeds != ndists)
+        stop("mismatch in length of seed and distance matrix indices")
     voxs <- 1:nvoxs
+    seeds <- firstSeed:lastSeed
+    dists <- firstDist:lastDist
+    
+    subs.cormaps <- vbca_batch2(sub.funcs, c(firstSeed, lastSeed), 
+                                ztransform=ztransform, 
+                                type=type, shared=shared, ...)
+    
+    seedCorMaps <- big.matrix(nvoxs-1, nsubs, type=type, shared=shared, ...)
     for (i in 1:nseeds) {
-        .Call("CombineSubMapsTransSimpleMain", sub.cormaps, subsMap@address, as.double(i), 
-              as.double(voxs[-cor_inds[i]]), as.double(nvoxs-1), as.double(nsubs))
-        qlm_residuals(subsMap, design_mat, FALSE, r_subsMap)
-        scale_fast(r_subsMap, to.copy=FALSE, byrows=TRUE)
-        big_cor(x=r_subsMap, byrows=TRUE, z=outmat, 
-                z_firstCol=dist_inds[i], z_lastCol=dist_inds[i])
-        .Call("big_add_scalar", outmat, as.double(-1), as.double(1), 
-                as.double(dist_inds[i]), as.double(dist_inds[i]));
+        .Call("subdist_combine_and_scale_submaps", subs.cormaps, as.double(i), 
+              as.double(voxs[-seeds[i]]), seedCorMaps, PACKAGE="connectir")
+        .Call("subdist_pearson_distance", seedCorMaps, dmats, as.double(dists[i]), 
+              FALSE, PACKAGE="connectir")
     }
     
-    rm(subsMap)
-    gc(F)
+    rm(subs.cormaps, seedCorMaps)
+    gc(FALSE, TRUE)
     
-    return(outmat)
+    return(dmats)
+}
+
+compute_subdist_worker2_regress <- function(sub.funcs, firstSeed, lastSeed, 
+                                            dmats, firstDist, lastDist, 
+                                            design_mat, 
+                                            ztransform=FALSE, method="pearson", 
+                                            type="double", shared=FALSE, ...)
+{
+    nsubs <- length(sub.funcs)
+    nvoxs <- ncol(sub.funcs[[1]])
+    nseeds <- lastSeed - firstSeed + 1
+    ndists <- lastDist - firstDist + 1
+    if (nseeds != ndists)
+        stop("mismatch in length of seed and distance matrix indices")
+    voxs <- 1:nvoxs
+    seeds <- firstSeed:lastSeed
+    dists <- firstDist:lastDist
+    
+    subs.cormaps <- vbca_batch2(sub.funcs, c(firstSeed, lastSeed), 
+                                ztransform=ztransform, 
+                                type=type, shared=shared, ...)
+    
+    seedCorMaps <- big.matrix(nsubs, nvoxs-1, type=type, shared=shared, ...)
+    r_seedCorMaps <- big.matrix(nsubs, nvoxs-1, type=type, shared=shared, ...)
+    for (i in 1:nseeds) {
+        .Call("subdist_combine_and_trans_submaps", subs.cormaps, as.double(i), 
+              as.double(voxs[-seeds[i]]), seedCorMaps, PACKAGE="connectir")
+        qlm_residuals(seedCorMaps, design_mat, FALSE, r_seedCorMaps)
+        scale_fast(r_seedCorMaps, to.copy=FALSE, byrows=TRUE)
+        .Call("subdist_pearson_distance", r_seedCorMaps, dmats, as.double(dists[i]), 
+              TRUE, PACKAGE="connectir")
+    }
+    
+    rm(subs.cormaps, seedCorMaps)
+    gc(FALSE, TRUE)
+    
+    return(dmats)
 }
 
 # bigmat: rows=subject distances, cols=voxels
@@ -357,16 +440,15 @@ gower.subdist <- function(bigmat, gower.bigmat=NULL, verbose=TRUE, ...) {
 
 gower.subdist2 <- function(inmat, outmat=NULL, 
                            blocksize=floor(ncol(inmat)/getDoParWorkers()), 
-                           verbose=TRUE, parallel=FALSE, ...) 
+                           verbose=1, parallel=FALSE, ...) 
 {
     nr <- nrow(inmat)
     nc <- ncol(inmat)
     blocks <- niftir.split.indices(1, nc, by=blocksize)
-    
-    if (verbose)
-        progress <- "text"
-    else
-        progress <- "none"
+    use_shared <- ifelse(parallel, TRUE, FALSE)
+    progress <- ifelse(as.logical(verbose), "text", "none")
+    inform <- verbose==2
+    verbose <- as.logical(verbose)
     
     if (is.null(outmat)) {
         outmat <- big.matrix(nr, nc, type="double", ...)
@@ -385,7 +467,7 @@ gower.subdist2 <- function(inmat, outmat=NULL,
         ei <- blocks$ends[i]
         .Call("big_gower", inmat, outmat, as.double(si), as.double(ei), 
               as.double(si), as.double(ei), PACKAGE="connectir")
-    }, .progress=progress, .parallel=parallel)
+    }, .progress=progress, .parallel=parallel, .inform=inform)
     
     return(outmat)
 }
@@ -412,8 +494,6 @@ slice.subdist <- function(bigmat, subs=1:sqrt(nrow(bigmat)), voxs=1:ncol(bigmat)
     matinds <- as.vector(matinds[subs,subs])
     deepcopy(bigmat, cols=voxs, rows=matinds, ...)
 }
-
-
 
 
 ### NEW CODE USING ARMADILLO

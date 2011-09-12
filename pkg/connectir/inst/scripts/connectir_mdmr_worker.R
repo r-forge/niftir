@@ -111,11 +111,10 @@ tryCatch({
   # model
   printf("...model")
   model <- read.csv(opts$model)
-  # TODO: check if below works with more than one permuted factor
-  if (!is.null(opts$factors2perm) && is.null(model[[opts$factors2perm]]))
+  if (!is.null(opts$factors2perm) && any(is.null(model[[opts$factors2perm]])))
       stop("Factors to permute given but doesn't match any column in the input model")
-
-  # subject distances (gower's centered)
+  
+  # subject distances
   printf("...subject distances")
   ## read
   tmp <- attach.big.matrix(file.path(opts$indir, "subdist_gower.desc"))
@@ -143,13 +142,23 @@ tryCatch({
       else
           opts$strata <- model[[opts$strata]]
   }
-  ## copy into memory
+  if (length(opts$usesubs) < sqrt(nrow(tmp))) {
+      # recompute ...
+  }    
+  ## copy into memory (NO!)
   xdist <- slice.subdist(tmp, subs=opts$usesubs)  # will create a copy
   rm(tmp); invisible(gc(FALSE))
   ## check
   tmp <- matrix(xdist[,1], sqrt(nrow(xdist)), sqrt(nrow(xdist)))
   check_gmat(tmp)
   rm(tmp); invisible(gc(FALSE))
+
+  
+  nsubs <- sqrt(nrow(xdist))
+  nvoxs <- ncol(xdist)
+  if (nrow(model) != nsubs)
+      stop("Number of subjects in distance matrix does not match number of subjects in model")
+
 
   ###
   # Block size
@@ -160,59 +169,6 @@ tryCatch({
   n2gb <- function(x) x*8/1024^3
   gb2n <- function(x) x/8*1024^3
 
-  # general info
-  nsubs <- sqrt(nrow(xdist))
-  nvoxs <- ncol(xdist)
-  if (nrow(model) != nsubs)
-      stop("Number of subjects in distance matrix does not match number of subjects in model")
-
-  # RAM for distance matrix
-  mem_used4dmat <- n2gb(nsubs^2 * nvoxs)
-
-  # RAM for Fperms matrix
-  mem_used4fperms <- n2gb(opts$permutations * nvoxs)
-
-  if (opts$blocksize==0) {
-      printf("...autosetting blocksize to -> ", newline=F)
-    
-      # minimum amount of RAM needed (assume blocksize of 2)
-      min_mem_needed <- n2gb(
-          opts$permutations * 2 * 2   # for temporary matrices
-          + nsubs^2 * 2
-      ) * getDoParWorkers() + mem_used4dmat + mem_used4fperms
-    
-      # limit in RAM use
-      mem_limit <- as.numeric(opts$memlimit)
-      if (mem_limit < min_mem_needed)
-          stop(sprintf("You require at least %.2f GB of memory but are limited to %i GB. Please set the --memlimit option to a higher number to continue.", min_mem_needed, mem_limit))
-    
-      # amount of RAM for mdmr
-      mem_used4mdmr <- mem_limit - mem_used4dmat - mem_used4fperms
-    
-      # block size
-      opts$blocksize <- floor(gb2n(
-          mem_used4mdmr/((4*opts$permutations+2*nsubs^2)*getDoParWorkers())
-      ))
-      printf("%i", opts$blocksize)
-    
-      # clear variables
-      rm(min_mem_needed, mem_limit, mem_used4mdmr)
-    
-  }
-
-  # temporary RAM needed while computing MDMR
-  ## error variance and explained variance
-  mem_used4temp <- n2gb(opts$permutations * opts$blocksize * 2 * getDoParWorkers())
-
-  # copy of subdist
-  mem_used4chunk <- n2gb(nsubs^2 * opts$blocksize * getDoParWorkers())
-
-  # total ram
-  mem_used <- mem_used4dmat + mem_used4fperms + mem_used4temp + mem_used4chunk
-
-  printf("...will be using %.2f GB of RAM", mem_used)
-  rm(nsubs, nvoxs, mem_used4dmat, mem_used4fperms, mem_used4temp, mem_used4chunk, mem_used)
-  invisible(gc(FALSE))
 
 
   ###

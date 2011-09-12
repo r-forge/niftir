@@ -29,9 +29,11 @@ RcppExport SEXP CombineSubMapsMain(SEXP LIST_allVoxs_allSubs, SEXP ADDR_oneVox_a
 RcppExport SEXP CombineSubMapsTransSimpleMain(SEXP LIST_allVoxs_allSubs, SEXP ADDR_oneVox_allSubs, SEXP Rseed_index, SEXP Rvoxindices, SEXP Rnvoxs, SEXP Rnsubs);
 
 // utils.cpp
+void free_arma(arma::mat& A, const double *ptr_double);
 BigMatrix* sbm_to_bm(SEXP Sbm);
-void sbm_to_arma_xd(SEXP SbM, arma::mat& M);
-void sub_sbm_to_arma_xd(SEXP SbM, arma::mat& M, SEXP SfirstCol, SEXP SlastCol);
+double* bm_to_ptr_xd(BigMatrix* pMat);
+const double* sbm_to_arma_xd(SEXP SbM, arma::mat& M);
+const double* sub_sbm_to_arma_xd(SEXP SbM, arma::mat& M, SEXP SfirstCol, SEXP SlastCol);
 RcppExport SEXP test_func(SEXP Sbm);
 
 // arith.cpp
@@ -59,8 +61,24 @@ RcppExport SEXP big_cor(SEXP As, SEXP Bs, SEXP Cs, SEXP A_firstCol, SEXP A_lastC
 RcppExport SEXP big_tcor(SEXP As, SEXP Bs, SEXP Cs, SEXP A_firstCol, SEXP A_lastCol, SEXP B_firstCol, SEXP B_lastCol, SEXP C_firstCol, SEXP C_lastCol);
 
 // subdist2.cpp
+RcppExport SEXP subdist_combine_and_scale_submaps(SEXP Slist_corMaps, SEXP Sseed, 
+                                                  SEXP SvoxInds, SEXP SseedCorMaps);
+RcppExport SEXP subdist_combine_submaps(SEXP Slist_corMaps, SEXP Sseed, 
+                                        SEXP SvoxInds, SEXP SseedCorMaps);
+RcppExport SEXP subdist_combine_and_trans_submaps(SEXP Slist_corMaps, SEXP Sseed, 
+                                                  SEXP SvoxInds, SEXP SseedCorMaps);
+RcppExport SEXP subdist_pearson_distance(SEXP SseedCorMaps, SEXP Sdmats, SEXP Sdcol, 
+                                         SEXP trans);
 RcppExport SEXP big_gower(SEXP SX, SEXP SY,  
                           SEXP SX_firstCol, SEXP SX_lastCol, 
                           SEXP SY_firstCol, SEXP SY_lastCol);
+
+// adonis.cpp
+RcppExport SEXP mdmr_nmat_to_pmat(SEXP SNmat, SEXP Snperms);
+RcppExport SEXP mdmr_worker(SEXP SfirstVox, SEXP SlastVox, SEXP SGmat, SEXP SFperms, 
+                            SEXP SNmat, 
+                            SEXP SH2mats, SEXP SIHmat, 
+                            SEXP SdfRes, SEXP SdfExp);
+
 
 #endif // _connectir_CONNECTIR

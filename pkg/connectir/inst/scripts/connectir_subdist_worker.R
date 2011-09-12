@@ -1,30 +1,21 @@
 suppressPackageStartupMessages(library("optparse"))
 
-# General Function(s)
-printf <- function(msg, ..., newline=TRUE) {
-    if (opts$verbose) {
-        cat(sprintf(msg, ...))
-        if (newline) cat("\n")
-    }
-}
-
 # Make option list
 option_list <- list(
     make_option(c("-i", "--infuncs"), type="character", default=NULL, dest="infuncs", help="File containing paths of different 4D functional images in one column (required)", metavar="file"),
     make_option(c("-m", "--inmasks"), type="character", default=NULL, dest="inmasks", help="File containing paths of different 3D masks for each functional image (required). Make sure that this list of masks are in the same order as the -i/--infuncs file.", metavar="file"),
     make_option("--ztransform", action="store_true", default=FALSE, dest="ztransform", help="Fischer Z-Transform the correlations before calculating the distance between participants"),
-    make_option("--seedmask", type="character", default=NULL, help="Mask to select the voxels that will be used to correlate with each voxel in the rest of the brain (or anything within the specified --brainmask)", metavar="file"),
     make_option("--brainmask", type="character", default=NULL, help="When computing each whole-brain connectivity map, this mask will restrict which parts of the whole-brain are to be considered", metavar="file"),
     make_option("--bg", type="character", default=NULL, help="Background image (e.g., MNI152 standard brain) upon which later results might be overlaid", metavar="file"), 
     make_option("--blocksize", type="integer", default=0, help="How many sets of voxels should be used in each iteration of computing the correlation (0 = auto) [default: %default]", metavar="number"),
     make_option("--memlimit", type="integer", default=6, dest="memlimit", help="If blocksize is set to auto (--blocksize=0), then will set the blocksize to use a maximum of RAM specified by this option  [default: %default]", metavar="number"),
-    make_option(c("-c", "--cores"), type="integer", default=1, help="Number of computer processors to use in parallel [default: %default]", metavar="number"),
-    make_option(c("-t", "--threads"), type="integer", default=1, help="Number of computer processors to use in parallel for MKL library [default: %default]", metavar="number"),
+    make_option("--forks", type="integer", default=1, help="Number of computer processors to use in parallel by forking the complete processing stream [default: %default]", metavar="number"),
+    make_option("--threads", type="integer", default=1, help="Number of computer processors to use in parallel by multi-threading matrix algebra operations [default: %default]", metavar="number"),
     make_option("--overwrite", action="store_true", default=FALSE, help="Overwrite output that already exists (default is not to overwrite already existing output)"),
     make_option("--no-link-functionals", action="store_true", default=FALSE, help="Will not create soft links to each of the functional images with the subdist directory"),
-    make_option("--check-functionals", action="store_true", default=FALSE, help="This will check if any of the input functional images has a point with a value equal to or less than zero, which is not allowed"),
+    make_option(c("-q", "--quiet"), action="store_false", dest="verbose", help="Print little output"), 
     make_option(c("-v", "--verbose"), action="store_true", default=TRUE, help="Print extra output [default]"),
-    make_option(c("-q", "--quiet"), action="store_false", dest="verbose", help="Print little output")
+    make_option(c("-d", "--debug"), action="store_true", default=TRUE, help="Like verbose but will also print more helpful error messages when --forks is >1")
 )
 
 # Make class/usage
@@ -42,22 +33,23 @@ if (length(args) < 1) {
 
 tryCatch({
 
-  ###
-  # Parallel processing setup
-  ###
-  set_parallel_procs(opts$cores, opts$threads, opts$verbose)
-  
+  # parallel processing setup
+  set_parallel_procs(opts$forks, opts$threads, opts$verbose)  
   # use foreach parallelization and shared memory?
-  use_shared = ifelse(opts$cores == 1, FALSE, TRUE)
+  parallel_forks = ifelse(opts$cores == 1, FALSE, TRUE)
   
+  # load connectir
   suppressWarnings(suppressPackageStartupMessages(library("connectir")))
 
-  start.time <- Sys.time()
 
   ###
-  # Check Arguments
+  # Check/Setup Required Inputs
   ###
-  printf("01. Checking required inputs")
+  
+  start.time <- Sys.time()
+  
+  # Check required
+  vcat(opts$verbose, "Checking required inputs")
   outdir <- abspath(args[1])
   if (file.exists(outdir) && !opts$overwrite)
       stop("Output directory '", outdir, "' already exists, you can use --overwrite")
@@ -69,14 +61,16 @@ tryCatch({
       stop("The file specified by -i/--infuncs does not exist")
   if (!file.exists(opts$inmasks))
       stop("The file specified by -m/--inmasks does not exist")
-  ## get input functionals
+  
+  # Prepare input functional filenames
   infiles <- sapply(as.character(read.table(opts$infuncs)[,1]), function(fp) {
       if (!file.exists(fp))
           stop("One of the input functionals does not exist: ", fp)
       abspath(fp)
   })
   n <- length(infiles)
-  ## get input masks
+  
+  # Prepare input mask filenames
   inmasks <- sapply(as.character(read.table(opts$inmasks)[,1]), function(fp) {
       if (!file.exists(fp))
           stop("One of the input functionals does not exist: ", fp)
@@ -84,197 +78,146 @@ tryCatch({
   })
   if (length(inmasks) != n)
       stop("Number of masks is not the same as the number of functional images")
+  
+  
+  ###
+  # Check/Setup Optional Inputs
+  ###
 
-  ###
-  # Check Options
-  ###
-  printf("02. Checking optional inputs")
-  lapply(c("seedmask", "brainmask", "bg"), function(optname) {
+  vcat(opts$verbose, "Checking optional inputs")
+  for (optname in c("brainmask", "bg")) {
       arg <- opts[[optname]]
       if(!file.exists(arg))
           vstop("--%s file '%s' does not exist", optname, arg)
       opts[[optname]] <- abspath(arg)
-  })
-
+  }
+  
+  if (opts$debug) {
+      verbosity <- 2
+  } else if (opts$verbose) {
+      verbosity <- 1
+  } else {
+      verbosity <- 0
+  }
+  
+  
   ###
-  # Read in inputs
+  # Read/Setup Masks
   ###
-  printf("05. Setting up inputs")
+  
+  vcat(opts$verbose, "Setting up masks")
+  
   ## remove existing output
   if (opts$overwrite)
       stop("Right now the overwrite function isn't implemented")
-
-  ## masks
+  
+  ## brainmask 1
   if (is.null(opts$brainmask)) {
       prebrainmask <- NULL
   } else {
-      printf("...reading brain mask")
+      vcat(opts$verbose, "...reading brain mask")
       prebrainmask <- read.mask(opts$brainmask)
   }
-  if (is.null(opts$seedmask)) {
-  	if (!is.null(prebrainmask))
-  		preseedmask <- prebrainmask
-  	else
-      	preseedmask <- NULL
-  } else {
-      printf("...reading seed mask")
-      preseedmask <- read.mask(opts$seedmask)
-  }
-
+  
   ## overlap mask
-  printf("...creating overlap of masks across participants")
+  vcat(opts$verbose, "...creating overlap of masks across participants")
   maskoverlap <- create_maskoverlap(inmasks)
   
-  ## seed mask
-  printf("...creating final seed mask")
-  if (!is.null(preseedmask)) {
-      if (length(preseedmask) != length(maskoverlap))
-          stop("length of seedmask and maskoverlap not the same")
-  #    if (sum(preseedmask[!maskoverlap]) > 0)
-  #        warning(sprintf("Seed mask '%s' contains some voxels that don't overlap across all participants", opts$seedmask))
-      seedmask <- preseedmask & maskoverlap
+  ## brainmask 2
+  vcat(opts$verbose, "...creating final brain mask")
+  if (is.null(prebrainmask)) {
+      brainmask <- maskoverlap
   } else {
-      seedmask <- maskoverlap
-  }
-
-  ## brainmask
-  printf("...creating final brain mask")
-  if (!is.null(prebrainmask)) {
       if (length(prebrainmask) != length(maskoverlap))
           stop("length of brainmask and maskoverlap not the same")
-  #    if (sum(prebrainmask[!maskoverlap]) > 0)
-  #        warning(sprintf("Brain mask '%s' contains some voxels that don't overlap across all participants", opts$brainmask))
       brainmask <- prebrainmask & maskoverlap
-  } else {
-      brainmask <- maskoverlap
   }
-  if (!all(seedmask[brainmask]==TRUE))
-      stop("For now the brainmask must contain all elements of the seedmask")
   
-  # set block size and memlimit
+  
+  ###
+  # Set Memory Demands
+  ###
+  
   nsubs <- length(infiles)
   nvoxs <- sum(brainmask)
   ntpts <- sapply(infiles, function(x) {
       hdr <- read.nifti.header(x)
-      if (length(hdr$dim) != 4)
-        stop("Input functional file must be 4 dimensions: ", x, ", but is ", length(hdr$dim))
+      if (length(hdr$dim) != 4) {
+          vstop("Input functional file '%s' must be 4 dimensions but is %i dimensional", 
+                x, length(hdr$dim))
+      }
       return(hdr$dim[[4]])
   })
   opts <- get_subdist_memlimit(opts, nsubs, nvoxs, ntpts)
   
-  ## functional data
-  printf("...reading and masking the functional data")
-  # 1. check if this is ok
-  funclist <- load_and_mask_func_data(infiles, brainmask, shared=use_shared, type="double", 
-                                      verbose=opts$verbose)
-  invisible(gc(FALSE))
-  if (opts$"check-functionals") {
-    printf("...checking functional data")
-    for (i in 1:length(funclist)) {
-      func <- funclist[[i]]
-      x <- colmin(func)
-      if (any(x <= 0)) {
-          stop("Masked functional data has points with a value equal or less than zero, this is not allowed: ", infiles[[i]])
-      }
-    }
-  }
-
-  # create the subdist directory (and get the subject distance matrix)
-  printf("...creating subdist directory and files")
-  masks <- list(maskoverlap=maskoverlap, seedmask=seedmask, brainmask=brainmask)
-  if (!is.null(preseedmask)) masks$preseedmask <- preseedmask
+  
+  ###
+  # Read/Prepare Functional Data
+  ###
+  
+  vcat(opts$verbose, "Loading and masking functional data")
+  reader <- gen_big_reader("nifti4d")
+  load_and_mask_func_data2(infiles, reader, mask=brainmask, 
+                           verbose=opts$verbose, parallel=parallel_forks, 
+                           type="double", shared=parallel_forks)
+  invisible(gc(FALSE, TRUE))
+  
+  
+  ###
+  # Creating output directory
+  ###
+  
+  vcat(opts$verbose, "Creating output directory and files")
+  masks <- list(maskoverlap=maskoverlap, brainmask=brainmask)
   if (!is.null(prebrainmask)) masks$prebrainmask <- prebrainmask
-  # note: this subdist isn't filebacked yet
-  subdist <- create_subdist(outdir, infiles, masks, opts, shared=use_shared)
+  dists_list <- create_subdist(outdir, infiles, masks, opts, shared=parallel_forks)
   
   # clear memory of unneeded stuff + get seedinds
-  seedinds <- which(seedmask[brainmask])
-  rm(masks, maskoverlap, preseedmask, prebrainmask, seedmask)   # save brainmask
-  invisible(gc(F))
-
+  rm(masks, maskoverlap)   # save brainmask
+  invisible(gc(FALSE, TRUE))
+  
   end.time <- Sys.time()
-  printf("Setup is done. It took: %.2f minutes\n", as.numeric(end.time-start.time, units="mins"))
-
-
+  vcat(opts$verbose, "Setup is done. It took: %.2f minutes\n", 
+       as.numeric(end.time-start.time, units="mins"))
+  
+  
   ###
-  # Compute the subdist
+  # Compute the subdists
   ###
   start.time <- Sys.time()
   
-  printf("06. Computing subject distances")
-  compute_subdist(funclist, subdist, seed_inds=seedinds, blocksize=opts$blocksize, ztransform=opts$ztransform, verbose=opts$verbose)
-  rm(funclist)
-  invisible(gc(FALSE))
-
-  end.time <- Sys.time()
-  printf("Distance computation is done! It took: %.2f minutes\n", as.numeric(end.time-start.time, units="mins"))
-
-  ###
-  # Save the subdist
-  ###
-  printf("07. Saving subject distances")
-  tmp <- deepcopy(subdist, backingpath=outdir, backingfile="subdist.bin", descriptorfile="subdist.desc")
-  
-  if (any(is.na(subdist[2,]))) {
-      print(subdist[2,])
-      stop("Found NA's in second row of subdist")
-  }
-  
-  printf("...saving 3D image zcheck1.nii.gz")
-  zcheck <- (subdist[2,]!=0)*1 + 1
+  vcat(opts$verbose, "Computing subject distances")
+  checks <- compute_subdist_wrapper(funclist, dists_list, 
+                                    opts$blocksize, opts$superblocksize, 
+                                    verbose=verbosity, parallel=parallel_forks, 
+                                    ztransform=opts$ztransform, method="pearson")  
+    
+  vcat(opts$verbose, "...saving zchecks")  
   hdr <- read.nifti.header(infiles[1])
   hdr$dim <- hdr$dim[1:3]; hdr$pixdim <- hdr$pixdim[1:3]
-  write.nifti(zcheck, hdr, brainmask, outfile=file.path(outdir, "zcheck1.nii.gz"))
-  if (any(zcheck==1))
-    fprintf("There are some bad voxels...see zcheck1.nii.gz")
-  
-  printf("...saving 3D image zcheck2.nii.gz")
-  zcheck <- (tmp[2,]!=0)*1 + 1
-  write.nifti(zcheck, hdr, brainmask, outfile=file.path(outdir, "zcheck2.nii.gz"))
-  if (any(zcheck==1))
-    fprintf("There are some bad voxels...see zcheck2.nii.gz")
-  
-  rm(brainmask); rm(tmp)
-  invisible(gc(FALSE))
+  write.nifti(checks$sdist, hdr, brainmask, odt="char", 
+              outfile=file.path(outdir, "zcheck_subdist.nii.gz"))
+  write.nifti(checks$gdist, hdr, brainmask, odt="char", 
+              outfile=file.path(outdir, "zcheck_subdist_gower.nii.gz"))
 
-  
-  ###
-  # Create gower matrix
-  ###
-  start.time <- Sys.time()
-
-  printf("08. Creating gower's centered matrices")
-  gdist <- gower.subdist(subdist, shared=FALSE)
-  rm(subdist)
-  invisible(gc(FALSE))
-  printf("...checking")
-  mat <- matrix(gdist[,1], sqrt(nrow(gdist)))
-  check_gmat(mat)
-  
   end.time <- Sys.time()
-  printf("Centering of matrices done! It took: %.2f minutes\n", as.numeric(end.time-start.time, units="mins"))
-
-
-  ###
-  # Save gower matrix
-  ###
-  printf("09. Saving gower's centered matrices")
-  tmp <- deepcopy(gdist, backingpath=outdir, backingfile="subdist_gower.bin", descriptorfile="subdist_gower.desc")
-  rm(tmp, gdist)
-  invisible(gc(FALSE))
-
+  vcat(opts$verbose, "Done! Total computation time: %.1f minutes\n", 
+       as.numeric(end.time-start.time, units="mins"))  
+  
 }, warning = function(ex) {
   cat("\nA warning was detected: \n")
   cat(ex$message, "\n\n")
   cat("Called by: \n")
   print(ex$call)
+  cat("\nSaving options...\n")
+  save(args, opts, file="called_options.rda")
 }, error = function(ex) {
   cat("\nAn error was detected: \n")
   cat(ex$message, "\n\n")
   cat("Called by: \n")
   print(ex$call)
   cat("\nSaving options...\n")
-  save(args, opts, printf, file="called_options.rda")
+  save(args, opts, file="called_options.rda")
 }, interrupt = function(ex) {
   cat("\nKill signal sent. Trying to clean up...\n")
   rm(list(ls()))

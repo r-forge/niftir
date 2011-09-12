@@ -17,7 +17,13 @@ permuted.index <- function (n, strata)
 # ABOVE: CODE DIRECTLY TAKEN FROM vegan
 
 # NOTE: assume that y-intercept exists...need to deal with case when don't have intercept
-mdmr.prepare.model <- function(formula, model, contr.unordered="contr.sum", contr.ordered="contr.poly") {
+mdmr.prepare.model <- function(formula, model, 
+                               contr.unordered="contr.sum", 
+                               contr.ordered="contr.poly", 
+                               factors2perm=NULL, 
+                               verbose=FALSE) 
+{
+    vcat(verbose, "...preparing model and stuff")
     TOL <- 1e-07
 
     n <- nrow(model)
@@ -36,7 +42,8 @@ mdmr.prepare.model <- function(formula, model, contr.unordered="contr.sum", cont
     rhs <- rhs[, 1:qrhs$rank, drop = FALSE]
     
     # Check if rank deficient?
-    solve(t(rhs) %*% rhs)
+    if (qrhs$rank < ncol(rhs))
+        stop("model is rank deficient")
     
     # Get different groups of variables
     grps <- grps[qrhs$pivot][1:qrhs$rank]
@@ -54,74 +61,154 @@ mdmr.prepare.model <- function(formula, model, contr.unordered="contr.sum", cont
     H <- H2s[[nterms]]  # complete model
     IH <- diag(n) - H
     if (length(H2s) > 1) 
-        for (i in length(H2s):2) H2s[[i]] <- H2s[[i]] - H2s[[i - 
-            1]]
+        for (i in length(H2s):2) 
+            H2s[[i]] <- H2s[[i]] - H2s[[i - 1]]
     
     # Get degrees of freedom
     df.Res <- n - qrhs$rank
     df.Exp <- sapply(u.grps[-1], function(i) sum(grps == i))
     
+    # Factors to permute (i.e., assess significance)
+    if (is.null(factors2perm)) {
+        factors2perm <- 1:length(factor.names)
+    } else if (is.character(factors2perm)) {
+        factors2perm <- sapply(factors2perm, function(x) 
+                                which(factor.names==x))
+    }
+    factor2perm.names <- factor.names[factors2perm]
+    ## refine degrees of freedom
+    df.Exp <- sapply(factors2perm, function(i) df.Exp[i])
+    
     return(list(
         rhs = rhs,
         grps = grps,
-        u.grps = u.grps,
-        factor.names = factor.names,
+        u.grps = u.grps, 
+        factor.names = factor.names, 
+        factors2perm = factors2perm, 
+        factor2perm.names = factor2perm.names, 
         H = H,
         H2s = H2s,
         IH = IH,
         df.Res = df.Res,
         df.Exp = df.Exp,
         nobs = n,
-        nfactors = length(factor.names)
+        nfactors = length(factor.names), 
+        nfactors2perm = length(factor2perm.names), 
+        verbose = verbose, 
+        progress = ifelse(verbose, "text", "none")
     ))
 }
 
 mdmr.prepare.permutations <- function(modelinfo, nperms, strata, max.iter, factors2perm) {
+    vcat(modelinfo$verbose, "...preparing permutations")
+
     # get matrix containing different permutations of observations
     p <- sapply(1:nperms, function(x) permuted.index(modelinfo$nobs, strata))
+    
     # remove permutations that are significantly correlated with your model
     if (max.iter > 0) {
-        rthresh <- tanh(1.96/sqrt(modelinfo$nobs-3)) # r value that is significant (p < 0.05)
+        # r value that is significant (p < 0.05)
+        rthresh <- tanh(1.96/sqrt(modelinfo$nobs-3))
         which.cor <- 1:nperms
         for (iter in 1:max.iter) {
+            # get correlations between real model and permuted ones
             which.cor <- unique(unlist(lapply(factors2perm, function(i) {
                 H <- modelinfo$H2s[[i]]
                 tmp <- sapply(which.cor, function(j) cor(H[,1], H[p[,j],1]))
                 which(abs(tmp)>rthresh)
             })))
+            
+            # if no significant correlations, break
             if (length(which.cor)==0)
                 break
-            p[,which.cor] <- sapply(1:length(which.cor), function(x) permuted.index(modelinfo$nobs, strata))
+            
+            # get new permutations to replace correlated ones
+            p[,which.cor] <- sapply(1:length(which.cor), function(x) 
+                                    permuted.index(modelinfo$nobs, strata))
         }
     }
+    
+    if (modelinfo$nobs < 2^31)
+        p <- as.integer(p)
+    
     return(p)
 }
 
-mdmr.prepare.permH2s <- function(modelinfo, p) {
-    nperms <- ncol(p) + 1   # original data + nperms
+mdmr.prepare.permH2s <- function(modelinfo, p, firstRow, lastRow, ...) {
+    if (firstRow < lastRow)
+        stop("first row can't be less than last row")
+    rows <- firstRow:lastRow
+    nperms <- length(rows)
+    if (nperms > ncol(p))
+        stop("more rows requested than permutations")
+    
     nfactors <- length(modelinfo$factors2perm)
+    
     H2mats <- lapply(1:nfactors, function(ii) {
+        vcat(modelinfo$verbose, "...preparing permuted model matrices for factor #%i", 
+             ii)
+        
         i <- modelinfo$factors2perm[ii]
-        bigmat <- big.matrix(modelinfo$nobs^2, nperms, type="double")
+        bigmat <- big.matrix(modelinfo$nobs^2, nperms+1, ...)
         bigmat[,1] <- as.vector(modelinfo$H2s[[i]])
-        for (k in 2:nperms) {
-            prm <- p[,k-1]
-            bigmat[,k] <- as.vector(modelinfo$H2s[[i]][prm,prm])
-        }
+        
+        l_ply(1:nperms, function(kk) {
+            k <- rows[kk]
+            prm <- p[,k]
+            bigmat[,k+1] <- as.vector(modelinfo$H2s[[i]][prm,prm])
+        }, .progress=modelinfo$progress)
+        
         return(bigmat)
     })
+    
     return(H2mats)
 }
 
-mdmr.prepare.permIH <- function(modelinfo, p) {
-    nperms <- ncol(p) + 1   # original data + nperms
-    IHmat <- big.matrix(modelinfo$nobs^2, nperms, type="double")
+mdmr.prepare.permIH <- function(modelinfo, p, firstRow, lastRow, ...) {
+    vcat(modelinfo$verbose, "...preparing permuted error matrices")
+    
+    if (firstRow < lastRow)
+        stop("first row can't be less than last row")
+    rows <- firstRow:lastRow
+    nperms <- length(rows)
+    if (nperms > ncol(p))
+        stop("more rows requested than permutations")
+    
+    IHmat <- big.matrix(modelinfo$nobs^2, nperms, ...)
     IHmat[,1] <- as.vector(modelinfo$IH)
-    for (k in 2:nperms) {
-        prm <- p[,k-1]
-        IHmat[,k] <- as.vector(modelinfo$IH[prm,prm])
-    }
+    
+    l_ply(1:nperms, function(kk) {
+        k <- rows[kk]
+        prm <- p[,k]
+        IHmat[,k+1] <- as.vector(modelinfo$IH[prm,prm])
+    }, .progress=modelinfo$progress)
+    
     return(IHmat)
+}
+
+mdmr.prepare.pmat <- function(modelinfo, nvoxs, ...)
+{
+    vcat(modelinfo$verbose, "...preparing matrix of p-values")
+    big.matrix(nvoxs, modelinfo$nfactors2perm, ...)
+}
+
+mdmr.prepare.fperms <- function(modelinfo, nperms, nvoxs, backingpath=NULL, ...)
+{
+    vcat(modelinfo$verbose, "...preparing matrix with all the Pseudo-F statistics")
+    n <- modelinfo$nfactors2perm
+    fpnames <- modelinfo$factor2perm.names
+    lapply(1:n, function(i) {
+        if (is.null(backingpath)) {
+            bm <- big.matrix(nperms+1, nvoxs, ...)
+        } else {
+            bm <- big.matrix(nperms+1, nvoxs, 
+                             backingpath=backingpath, 
+                             backingfile=sprintf("fperms_%s.bin", fpnames[i]), 
+                             descriptorfile=sprintf("fperms_%s.desc", fpnames[i]), 
+                             ...)                       
+        }
+        return(bm)
+    })
 }
 
 mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, Pmat, Fperms) {
@@ -172,71 +259,152 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
 
 
 # assume each column of x has been gower centered
-mdmr <- function(x, formula, model, nperms=4999, factors2perm=NULL, voxs=1:ncol(x), block.size=250, verbose=TRUE, contr.unordered="contr.sum", contr.ordered="contr.poly", max.iter=10, strata=NULL) {
-    # todo: test if x is matrix or big.matrix?
+mdmr <- function(G, formula, model, 
+                 nperms=4999, factors2perm=NULL, superblocksize=nperms, 
+                 voxs=1:ncol(x), blocksize=250, 
+                 contr.unordered="contr.sum", contr.ordered="contr.poly", 
+                 max.iter=10, strata=NULL, 
+                 verbose=1, parallel=FALSE, 
+                 G.path=NULL, fperms.path=NULL, 
+                 type="double", shared=parallel) 
+{
+    inform <- verbose==2
+    verbose <- as.logical(verbose)
+    progress <- ifelse(verbose, "text", "none")
     
     if (!is.data.frame(model))
-        stop("'model' input must be a data frame")
+        stop("input model must be a data frame")
+    if (!is.big.matrix(G) || !is.shared(G))
+        stop("input Gower's matrix must be type big matrix and shared")
+    if (!is.null(fperms.path) && !file.exists(fperms.path))
+        stop("output path for Pseudo-F permutations does not exist")
+    if (is.filebacked(G) && is.null(G.path))
+        stop("G.path must be given when G is filebacked big matrix")
+    if (!is.filebacked(G) && !is.null(G.path))
+        warning("G.path will be ignored", immediate.=TRUE)
+    if (!is.null(G.path) && !file.exists(G.path))
+        stop("output path for distance matrices does not exist")
     
-    nVoxs <- length(voxs)
-    nSubs <- sqrt(nrow(x))  # don't want length(subs) here
-    blocks <- niftir.split.indices(1, nVoxs, by=block.size)
+    nvoxs <- length(voxs)
+    nsubs <- sqrt(nrow(G))  # don't want length(subs) here
+    superblocks <- niftir.split.indices(1, nvoxs, by=superblocksize)
+    blocks <- niftir.split.indices(1, nperms, by=blocksize)
     
     # Prepare model matrix
-    vcat(verbose, "Preparing model stuff")
-    modelinfo <- mdmr.prepare.model(formula, model, contr.unordered, contr.ordered)
+    modelinfo <- mdmr.prepare.model(formula, model, contr.unordered, contr.ordered, 
+                                    factors2perm, verbose)
+    vcat(verbose, "...will calculate p-values for the following factors: %s", 
+         paste(modelinfo$factor2perm.names, sep=", "))
     
     # Permutation Business
-    vcat(verbose, "Preparing permutation related inputs")
-    ## factors to permute
-    if (is.null(factors2perm))
-        factors2perm <- 1:modelinfo$nfactors
-    else if (is.character(factors2perm))
-        factors2perm <- sapply(factors2perm, function(x) which(modelinfo$factor.names==x))
-    factor.names <- modelinfo$factor.names[factors2perm]
-    ## get permutations
     p <- mdmr.prepare.permutations(modelinfo, nperms, strata, max.iter, factors2perm)
-    ## refine df of experiment
-    modelinfo$df.Exp <- sapply(factors2perm, function(i) modelinfo$df.Exp[i])
-    modelinfo$factors2perm <- factors2perm
-    
-    # Hat matrices prepared with all possible permuted models
-    vcat(verbose, "Preparing permuted model matrices")
-    H2mats <- mdmr.prepare.permH2s(modelinfo, p)
-    IHmat <- mdmr.prepare.permIH(modelinfo, p)
     
     # Create output matrices
-    vcat(verbose, "Preparing output matrices (pvals and fstats)")
-    ## pvals
-    Pmat <- big.matrix(nVoxs, length(factors2perm), type="double")
-    ## fstats
-    Fperms <- lapply(1:length(factors2perm), function(i) {
-        big.matrix(nperms+1, nVoxs, type="double")
-    })
-    
-    vcat(verbose, "Will calculate permutation based p-values for the following factors:", factor.names)
-    
-    vcat(verbose, "Computing MDMR across", blocks$n, "blocks")
-    ## progress bar
-    if (verbose)
-        pb <- progressbar(blocks$n)
-    ## loop through
-    if (getDoParRegistered() && getDoParWorkers() > 1) {
-        foreach(i=1:blocks$n, .packages=c("connectir"), .inorder=TRUE) %dopar% {
-            if (verbose)
-                update(pb, i)
-            mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms)
-        }
+    Pmat <- mdmr.prepare.pmat(modelinfo, nvoxs, 
+                              init=0, type=type, shared=shared)
+    if (!is.null(fperms.path)) {
+        save_fperms <- TRUE
+        Fperms <- mdmr.prepare.fperms(modelinfo, nperms, nvoxs, 
+                                      backingpath=fperms.path, 
+                                      type=type, shared=TRUE)
     } else {
-        for (i in 1:blocks$n) {
-            if (verbose)
-                update(pb, i)
-            mdmr_worker(blocks$starts[i], blocks$ends[i], x, H2mats, IHmat, modelinfo$df.Res, modelinfo$df.Exp, Pmat, Fperms)
-        }
+        save_fperms <- FALSE
     }
-    ## end progress bar
-    if (verbose)
-        end(pb)
+    
+    dfRes <- as.double(modelinfo$df.Res)
+    dfExp <- as.double(modelinfo$df.Exp)
+    
+    # TODO: loop through superblocks
+    vcat(verbose, "Computing MDMR across %i large blocks", 
+         superblocks$n)
+    vcat(verbose, "...with %i smaller blocks within each larger one",
+         blocks$n)
+    
+    # tmp_G <- deepcopy(G...sub_nvoxs)
+    # tmp_F <- nperms, sub_nvoxs
+    
+    for (si in 1:superblocks$n) {
+        vcat(verbose, "large block %i", si)
+        start.time <- Sys.time()
+        
+        firstVox <- superblocks$starts[si]
+        lastVox <- superblocks$ends[si]
+        sub_nvoxs <- lastVox - firstVox + 1
+        
+        vcat(verbose, "...copying distance matrices into memory")
+        tmpG <- deepcopy(x=G, cols=firstVox:lastVox, type=type, shared=shared)
+        if (is.filebacked(G))
+            G <- free.memory(G, G.path)
+        
+        vcat(verbose, "...almost MDMR time")
+        list_tmpFperms <- llply(1:blocks$n, function(bi) {
+            firstPerm <- as.double(blocks$starts[bi])
+            lastPerm <- as.double(blocks$ends[bi])
+            sub_nperms <- lastPerm - firstPerm + 1 + 1
+            
+            tmpFperms <- mdmr.prepare.fperms(modelinfo, sub_nperms, sub_nvoxs, 
+                                             type=type, shared=shared)
+            H2mats <- mdmr.prepare.permH2s(modelinfo, p, firstPerm, lastPerm, 
+                                           type=type, shared=FALSE)
+            IHmat <- mdmr.prepare.permIH(modelinfo, p, firstPerm, lastPerm, 
+                                         type=type, shared=FALSE)
+            
+            .Call("mdmr_worker", tmpG, tmpFperms, 
+                  Pmat, H2mats, IHmat, dfRes, dfExp, 
+                  PACKAGE="connectir")
+            
+            rm(H2mats, IHmat)
+            invisible(gc(FALSE, TRUE))
+            
+            return(tmpFperms)
+        }, .progress=progress, .inform=inform, .parallel=parallel)
+        
+        if (save_fperms) {
+            n <- length(Fperms)
+            fpnames <- modelinfo$factor2perm.names
+            
+            Fperms <- l_ply(1:n, function(fi) {
+                vcat(verbose, "...saving permuted pseudo-F statistics for '%s'", 
+                     fpnames[fi])
+                aF <- Fperms[[fi]]
+                
+                # first row
+                tF <- list_tmpFperms[[1]][[fi]]
+                sF <- sub.big.matrix(aF, firstRow=1, lastRow=1, 
+                                    firstCol=firstVox, lastCol=lastVox)
+                deepcopy(x=tF, rows=1, y=sF)
+                
+                # all other rows
+                l_ply(1:blocks$n, function(bi) {
+                    firstPerm <- blocks$starts[bi] + 1
+                    lastPerm <- blocks$ends[bi] + 1
+                    tF <- list_tmpFperms[[bi]][[fi]]
+                    sF <- sub.big.matrix(aF, firstRow=firstPerm, lastRow=lastPerm, 
+                                        firstCol=firstVox, lastCol=lastVox)
+                    deepcopy(x=tF, rows=2:nrow(tF), y=sF)
+                }, .progress=progress, .inform=inform)
+                
+                # clear memory a bit
+                flush(aF)
+                aF <- free.memory(aF, fperms.path)
+                
+                return(aF)
+            })
+        }
+        
+        rm(tmpG, list_tmpFperms)
+        invisible(gc(FALSE, TRUE))
+        
+        # how long?
+        end.time <- Sys.time()
+        time.total <- as.numeric(end.time-start.time, units="mins")
+        time.left <- time.total*(superblocks$n-si)
+        vcat(verbose, "...took %.1f minutes (%.1f minutes left)\n", 
+             time.total, time.left)
+    }
+        
+    # divide Pmat by # of perms + 1
+    .Call("mdmr_nmat_to_pmat", Pmat, as.double(nperms+1), PACKAGE="connectir")
     
     structure(
         list(

@@ -1,5 +1,20 @@
 #include "connectir/connectir.h"
 
+void free_arma(arma::mat& M, const double *ptr_double) {
+    try {
+        arma::access::rw(M.mem) = ptr_double;
+        arma::access::rw(M.n_rows) = 1;
+        arma::access::rw(M.n_cols) = 1;
+        arma::access::rw(M.n_elem) = 1;
+        return;
+    } catch(std::exception &ex) {
+        forward_exception_to_r(ex);
+    } catch(...) {
+        Rf_error("c++ exception (unknown reason)");
+    }
+    return;
+}
+
 BigMatrix* sbm_to_bm(SEXP Sbm) {
     try {  
         Rcpp::RObject Rbm(Sbm);
@@ -14,7 +29,33 @@ BigMatrix* sbm_to_bm(SEXP Sbm) {
     return NULL;
 }
 
-void sbm_to_arma_xd(SEXP SbM, arma::mat& M) {
+double* bm_to_ptr_xd(BigMatrix* pMat) {
+    try {
+        index_type offset = pMat->nrow() * pMat->col_offset();
+        double *ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset;
+        return ptr_double;
+    } catch(std::exception &ex) {
+        forward_exception_to_r(ex);
+    } catch(...) {
+        ::Rf_error("c++ exception (unknown reason)");
+    }
+    return NULL;
+}
+
+double* sub_bm_to_ptr_xd(BigMatrix* pMat, index_type firstCol, index_type lastCol) {
+    try {
+        index_type offset = pMat->nrow() * pMat->col_offset();
+        double *ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset;
+        return ptr_double;
+    } catch(std::exception &ex) {
+        forward_exception_to_r(ex);
+    } catch(...) {
+        ::Rf_error("c++ exception (unknown reason)");
+    }
+    return NULL;
+}
+
+const double* sbm_to_arma_xd(SEXP SbM, arma::mat& M) {
     try {
         BigMatrix *pMat = sbm_to_bm(SbM);
         if (pMat->matrix_type() != 8)
@@ -25,15 +66,22 @@ void sbm_to_arma_xd(SEXP SbM, arma::mat& M) {
         index_type offset = pMat->nrow() * pMat->col_offset();
         double *ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset;
         
+        //M = arma::mat(ptr_double, pMat->nrow(), pMat->ncol(), false);
+        
+        const double* old_ptr = M.memptr();
+        
         arma::access::rw(M.mem) = ptr_double;
         arma::access::rw(M.n_rows) = pMat->nrow();
         arma::access::rw(M.n_cols) = pMat->ncol();
         arma::access::rw(M.n_elem) = pMat->nrow() * pMat->ncol();
+        
+        return old_ptr;
     } catch(std::exception &ex) {
         forward_exception_to_r(ex);
     } catch(...) {
         Rf_error("c++ exception (unknown reason)");
     }
+    return NULL;
 }
 
 SEXP test_func(SEXP SbM) {
@@ -50,7 +98,7 @@ SEXP test_func(SEXP SbM) {
     return R_NilValue;
 }
 
-void sub_sbm_to_arma_xd(SEXP SbM, arma::mat& M, SEXP SfirstCol, SEXP SlastCol) 
+const double* sub_sbm_to_arma_xd(SEXP SbM, arma::mat& M, SEXP SfirstCol, SEXP SlastCol) 
 {
     try {
         index_type firstCol = static_cast<index_type>(DOUBLE_DATA(SfirstCol)[0] - 1);
@@ -70,15 +118,20 @@ void sub_sbm_to_arma_xd(SEXP SbM, arma::mat& M, SEXP SfirstCol, SEXP SlastCol)
         index_type offset = pMat->nrow() * (pMat->col_offset() + firstCol);
         double *ptr_double = reinterpret_cast<double*>(pMat->matrix()) + offset;
         
+        const double* old_ptr = M.memptr();
+        
         arma::access::rw(M.mem) = ptr_double;
         arma::access::rw(M.n_rows) = pMat->nrow();
         arma::access::rw(M.n_cols) = ncol;
         arma::access::rw(M.n_elem) = pMat->nrow() * ncol;
+        
+        return old_ptr;
     } catch(std::exception &ex) {
         forward_exception_to_r(ex);
     } catch(...) {
         Rf_error("c++ exception (unknown reason)");
     }
+    return NULL;
 }
 
 //

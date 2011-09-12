@@ -9,23 +9,30 @@ vstop <- function(msg, ...) stop(sprintf(msg, ...))
 
 set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE) {
     vcat(verbose, "Setting %i parallel forks", nforks)
+    suppressPackageStartupMessages(library("blasctl"))
     suppressPackageStartupMessages(library("doMC"))
     registerDoMC()
     nprocs <- getDoParWorkers()
     if (nforks > nprocs)
-        vstop("# of forks %i is greater than the actual # of processors (%i)", nforks, nprocs)
+        vstop("# of forks %i is greater than the actual # of processors (%i)", 
+              nforks, nprocs)
     options(cores=nforks)
     
-    vcat(verbose, "Setting %i threads to be used for matrix algebra operations", nthreads)
+    vcat(verbose, "Setting %i threads used for matrix algebra operations", 
+         nthreads)
+    nprocs <- omp_get_max_threads()
     if (nthreads > nprocs)
-        vstop("# of threads %i is greater than the actual # of processors (%i)", nthreads, nprocs)
+        vstop("# of threads %i is greater than the actual # of processors (%i)", 
+              nthreads, nprocs)
     if (existsFunction("setMKLthreads")) {
         setMKLthreads(nthreads)
     } else {
-        # cover all our bases
+        # cover all our blases
         Sys.setenv(MKL_NUM_THREADS=nthreads)
         Sys.setenv(GOTO_NUM_THREADS=nthreads)
         Sys.setenv(OMP_NUM_THREADS=nthreads)
+        blas_set_num_procs(nthreads)
+        omp_set_num_procs(nthreads)
     }
     
     invisible(TRUE)
@@ -34,58 +41,237 @@ set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE) {
 n2gb <- function(x) x*8/1024^3
 gb2n <- function(x) x/8*1024^3
 
+n2mb <- function(x) x*8/1024^2
+mb2n <- function(x) x/8*1024^2
+
 # opts => list(blocksize=0, memlimit=6, verbose=TRUE)
 # return opts
 get_subdist_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts) {
-    printf <- function(msg, ..., newline=TRUE) vcat(opts$verbose, msg, ..., newline=newline)
+    vcat(opts$verbose, "Determining memory demands")
+
+    nforks <- getDoParWorkers()
+    mem_limit <- as.numeric(opts$memlimit)
     
-    # amount of RAM used in GB for functionals
+    # RAM for functionals
     mem_used4func <- sum(sapply(subs.ntpts, function(x) n2gb(x*nvoxs)))
-    printf("...%.2f GB of memory used for functional data", mem_used4func)
+    vcat(opts$verbose, "...%.2f GB used for functional data", mem_used4func)
     
-    # amount of RAM used for distance matrix
-    mem_used4dmat <- n2gb(nsubs^2 * nvoxs)*2    # *2 cuz copies are made (e.g. saving & gower)
-    printf("...%.2f GB of memory used for 2 distance matrices", mem_used4dmat)
-    n4onemap <- nvoxs * nsubs
-    printf("...%.2f GB of memory used for one voxel's connectivity map across subjects", 
-            n2gb(n4onemap))
+    # RAM for 2 distance matrices
+    mem_by_dists <- n2gb(nsubs^2 * 2)
+    vcat(opts$verbose, "...%.1f MB used for 2 distance matrices", 
+         mem_by_dists*1024)
     
-    # functionals and 2 subject distances not held in memory @ same time
-    mem_dat <- ifelse(mem_used4func > (mem_used4dmat/2), 
-                        mem_used4func + mem_used4func, 
-                        mem_used4dmat)
+    # RAM for 1 connectivity map
+    n2onemap <- nvoxs * nsubs
+    mem_by_seeds <- n2gb(n2onemap)
+    vcat(opts$verbose, "...%.1f MB used for 2 connectivity maps across %i subjects", 
+         2*mem_by_seeds*1024, nsubs)
     
-    # set blocksize if auto
-    if (opts$blocksize == 0) {
+    # Temporary seed maps (varies with nforks)
+    mem_tmp <- mem_by_seeds*nforks
+    
+    # memory varies based on chunking of # of seed voxels and # of distance matrices
+    mem_limit <- as.numeric(opts$memlimit)
+    mem_fixed <- mem_used4func + mem_tmp
+    f <- function(d, s) {
+        mem_limit - mem_fixed - d*mem_by_dists - s*mem_by_seeds
+    }
+    # note: for d: s <= d <= nvoxs
+    
+    # Auto-Set Block Size
+    if (opts$blocksize == 0 || opts$superblocksize == 0) {
         # minimum amount of RAM needed
-        ## mem_used4func + memory for 2 connectivity maps per subjects
-        min_mem_needed <- n2gb(n4onemap*2*getDoParWorkers()) + mem_dat
+        min_mem_needed <- mem_fixed + 2*mem_by_dists + 2*nforks*mem_by_seeds
         
         # limit in RAM use
-        mem_limit <- as.numeric(opts$memlimit)
         if (mem_limit < min_mem_needed) {
-            vstop("You require at least %.2f GB of memory but are limited to %i GB. Please set the --memlimit option to a higher number in order to continue.", min_mem_needed, mem_limit)
+            vstop(paste("You require at least %.2f GB of memory but are limited", 
+                        "to %.2f GB. Please reset the --memlimit option."), 
+                  min_mem_needed, mem_limit)
         } else {
-            printf("...memory limit is %.2f GB and a minimum of %.2f GB needed", 
-                    mem_limit, min_mem_needed)
+            vcat(opts$verbose, paste("...memory limit is %.2f GB and a minimum", 
+                                     "of %.2f GB is needed"), 
+                 mem_limit, min_mem_needed)
         }
         
-        # amount of RAM for connectivity matrix
-        mem_used4conn <- mem_limit - mem_used4func - mem_used4dmat
+        # can use max of both?
+        m <- f(nvoxs, nvoxs)
+        if (m > 0) {
+            opts$superblocksize <- nvoxs
+            opts$blocksize <- nvoxs
+        } else {
+            vcat(opts$verbose, paste("...if you wanted to hold everything in memory",
+                                     "you would need at least %.2f GB of RAM"), 
+                               mem_limit-m)
+            vcat(opts$verbose, "...autosetting superblocksize and blocksize")
+            
+            # super blocks (# of voxels in distance matrices to chunk)
+            s.choices <- c(2*nforks, floor(seq(0,1,by=0.002)[-1]*nvoxs))
+            s.choices[-1] <- s.choices[-1][s.choices[-1] > 2*nforks]
+            ds <- sapply(s.choices, function(s) {
+                tryCatch(uniroot(f, c(s,nvoxs), s=s)$root, error=function(ex) NA)
+            })
+            w <- (length(ds) + 1) - which.min(rev(ds))
+            d <- floor(ds[w])
+            if (length(d) == 0 || d == 0) {
+                stop("Sh*%, you don't have enough RAM")
+            } else {
+                opts$superblocksize <- d
+            }
+            
+            # regular blocks (# of seed voxels to chunk)
+            s <- tryCatch(floor(uniroot(f, c(2,nvoxs), d=d)$root), 
+                    error=function(ex) nvoxs)
+            opts$blocksize <- s
+        }
+    }
+    
+    vcat(opts$verbose, "...setting super-block size to %i (out of %i)", 
+         opts$superblocksize, nvoxs)
+    vcat(opts$verbose, "...setting block size to %i (out of %i)", 
+         opts$blocksize, nvoxs)
+     
+    # adjust for # of forks
+    if (nforks > 1) {
+        opts$blocksize <- floor(opts$blocksize/nforks)
+        vcat(opts$verbose, "...adjusting block size to %i based on %i forks", 
+             opts$blocksize, nforks)
+    }
 
-        # block size
-        printf("...autosetting blocksize to -> ", newline=F)
-        opts$blocksize <- floor(gb2n(mem_used4conn)/(n4onemap*getDoParWorkers()))
-        printf("%i (with RAM limit of %.2f GB)", opts$blocksize, mem_limit)
+    # checks
+    if (opts$blocksize < 1)
+        stop("block size is less than 1")
+    if (opts$superblocksize < 1)
+        stop("super block size is less than 1")
+
+    # calculate amount of memory that will be used
+    d <- opts$superblocksize
+    s <- opts$blocksize
+    m <- f(d, s); mem_used <- mem_limit - m
+    if (mem_used > mem_limit) {
+        vstop("You require %.2f GB of memory but have a limit of %.2f GB", 
+              mem_used, mem_limit)
     } else {
-        printf("...adjusting blocksize based on # of processors and will use: ", newline=F)
+        vcat(opts$verbose, "...%.2f GB of RAM will be used", mem_used)
+    }
+        
+    return(opts)
+}
 
-        # set block size based on # of processors
-        opts$blocksize <- floor(opts$blocksize/getDoParWorkers())
+get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
+    vcat(opts$verbose, "Determining MDMR memory demands")
+    
+    len_dmat <- nsubs^2
+    nforks <- getDoParWorkers()
+    
+    tmp <- n2gb(nsubs*nperms)
+    mem_perms <- ifelse(nsubs < 2^31, tmp, tmp/2)
+    mem_pvals <- n2gb(nvoxs*nfactors)
+    vcat(opts$verbose, "...%.1f MB used for permutation indices", mem_perms*1024)
+    vcat(opts$verbose, "...%.1f MB used for p-values", mem_pvals*1024)
+    
+    mem_gmats <- n2gb(2*len_dmat)               # *nvoxs
+    mem_fperms <- n2gb(2*nfactors*(nperms+1))   # *nvoxs
+    vcat(opts$verbose, "...minimum of %.1f MB used for distance matrices", 
+         2*mem_gmats*1024)
+    vcat(opts$verbose, "...minimum of %.1f MB used for permuted pseudo-F stats", 
+         2*mem_fperms*1024)
+    mem_by_voxs <- mem_gmats + mem_fperms
+    
+    mem_h2s <- n2gb(nfactors*len_dmat)          # *nperms
+    mem_ih <- n2gb(len_dmat)                    # *nperms
+    vcat(opts$verbose, "...minimum of %.1f MB used for permuted model matrices", 
+         2*mem_h2s*1024)
+    vcat(opts$verbose, "...minimum of %.1f MB used for permuted error matrices", 
+         2*mem_ih*1024)
+    mem_by_perms <- mem_h2s + mem_ih
+    
+    mem_tmp <- n2gb(2*1*1)                       # *nvoxs*nperms
+    vcat(opts$verbose, "...minimum of %.1f MB used for temporary matrices", 
+         2*mem_tmp*1024)
+    
+    mem_fixed <- mem_perms + mem_pvals + mem_h2s + mem_ih
+    
+    # memory varies based on chunking of # of voxels and # of perms
+    mem_limit <- as.numeric(opts$memlimit)
+    f <- function(v, p) {
+        mem_limit - mem_fixed - v*mem_by_voxs - p*mem_by_perms - v*p*mem_tmp
+    }
+    
+    if (opts$blocksize == 0 || opts$superblocksize == 0) {
+        # limit good?
+        min_mem_needed <- mem_fixed + 2*mem_by_voxs + 2*mem_by_perms + 2*mem_tmp
+        if (mem_limit < min_mem_needed) {
+            vstop(paste("You require at least %.2f GB of memory but are limited", 
+                        "to %.2f GB. Please reset the --memlimit option."), 
+                  min_mem_needed, mem_limit)
+        } else {
+            vcat(opts$verbose, paste("...memory limit is %.2f GB and a minimum", 
+                                     "of %.3f GB is needed"), 
+                 mem_limit, min_mem_needed)
+        }
+        
+        # can use max of both?
+        m <- f(nvoxs, nperms)
+        if (m > 0) {
+            opts$superblocksize <- nvoxs
+            opts$blocksize <- nperms
+        } else {
+            vcat(opts$verbose, paste("...if you wanted to hold everything in memory",
+                                     "you would need at least %.2f GB of RAM"), 
+                               mem_limit-m)
+            vcat(opts$verbose, "...autosetting superblocksize and blocksize")
+            
+            # super blocks (# of voxels to chunk)
+            p.choices <- c(2*nforks, floor(seq(0,1,by=0.01)[-1]*nperms))
+            vs <- sapply(p.choices, function(p) {
+                tryCatch(uniroot(f, c(2,nvoxs), p=p)$root, error=function(ex) NA)
+            })
+            w <- (length(vs) + 1) - which.min(rev(vs))
+            w <- ifelse((w-1)>0, w-1, w)
+            v <- floor(vs[w])
+            if (length(v) == 0 || v == 0) {
+                stop("Sh*%, you don't have enough RAM")
+            } else {
+                opts$superblocksize <- v
+            }
+            
+            # regular blocks (# of permutations to chunk)
+            p <- tryCatch(floor(uniroot(f, c(2,nperms), v=v)$root), 
+                    error=function(ex) nperms)
+            opts$blocksize <- p
+        }
+    }
+    
+    vcat(opts$verbose, "...setting super-block size to %i (out of %i voxels)", 
+         opts$superblocksize, nvoxs)
+    vcat(opts$verbose, "...setting block size to %i (out of %i permutations)", 
+         opts$blocksize, nperms)
+    
+    # adjust for # of forks
+    if (nforks > 1) {
+        opts$blocksize <- floor(opts$blocksize/nforks)
+        vcat(opts$verbose, "...adjusting block size to %i based on %i forks", 
+             opts$blocksize, nforks)
+    } else {
+        
+    }
+    
+    # checks
+    if (opts$blocksize < 1)
+        stop("block size is less than 1")
+    if (opts$superblocksize < 1)
+        stop("super block size is less than 1")
 
-        # calculate amount of memory that will be used
-        mem_used <- n2gb(opts$blocksize * n4onemap * getDoParWorkers()) + mem_dat
-        printf("%.2f GB of RAM", mem_used)
+    # calculate amount of memory that will be used
+    v <- opts$superblocksize
+    p <- opts$blocksize
+    m <- f(v, p); mem_used <- mem_limit - m
+    if (mem_used > mem_limit) {
+        vstop("You require %.2f GB of memory but have a limit of %.2f GB", 
+              mem_used, mem_limit)
+    } else {
+        vcat(opts$verbose, "...%.2f GB of RAM will be used", mem_used)
     }
     
     return(opts)

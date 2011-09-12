@@ -79,7 +79,7 @@ automask <- function(x, cols=NULL, na.rm=FALSE) {
 ## '...' => for as.big.matrix creation
 ## exclude.thresh => 
 overlap_automasks <- function(xs, read_fun, verbose=FALSE, parallel=FALSE, na.rm=FALSE, 
-                              exclude.thresh=0.10, ...) 
+                              exclude.thresh=0, ...) 
 {
     if (!is.list(xs) && !is.vector(xs))
         stop("input 'xs' must be a vector or list")
@@ -117,8 +117,8 @@ overlap_automasks <- function(xs, read_fun, verbose=FALSE, parallel=FALSE, na.rm
 }
 
 # Load data
-load_and_mask_func_data2 <- function(xs, read_fun, mask=NULL, verbose=FALSE, parallel=FALSE, 
-                                     check=TRUE, ...)
+load_and_mask_func_data2 <- function(xs, read_fun, mask=NULL, verbose=FALSE, 
+                                     parallel=FALSE, check=TRUE, ...)
 {
     if (!is.list(xs) && !is.vector(xs))
         stop("input 'xs' must be a vector or list")
@@ -133,12 +133,12 @@ load_and_mask_func_data2 <- function(xs, read_fun, mask=NULL, verbose=FALSE, par
     dat.list <- llply(xs, function(x) {
         x <- read_fun(x, ...)
         if (!is.null(mask)) {
-            z <- deepcopy(x, cols=mask)
+            z <- deepcopy(x, cols=mask, ...)
             rm(x); gc(FALSE, TRUE)
             x <- z
             rm(z); gc(FALSE, TRUE)
         }
-        y <- scale(x, to.copy=TRUE)
+        y <- scale(x, to.copy=TRUE, ...)
         rm(x); gc(FALSE, TRUE)
         return(y)
     }, .progress=progress, .parallel=parallel)
@@ -150,9 +150,10 @@ load_and_mask_func_data2 <- function(xs, read_fun, mask=NULL, verbose=FALSE, par
             dat <- dat.list[[i]]
             fname <- xs[[i]]
             # Everything must have same # of voxels
-            if (nc != ncol(dat))
-                stop(sprintf("%s must have the same # of nodes (%i vs %i) as other datasets", 
-                                fname, nc, ncol(dat)))
+            if (nc != ncol(dat)) {
+                vstop("%s must have the same # of nodes (%i vs %i) as other datasets", 
+                      fname, nc, ncol(dat))
+            }
             
             # There can't be any NaNs
             col.nas <- colna(dat.list[[i]])>0
