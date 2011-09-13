@@ -117,7 +117,7 @@ create_subdist <- function(outdir, infiles, masks, opts, ...) {
     inmaskdir <- file.path(outdir, "input_masks")
     
     # Create directories
-    vcat(opts$verbose, "...creating directories")
+    vcat(opts$verbose, "...creating directories in %s", outdir)
     dir.create(outdir)
     dir.create(infuncdir)
     dir.create(inmaskdir)
@@ -190,9 +190,9 @@ compute_subdist_wrapper <- function(sub.funcs, list.dists,
     nvoxs <- ncol(sdist)
     superblocks <- niftir.split.indices(1, nvoxs, by=superblocksize)
     
-    vcat(verbose, "will run through %i blocks", superblocks$n)
+    vcat(verbose, "will run through %i large blocks", superblocks$n)
     for (i in 1:superblocks$n) {
-        vcat(verbose, "block %i", i)
+        vcat(verbose, "large block %i", i)
         start.time <- Sys.time()
         
         firstSeed <- superblocks$start[i]; lastSeed <- superblocks$ends[i]
@@ -214,28 +214,29 @@ compute_subdist_wrapper <- function(sub.funcs, list.dists,
         # save subdist
         vcat(verbose, "...saving distances")
         firstCol <- superblocks$start[i]; lastCol <- superblocks$ends[i]
-        sub_sdist <- sub.big.matrix(sdist, firstCol=firstCol, lastCol=lastCol)
+        sub_sdist <- sub.big.matrix(sdist, firstCol=firstCol, lastCol=lastCol, 
+                                    backingpath=bpath)
         deepcopy(x=tmp_sdist, y=sub_sdist)
         ## checks
         tmp <- (sub_sdist[2,]!=0)*1 + 1
         zcheck1 <- c(zcheck1, tmp)
-        if (any(tmp==2))
-            vcat(verbose, "...there are %i bad voxels", sum(tmp==2))
+        if (any(tmp==1))
+            vcat(verbose, "...there are %i bad voxels", sum(tmp==1))
         ## clear file-backed RAM usage
         flush(sub_sdist); flush(sdist)
         rm(sub_sdist); gc(FALSE, TRUE)
         sdist <- free.memory(sdist, bpath)
-        
+
         # gower centered matrices
         vcat(verbose, "...gower centering")
-        sub_gdist <- sub.big.matrix(gdist, firstCol=firstCol, lastCol=lastCol)
-        gower.subdist2 <- function(tmp_sdist, outmat=sub_gdist,  
-                                   verbose=verbosity, parallel=parallel)
+        sub_gdist <- sub.big.matrix(gdist, firstCol=firstCol, lastCol=lastCol, 
+                                    backingpath=bpath)
+        gower.subdist2(tmp_sdist, outmat=sub_gdist, verbose=verbosity, parallel=parallel)
         ## checks
         tmp <- (sub_gdist[2,]!=0)*1 + 1
         zcheck2 <- c(zcheck2, tmp)
-        if (any(tmp==2))
-            vcat(verbose, "...there are %i bad voxels", sum(tmp==2))
+        if (any(tmp==1))
+            vcat(verbose, "...there are %i bad voxels", sum(tmp==1))
         ## clear file-backed RAM usage
         flush(sub_gdist); flush(gdist)
         rm(sub_gdist); gc(FALSE, TRUE)

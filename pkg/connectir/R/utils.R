@@ -34,6 +34,12 @@ set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE) {
         blas_set_num_threads(nthreads)
         omp_set_num_threads(nthreads)
     }
+    # Not sure if these env vars matter?
+    Sys.setenv(OMP_NUM_THREADS=nthreads)
+    Sys.setenv(GOTO_NUM_THREADS=nthreads)
+    Sys.setenv(MKL_NUM_THREADS=nthreads)
+    Sys.setenv(OMP_DYNAMIC=TRUE)
+    Sys.setenv(MKL_DYNAMIC=TRUE)
     
     invisible(TRUE)
 }
