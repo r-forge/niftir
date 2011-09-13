@@ -27,6 +27,8 @@ set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE) {
               nthreads, nprocs)
     }
     
+    print(existsFunction("setMKLthreads"))
+    
     if (existsFunction("setMKLthreads")) {
         vcat(verbose, "...using Intel's MKL")
         setMKLthreads(nthreads)

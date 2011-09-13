@@ -84,7 +84,7 @@ check_subdist <- function(sdir) {
     lapply(distfiles, checkpath, FALSE)
     
     # Count number of seed voxels
-    mask <- read.mask(seedfile)
+    mask <- read.mask(maskfile)
     nvoxs <- sum(mask)
     
     # Read in subdist and seedmask + check
