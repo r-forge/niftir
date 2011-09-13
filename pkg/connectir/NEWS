@@ -21,3 +21,8 @@
 12-Sept-2011
 
 *   Refactered mdmr related functions for better memory handling
+*   Fixes to compute_subdist related functions
+
+13-Sept-2011
+
+*   Fixes to compute_mdmr related functions

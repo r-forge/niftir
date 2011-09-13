@@ -52,10 +52,7 @@ check_subdist <- function(sdir) {
     optsfile <- file.path(sdir, "options.rda")
     infuncdir <- file.path(sdir, "input_funcs")
     inmaskdir <- file.path(sdir, "input_masks")
-    inmaskfiles <- file.path(inmaskdir, 
-        c("brainmask.nii.gz",  "seedmask.nii.gz")
-    )
-    seedfile <- file.path(inmaskdir, "seedmask.nii.gz")
+    maskfile <- file.path(inmaskdir, "brainmask.nii.gz")
     distfiles <- file.path(sdir, 
         c("subdist.desc", "subdist.bin", "subdist_gower.desc", "subdist_gower.bin")
     )
@@ -81,7 +78,7 @@ check_subdist <- function(sdir) {
     
     # Check input masks
     checkpath(inmaskdir, TRUE)
-    lapply(inmaskfiles, checkpath, FALSE)
+    checkpath(maskfile, FALSE)
     
     # Check subdist and related files
     lapply(distfiles, checkpath, FALSE)
