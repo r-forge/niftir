@@ -36,9 +36,9 @@ if (length(args) != 1) {
     quit(save="no", status=1)
 }
 
+saved_opts <- list(args=args, opts=opts)
+
 tryCatch({
-  
-  saved_opts <- list(args=args, opts=opts)
   
   # load connectir
   suppressWarnings(suppressPackageStartupMessages(library("connectir")))
