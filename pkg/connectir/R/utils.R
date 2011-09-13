@@ -240,7 +240,6 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
                 tryCatch(uniroot(f, c(2,nvoxs), p=p)$root, error=function(ex) NA)
             })
             w <- (length(vs) + 1) - which.min(rev(vs))
-            w <- ifelse((w-1)>0, w-1, w)
             v <- floor(vs[w])
             if (length(v) == 0 || v == 0) {
                 stop("Sh*%, you don't have enough RAM")

@@ -135,8 +135,8 @@ mdmr.prepare.permutations <- function(modelinfo, nperms, strata, max.iter, facto
 }
 
 mdmr.prepare.permH2s <- function(modelinfo, p, firstRow, lastRow, ...) {
-    if (firstRow < lastRow)
-        stop("first row can't be less than last row")
+    if (firstRow > lastRow)
+        stop("first row can't be greater than the last row")
     rows <- firstRow:lastRow
     nperms <- length(rows)
     if (nperms > ncol(p))
@@ -167,8 +167,8 @@ mdmr.prepare.permH2s <- function(modelinfo, p, firstRow, lastRow, ...) {
 mdmr.prepare.permIH <- function(modelinfo, p, firstRow, lastRow, ...) {
     vcat(modelinfo$verbose, "...preparing permuted error matrices")
     
-    if (firstRow < lastRow)
-        stop("first row can't be less than last row")
+    if (firstRow > lastRow)
+        stop("first row can't be greater than the last row")
     rows <- firstRow:lastRow
     nperms <- length(rows)
     if (nperms > ncol(p))
@@ -261,7 +261,7 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
 # assume each column of x has been gower centered
 mdmr <- function(G, formula, model, 
                  nperms=4999, factors2perm=NULL, superblocksize=nperms, 
-                 voxs=1:ncol(x), blocksize=250, 
+                 voxs=1:ncol(G), blocksize=250, 
                  contr.unordered="contr.sum", contr.ordered="contr.poly", 
                  max.iter=10, strata=NULL, 
                  verbose=1, parallel=FALSE, 
