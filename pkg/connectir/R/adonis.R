@@ -271,6 +271,7 @@ mdmr <- function(G, formula, model,
     inform <- verbose==2
     verbose <- as.logical(verbose)
     progress <- ifelse(verbose, "text", "none")
+    vcat(verbose, "MDMR Time")
     
     if (!is.data.frame(model))
         stop("input model must be a data frame")
@@ -417,15 +418,14 @@ mdmr <- function(G, formula, model,
     )
 }
 
-save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE, save.perms=FALSE) {
-    if (!file.exists(sdir))
-        stop("Cannot save MDMR to ", sdir, " since it doesn't exist")
+save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE) {
+    vcat(verbose, "Saving MDMR Results")
     
-    vcat(verbose, "...creating MDMR output directory")
     mdmr.output <- mdir
-    if (file.exists(mdmr.output))
-        stop("MDMR output ", mdmr.output, " already exists")
-    dir.create(mdmr.output)
+    if (!file.exists(mdmr.output)) {
+        vcat(verbose, "...creating MDMR output directory")
+        dir.create(mdmr.output)
+    }
     
     mpath <- function(...) file.path(mdmr.output, ...)
     
@@ -440,14 +440,15 @@ save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE, save.perms=FALSE) 
     ## save
     vcat(verbose, "...saving model info")
     save(modelinfo, file=mpath("modelinfo.rda"))
-    ## formulax
+    ## formula
     cat(as.character(formula)[-c(1:2)], file=mpath("formula.txt"))
     ## factors
     vcat(verbose, "...saving factor names")
-    factornames <- modelinfo$factor.names[modelinfo$factors2perm]
+    factornames <- modelinfo$factor2perm.names
     nfactors <- length(factornames)
     totext <- sprintf("# All Factors\n%s\n# Permuted Factors\n%s\n", 
-                modelinfo$factor.names, factornames)
+                paste(modelinfo$factor.names, collapse=", "), 
+                paste(factornames, collapse=", "))
     cat(totext, file=mpath("factorinfo.txt"))
     ## evs
     vcat(verbose, "...saving evs")
@@ -460,20 +461,20 @@ save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE, save.perms=FALSE) 
     IH <- modelinfo$IH
     write.table(IH[,], quote=F, row.names=F, col.names=F, file=mpath("residuals.2D"))
     
-    vcat(verbose, "...saving p-values")
+    vcat(verbose, "...saving p-values (1-p)")
     Pmat <- obj$pvals
     for (i in 1:nfactors) {
         fn <- mpath(sprintf("pvals_%s.nii.gz", factornames[i]))
-        write.nifti(1 - Pmat[,i], header, mask, outfile=fn)
+        write.nifti(1 - Pmat[,i], header, mask, outfile=fn, odt="float")
     }
     
-    vcat(verbose, "...saving FDR corrected p-values")
+    vcat(verbose, "...saving FDR corrected p-values (1-p)")
     CorrPmat <- big.matrix(nrow(Pmat), ncol(Pmat), type="double")
     for (i in 1:nfactors) {
         fn <- mpath(sprintf("fdr_pvals_%s.nii.gz", factornames[i]))
         tmp <- p.adjust(Pmat[,i], "BH")
         CorrPmat[,i] <- tmp
-        write.nifti(1 - tmp, header, mask, outfile=fn)
+        write.nifti(1 - tmp, header, mask, outfile=fn, odt="float")
         rm(tmp)
         gc(FALSE)
     }
@@ -482,7 +483,7 @@ save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE, save.perms=FALSE) 
     for (i in 1:nfactors) {
         fn <- mpath(sprintf("zstats_%s.nii.gz", factornames[i]))
         tmp <- qt(Pmat[,i], Inf, lower.tail=FALSE)
-        write.nifti(tmp, header, mask, outfile=fn)
+        write.nifti(tmp, header, mask, outfile=fn, odt="float")
         rm(tmp)
         gc(FALSE)
     }
@@ -491,24 +492,12 @@ save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE, save.perms=FALSE) 
     for (i in 1:nfactors) {
         fn <- mpath(sprintf("fdr_zstats_%s.nii.gz", factornames[i]))
         tmp <- qt(CorrPmat[,i], Inf, lower.tail=FALSE)
-        write.nifti(tmp, header, mask, outfile=fn)
+        write.nifti(tmp, header, mask, outfile=fn, odt="float")
         rm(tmp)
         gc(FALSE)
     }
     rm(CorrPmat)
     gc(FALSE)
-    
-    if (save.perms) {
-        vcat(verbose, "...saving permutated F-statistics")
-        Fperms <- obj$fstats
-        for (i in 1:nfactors) {
-            tmp <- deepcopy(Fperms[[i]], backingpath=mdmr.output, 
-                backingfile=sprintf("fperms_%s.bin", factornames[i]), 
-                descriptorfile=sprintf("fperms_%s.desc", factornames[i]))
-            rm(tmp)
-            gc(FALSE)
-        }
-    }
 }
 
 

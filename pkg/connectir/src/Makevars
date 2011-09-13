@@ -1,2 +1,2 @@
 PKG_CPPFLAGS=-I../inst/include
-PKG_LIBS=/Library/Frameworks/R.framework/Versions/2.13/Resources/library/Rcpp/lib/x86_64/libRcpp.a
+PKG_LIBS=/Library/Frameworks/R.framework/Versions/2.13/Resources/library/Rcpp/lib/x86_64/libRcpp.a -lRlapack
