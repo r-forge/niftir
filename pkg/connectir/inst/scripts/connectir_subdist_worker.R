@@ -211,14 +211,14 @@ tryCatch({
   cat("Called by: \n")
   print(ex$call)
   cat("\nSaving options...\n")
-  save(saved_opts$args, saved_opts$opts, file="called_options.rda")
+  save(saved_opts, file="called_options.rda")
 }, error = function(ex) {
   cat("\nAn error was detected: \n")
   cat(ex$message, "\n\n")
   cat("Called by: \n")
   print(ex$call)
   cat("\nSaving options...\n")
-  save(saved_opts$args, saved_opts$opts, file="called_options.rda")
+  save(saved_opts, file="called_options.rda")
 }, interrupt = function(ex) {
   cat("\nKill signal sent. Trying to clean up...\n")
   rm(list(ls()))
