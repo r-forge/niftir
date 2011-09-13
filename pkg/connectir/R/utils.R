@@ -140,10 +140,11 @@ get_subdist_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts) {
 
     # checks
     if (opts$blocksize < 1)
-        stop("block size is less than 1")
+        stop("block size must be greater than 1 and less then # of voxels")
     if (opts$superblocksize < 1)
-        stop("super block size is less than 1")
-
+        stop("super block size is less than 1 and less than # of voxels")
+    
+    
     # calculate amount of memory that will be used
     d <- opts$superblocksize
     s <- opts$blocksize

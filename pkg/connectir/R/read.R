@@ -130,7 +130,7 @@ load_and_mask_func_data2 <- function(xs, read_fun, mask=NULL, verbose=FALSE,
         mask <- which(mask)
     
     vcat(verbose, "reading data")
-    dat.list <- llply(xs, function(x) {
+    dat.list <- l_ply(xs, function(x) {
         x <- read_fun(x, ...)
         if (!is.null(mask)) {
             z <- deepcopy(x, cols=mask, ...)
@@ -141,7 +141,7 @@ load_and_mask_func_data2 <- function(xs, read_fun, mask=NULL, verbose=FALSE,
         y <- scale(x, to.copy=TRUE, ...)
         rm(x); gc(FALSE, TRUE)
         return(y)
-    }, .progress=progress, .parallel=parallel)
+    }, .progress=progress)
     
     if (check) {
         vcat(verbose, "checking data")
