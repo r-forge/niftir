@@ -39,7 +39,7 @@ tryCatch({
   # parallel processing setup
   set_parallel_procs(opts$forks, opts$threads, opts$verbose)  
   # use foreach parallelization and shared memory?
-  parallel_forks = ifelse(opts$cores == 1, FALSE, TRUE)
+  parallel_forks <- ifelse(opts$forks == 1, FALSE, TRUE)
 
   ###
   # Check/Setup Required Inputs
