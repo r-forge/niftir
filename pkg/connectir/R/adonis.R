@@ -429,7 +429,7 @@ mdmr <- function(G, formula, model,
         vcat(verbose, "...took %.1f minutes (%.1f minutes left)\n", 
              time.total, time.left)
     }
-        
+    
     # divide Pmat by # of perms + 1
     .Call("mdmr_nmat_to_pmat", Pmat, as.double(nperms+1), PACKAGE="connectir")
     

@@ -155,6 +155,7 @@ SEXP kendall_worker(SEXP SRatings)
     return R_NilValue;
 }
 
+
 SEXP voxelwise_kendall(SEXP Slist_CorMaps, SEXP SSeedMaps, SEXP Snseeds)
 {
     try {
