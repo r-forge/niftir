@@ -57,24 +57,24 @@ SEXP mdmr_worker(SEXP SGmat, SEXP SFperms, SEXP SNmat,
         arma::mat ErrorVariance = arma::trans(IHmat) * Gmat;
         for (index_type i=0; i < nterms; ++i)
         {
-            printf("8.\n");
+            //printf("8.\n");
             PROTECT(SH2mat = VECTOR_ELT(SH2mats, i));
             sbm_to_arma_xd(SH2mat, H2mat);
             UNPROTECT(1);
 
-            printf("9.\n");
+            //printf("9.\n");
             PROTECT(SFmat = VECTOR_ELT(SFperms, i));
             sbm_to_arma_xd(SFmat, Fmat);
             UNPROTECT(1);
             
-            printf("10.\n");
+            //printf("10.\n");
             ExplainedVariance = arma::trans(H2mat) * Gmat;
             
-            printf("11.\n");
+            //printf("11.\n");
             // ExplainedVariance/ErrorVariance
             Fmat = (ExplainedVariance/ErrorVariance) * (dfRes/dfExp(i));
             
-            printf("12.\n");
+            //printf("12.\n");
             // # of observations greater than original
             realFs = Fmat.row(0);
             Nvec = const_cast<double *>(Nmat.colptr(i));
@@ -84,7 +84,7 @@ SEXP mdmr_worker(SEXP SGmat, SEXP SFperms, SEXP SNmat,
             }
         }
         
-        printf("13.\n");
+        //printf("13.\n");
         Nvec = NULL;
         free_arma(Gmat, old_gptr);
         free_arma(Nmat, old_nptr);
@@ -92,7 +92,7 @@ SEXP mdmr_worker(SEXP SGmat, SEXP SFperms, SEXP SNmat,
         free_arma(IHmat, old_ihptr);
         free_arma(Fmat, old_fptr);
         
-        printf("14.\n");
+        //printf("14.\n");
         return R_NilValue;
     } catch(std::exception &ex) {
         forward_exception_to_r(ex);

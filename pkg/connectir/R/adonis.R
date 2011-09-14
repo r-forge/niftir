@@ -140,8 +140,8 @@ mdmr.prepare.permutations <- function(modelinfo, nperms, strata, max.iter, facto
 mdmr.prepare.permH2s <- function(modelinfo, p, firstRow, lastRow, ...) {
     if (firstRow > lastRow)
         stop("first row can't be greater than the last row")
-    rows <- firstRow:lastRow
-    nperms <- length(rows)
+    prows <- firstRow:lastRow
+    nperms <- length(prows)
     if (nperms > ncol(p))
         stop("more rows requested than permutations")
     
@@ -156,9 +156,9 @@ mdmr.prepare.permH2s <- function(modelinfo, p, firstRow, lastRow, ...) {
         bigmat[,1] <- as.vector(modelinfo$H2s[[i]])
         
         l_ply(1:nperms, function(kk) {
-            k <- rows[kk]
+            k <- prows[kk]
             prm <- p[,k]
-            bigmat[,k+1] <- as.vector(modelinfo$H2s[[i]][prm,prm])
+            bigmat[,kk+1] <- as.vector(modelinfo$H2s[[i]][prm,prm])
         }, .progress=modelinfo$progress)
         
         return(bigmat)
@@ -172,8 +172,8 @@ mdmr.prepare.permIH <- function(modelinfo, p, firstRow, lastRow, ...) {
     
     if (firstRow > lastRow)
         stop("first row can't be greater than the last row")
-    rows <- firstRow:lastRow
-    nperms <- length(rows)
+    prows <- firstRow:lastRow
+    nperms <- length(prows)
     if (nperms > ncol(p))
         stop("more rows requested than permutations")
     
@@ -181,9 +181,9 @@ mdmr.prepare.permIH <- function(modelinfo, p, firstRow, lastRow, ...) {
     IHmat[,1] <- as.vector(modelinfo$IH)
     
     l_ply(1:nperms, function(kk) {
-        k <- rows[kk]
+        k <- prows[kk]
         prm <- p[,k]
-        IHmat[,k+1] <- as.vector(modelinfo$IH[prm,prm])
+        IHmat[,kk+1] <- as.vector(modelinfo$IH[prm,prm])
     }, .progress=modelinfo$progress)
     
     return(IHmat)
@@ -354,11 +354,7 @@ mdmr <- function(G, formula, model,
             return(tmpFperms)
         }, .progress=progress, .inform=inform, .parallel=FALSE)
         
-        print(length(list_tmpFperms))
-        print(dim(list_tmpFperms[[1]]))
-        
-        vcat(verbose, "...almost MDMR time")
-        rets <- llply(1:blocks$n, function(bi, list_tmpFperms) {
+        afun <- function(bi) {
             firstPerm <- as.double(blocks$starts[bi])
             lastPerm <- as.double(blocks$ends[bi])
             
@@ -376,7 +372,11 @@ mdmr <- function(G, formula, model,
             invisible(gc(FALSE, TRUE))
             
             return(TRUE)
-        }, list_tmpFperms, .progress=progress, .inform=inform, .parallel=parallel)
+        }
+        
+        vcat(verbose, "...almost MDMR time")
+        rets <- llply(1:blocks$n, afun, 
+                      .progress=progress, .inform=inform, .parallel=parallel)
         
         vcat(verbose, "...saving P-values")
         sub_Pmat <- sub.big.matrix(Pmat, firstRow=firstVox, lastRow=lastVox)
