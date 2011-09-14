@@ -354,8 +354,11 @@ mdmr <- function(G, formula, model,
             return(tmpFperms)
         }, .progress=progress, .inform=inform, .parallel=FALSE)
         
+        print(length(list_tmpFperms))
+        print(dim(list_tmpFperms[[1]]))
+        
         vcat(verbose, "...almost MDMR time")
-        rets <- llply(1:blocks$n, function(bi) {
+        rets <- llply(1:blocks$n, function(bi, list_tmpFperms) {
             firstPerm <- as.double(blocks$starts[bi])
             lastPerm <- as.double(blocks$ends[bi])
             
@@ -373,7 +376,7 @@ mdmr <- function(G, formula, model,
             invisible(gc(FALSE, TRUE))
             
             return(TRUE)
-        }, .progress=progress, .inform=inform, .parallel=parallel)
+        }, list_tmpFperms, .progress=progress, .inform=inform, .parallel=parallel)
         
         vcat(verbose, "...saving P-values")
         sub_Pmat <- sub.big.matrix(Pmat, firstRow=firstVox, lastRow=lastVox)
