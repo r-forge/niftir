@@ -55,7 +55,8 @@ SEXP mdmr_worker(SEXP SGmat, SEXP SFperms, SEXP SNmat,
         
         arma::mat ExplainedVariance;
         arma::mat ErrorVariance = arma::trans(IHmat) * Gmat;
-        for (index_type i=0; i < nterms; ++i)
+        index_type i, j;
+        for (i=0; i < nterms; ++i)
         {
             //printf("8.\n");
             PROTECT(SH2mat = VECTOR_ELT(SH2mats, i));
@@ -78,9 +79,9 @@ SEXP mdmr_worker(SEXP SGmat, SEXP SFperms, SEXP SNmat,
             // # of observations greater than original
             realFs = Fmat.row(0);
             Nvec = const_cast<double *>(Nmat.colptr(i));
-            for (i = 0; i < nvoxs; ++i)
+            for (j = 0; j < nvoxs; ++j)
             {
-                Nvec[i] += arma::as_scalar(arma::sum(realFs(i) >= Fmat.col(i)));
+                Nvec[j] += arma::as_scalar(arma::sum(Fmat.col(j) > realFs(j)));
             }
         }
         

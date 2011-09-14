@@ -104,15 +104,111 @@ SEXP big_tcor(SEXP As, SEXP Bs, SEXP Cs,
     return R_NilValue;
 }
 
-//SEXP kendall(SEXP SRatings)
-//{
-//    arma::mat Ratings(1,1);
-//    const double* old_rptr = sbm_to_arma_xd(SRatings, Ratings);
-//    
-//    arma::uvec Ovec(Xr.nrow());
-//    arma::mat Rmat(Xr.nrow(), Xr.ncol());
-//    double* Rvec;
-//    
-//    
-//    free_arma(Ratings, old_rptr);
-//}
+double kendall_worker_d(SEXP SRatings)
+{
+    try {
+        arma::mat Ratings(1,1);
+        const double* old_rptr = sbm_to_arma_xd(SRatings, Ratings);
+    
+        arma::uvec Ovec(Ratings.n_rows);
+        arma::mat Rmat(Ratings.n_rows, Ratings.n_cols);
+        double* Rvec;
+    
+        // Ranking
+        arma::u32 i, j;
+        for (i = 0; i < Ratings.n_cols; ++i) {
+            Ovec = arma::sort_index(Ratings.unsafe_col(i));
+            Rvec = Rmat.colptr(i);
+            for (j = 0; j < Ratings.n_rows; ++j) {
+                Rvec[Ovec(j)] = static_cast<double>(j+1);
+            }
+        }
+    
+        // rowSums
+        arma::colvec rs = arma::sum(Rmat, 1);
+    
+        // var
+        double v = var(rs);
+    
+        // clean up
+        Rvec = NULL;
+        free_arma(Ratings, old_rptr);
+    
+        return v;
+    } catch( std::exception &ex ) {
+      forward_exception_to_r( ex );
+    } catch(...) { 
+      ::Rf_error( "c++ exception (unknown reason)" ); 
+    }
+    return -1;
+}
+
+SEXP kendall_worker(SEXP SRatings)
+{
+    try {
+        return Rcpp::wrap( kendall_worker_d(SRatings) );
+    } catch( std::exception &ex ) {
+      forward_exception_to_r( ex );
+    } catch(...) { 
+      ::Rf_error( "c++ exception (unknown reason)" ); 
+    }
+    return R_NilValue;
+}
+
+SEXP voxelwise_kendall(SEXP Slist_CorMaps, SEXP SSeedMaps, SEXP Snseeds)
+{
+    try {
+        Rcpp::List list_CorMaps(Slist_CorMaps);
+        index_type nsubs = list_CorMaps.size();
+        index_type nseeds = static_cast<index_type>(DOUBLE_DATA(Snseeds)[0]);
+        
+        SEXP SSubMaps;
+        arma::mat SubMaps(1,1);
+        const double* old_sptr = SubMaps.memptr();
+        
+        arma::mat SeedMaps(1,1);
+        const double* old_smptr = sbm_to_arma_xd(SSeedMaps, SeedMaps);
+        index_type nvoxs = static_cast<index_type>(SeedMaps.n_rows);
+        if (nsubs != (index_type)SeedMaps.n_cols)
+            Rf_error("number of columns in seedmap incorrect");
+        
+        arma::vec ks(nseeds);
+        
+        index_type seedi, subi, voxi;
+        double* smap;
+        // Loop through each seed voxel
+        for (seedi = 0; seedi < nseeds; ++seedi) {
+            
+            // Combine seed maps across subjects for given voxel
+            for (subi = 0; subi < nsubs; ++subi)
+            {
+                PROTECT(SSubMaps = VECTOR_ELT(Slist_CorMaps, subi));
+                sbm_to_arma_xd(SSubMaps, SubMaps);
+                UNPROTECT(1);
+                smap = SeedMaps.colptr(subi);
+                for (voxi = 0; voxi < nvoxs; ++voxi) {
+                    smap[voxi] = SubMaps(seedi,voxi);
+                }
+            }
+            
+            // Get kendall's w
+            ks(seedi) = kendall_worker_d(SSeedMaps);
+        }
+        
+        // Scale
+        double d_nvoxs = static_cast<double>(nvoxs);
+        double d_nsubs = static_cast<double>(nsubs);
+        ks = (12*ks*d_nvoxs-1) / (pow(d_nsubs,2)*(pow(d_nvoxs,3)-d_nvoxs));
+        
+        smap = NULL;
+        free_arma(SubMaps, old_sptr);
+        free_arma(SeedMaps, old_smptr);
+        
+        return Rcpp::wrap( ks );
+    } catch( std::exception &ex ) {
+      forward_exception_to_r( ex );
+    } catch(...) { 
+      ::Rf_error( "c++ exception (unknown reason)" ); 
+    }
+    return R_NilValue;
+}

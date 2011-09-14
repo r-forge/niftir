@@ -27,7 +27,7 @@ test_that("C++ mdmr_worker works", {
     # Outputs
     rFperms <- lapply(1:nfactors, function(i) create_data(nperms, nvoxs))
     cFperms <- lapply(rFperms, deepcopy, shared=FALSE, type="double")
-    rPmat <- big.matrix(nvoxs, nfactors, init=0, type="double", shared=FALSE)
+    rPmat <- big.matrix(nvoxs, nfactors, init=1, type="double", shared=FALSE)
     cPmat <- deepcopy(rPmat, shared=FALSE, type="double")
     
     # Reference
