@@ -104,3 +104,15 @@ SEXP big_tcor(SEXP As, SEXP Bs, SEXP Cs,
     return R_NilValue;
 }
 
+//SEXP kendall(SEXP SRatings)
+//{
+//    arma::mat Ratings(1,1);
+//    const double* old_rptr = sbm_to_arma_xd(SRatings, Ratings);
+//    
+//    arma::uvec Ovec(Xr.nrow());
+//    arma::mat Rmat(Xr.nrow(), Xr.ncol());
+//    double* Rvec;
+//    
+//    
+//    free_arma(Ratings, old_rptr);
+//}

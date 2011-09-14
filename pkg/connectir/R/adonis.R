@@ -389,7 +389,7 @@ mdmr <- function(G, formula, model,
             n <- length(Fperms)
             fpnames <- modelinfo$factor2perm.names
             
-            Fperms <- l_ply(1:n, function(fi) {
+            Fperms <- llply(1:n, function(fi) {
                 vcat(verbose, "...saving permuted pseudo-F statistics for '%s'", 
                      fpnames[fi])
                 aF <- Fperms[[fi]]
@@ -397,7 +397,8 @@ mdmr <- function(G, formula, model,
                 # first row
                 tF <- list_tmpFperms[[1]][[fi]]
                 sF <- sub.big.matrix(aF, firstRow=1, lastRow=1, 
-                                    firstCol=firstVox, lastCol=lastVox)
+                                    firstCol=firstVox, lastCol=lastVox, 
+                                    backingpath=fperms.path)
                 deepcopy(x=tF, rows=1, y=sF)
                 
                 # all other rows
@@ -406,9 +407,10 @@ mdmr <- function(G, formula, model,
                     lastPerm <- blocks$ends[bi] + 1
                     tF <- list_tmpFperms[[bi]][[fi]]
                     sF <- sub.big.matrix(aF, firstRow=firstPerm, lastRow=lastPerm, 
-                                        firstCol=firstVox, lastCol=lastVox)
+                                        firstCol=firstVox, lastCol=lastVox, 
+                                        backingpath=fperms.path)
                     deepcopy(x=tF, rows=2:nrow(tF), y=sF)
-                }, .progress=progress, .inform=inform)
+                }, .progress=progress)
                 
                 # clear memory a bit
                 flush(aF)
@@ -504,7 +506,7 @@ save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE) {
         gc(FALSE)
     }
     
-    vcat(verbose, "...saving z-statics")
+    vcat(verbose, "...saving z-statistics")
     for (i in 1:nfactors) {
         fn <- mpath(sprintf("zstats_%s.nii.gz", factornames[i]))
         tmp <- qt(Pmat[,i], Inf, lower.tail=FALSE)
