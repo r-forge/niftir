@@ -351,6 +351,7 @@ mdmr <- function(G, formula, model,
             sub_nperms <- lastPerm - firstPerm + 1 + 1
             tmpFperms <- mdmr.prepare.fperms(modelinfo, sub_nperms, sub_nvoxs, 
                                              type=type, shared=shared)
+            return(tmpFperms)
         }, .progress=progress, .inform=inform, .parallel=FALSE)
         
         vcat(verbose, "...almost MDMR time")
