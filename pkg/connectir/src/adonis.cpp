@@ -22,26 +22,33 @@ SEXP mdmr_worker(SEXP SGmat, SEXP SFperms, SEXP SNmat,
                  SEXP SdfRes, SEXP SdfExp)
 {
     try {
+        printf("1.\n");
         Rcpp::List tmp(SH2mats);
         index_type nterms = static_cast<index_type>(tmp.size());
         
+        printf("2.\n");
         arma::mat Gmat(1,1);
         const double* old_gptr = sbm_to_arma_xd(SGmat, Gmat);
         index_type nvoxs = static_cast<index_type>(Gmat.n_cols);
         
+        printf("3.\n");
         SEXP SFmat;
         arma::mat Fmat(1,1); const double* old_fptr = Fmat.memptr();
         
+        printf("4.\n");
         arma::mat Nmat(1,1);
         const double* old_nptr = sbm_to_arma_xd(SNmat, Nmat);
         arma::rowvec realFs; double* Nvec;
         
+        printf("5.\n");
         SEXP SH2mat;
         arma::mat H2mat(1,1); const double* old_h2ptr = H2mat.memptr();
         
+        printf("6.\n");
         arma::mat IHmat(1,1);
         const double* old_ihptr = sbm_to_arma_xd(SIHmat, IHmat);
         
+        printf("7.\n");
         double dfRes = DOUBLE_DATA(SdfRes)[0];
         Rcpp::NumericVector RdfExp(SdfExp);
         arma::vec dfExp(RdfExp.begin(), RdfExp.size(), false);
@@ -50,19 +57,24 @@ SEXP mdmr_worker(SEXP SGmat, SEXP SFperms, SEXP SNmat,
         arma::mat ErrorVariance = arma::trans(IHmat) * Gmat;
         for (index_type i=0; i < nterms; ++i)
         {
+            printf("8.\n");
             PROTECT(SH2mat = VECTOR_ELT(SH2mats, i));
             sbm_to_arma_xd(SH2mat, H2mat);
             UNPROTECT(1);
 
+            printf("9.\n");
             PROTECT(SFmat = VECTOR_ELT(SFperms, i));
             sbm_to_arma_xd(SFmat, Fmat);
             UNPROTECT(1);
             
+            printf("10.\n");
             ExplainedVariance = arma::trans(H2mat) * Gmat;
             
+            printf("11.\n");
             // ExplainedVariance/ErrorVariance
             Fmat = (ExplainedVariance/ErrorVariance) * (dfRes/dfExp(i));
             
+            printf("12.\n");
             // # of observations greater than original
             realFs = Fmat.row(0);
             Nvec = const_cast<double *>(Nmat.colptr(i));
@@ -72,13 +84,16 @@ SEXP mdmr_worker(SEXP SGmat, SEXP SFperms, SEXP SNmat,
             }
         }
         
+        printf("13.\n");
+        Nvec = NULL;
         free_arma(Gmat, old_gptr);
         free_arma(Nmat, old_nptr);
         free_arma(H2mat, old_h2ptr);
         free_arma(IHmat, old_ihptr);
         free_arma(Fmat, old_fptr);
         
-        return SFperms;
+        printf("14.\n");
+        return R_NilValue;
     } catch(std::exception &ex) {
         forward_exception_to_r(ex);
     } catch(...) {
