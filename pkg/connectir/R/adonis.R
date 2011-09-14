@@ -348,7 +348,7 @@ mdmr <- function(G, formula, model,
         list_tmpFperms <- llply(1:blocks$n, function(bi) {
             firstPerm <- as.double(blocks$starts[bi])
             lastPerm <- as.double(blocks$ends[bi])
-            sub_nperms <- lastPerm - firstPerm + 1 + 1
+            sub_nperms <- lastPerm - firstPerm + 1
             tmpFperms <- mdmr.prepare.fperms(modelinfo, sub_nperms, sub_nvoxs, 
                                              type=type, shared=shared)
             return(tmpFperms)
