@@ -306,8 +306,7 @@ mdmr <- function(G, formula, model,
     p <- mdmr.prepare.permutations(modelinfo, nperms, strata, max.iter, factors2perm)
     
     # Create output matrices
-    Pmat <- mdmr.prepare.pmat(modelinfo, nvoxs, 
-                              init=0, type=type, shared=TRUE)
+    Pmat <- mdmr.prepare.pmat(modelinfo, nvoxs, type=type, shared=TRUE)
     if (!is.null(fperms.path)) {
         save_fperms <- TRUE
         Fperms <- mdmr.prepare.fperms(modelinfo, nperms, nvoxs, 
@@ -337,7 +336,7 @@ mdmr <- function(G, formula, model,
         lastVox <- superblocks$ends[si]
         sub_nvoxs <- lastVox - firstVox + 1
         
-        tmp_Pmat <- mdmr.prepare.pmat(modelinfo, sub_nvoxs, init=0, 
+        tmp_Pmat <- mdmr.prepare.pmat(modelinfo, sub_nvoxs, init=1, 
                                       type=type, shared=shared)
         
         vcat(verbose, "...copying distance matrices into memory")

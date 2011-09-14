@@ -27,9 +27,7 @@ set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE) {
               nthreads, nprocs)
     }
     
-    print(existsFunction("setMKLthreads"))
-    
-    if (existsFunction("setMKLthreads")) {
+    if (existsFunction("setMKLthreads", where=topenv(.GlobalEnv))) {
         vcat(verbose, "...using Intel's MKL")
         setMKLthreads(nthreads)
     } else {
