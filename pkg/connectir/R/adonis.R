@@ -315,6 +315,7 @@ mdmr <- function(G, formula, model,
                                       type=type, shared=TRUE)
     } else {
         save_fperms <- FALSE
+        Fperms <- NULL
     }
     
     dfRes <- as.double(modelinfo$df.Res)
