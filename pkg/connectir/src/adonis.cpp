@@ -17,8 +17,7 @@ SEXP mdmr_nmat_to_pmat(SEXP SNmat, SEXP Snperms)
     return R_NilValue;
 }
 
-SEXP mdmr_worker(SEXP SfirstVox, SEXP SlastVox, SEXP SGmat, SEXP SFperms, 
-                 SEXP SNmat, 
+SEXP mdmr_worker(SEXP SGmat, SEXP SFperms, SEXP SNmat, 
                  SEXP SH2mats, SEXP SIHmat, 
                  SEXP SdfRes, SEXP SdfExp)
 {
@@ -27,14 +26,14 @@ SEXP mdmr_worker(SEXP SfirstVox, SEXP SlastVox, SEXP SGmat, SEXP SFperms,
         index_type nterms = static_cast<index_type>(tmp.size());
         
         arma::mat Gmat(1,1);
-        const double* old_gptr = sub_sbm_to_arma_xd(SGmat, Gmat, SfirstVox, SlastVox);
+        const double* old_gptr = sbm_to_arma_xd(SGmat, Gmat);
         index_type nvoxs = static_cast<index_type>(Gmat.n_cols);
         
         SEXP SFmat;
         arma::mat Fmat(1,1); const double* old_fptr = Fmat.memptr();
         
         arma::mat Nmat(1,1);
-        const double* old_nptr = sub_sbm_to_arma_xd(SNmat, Nmat, SfirstVox, SlastVox);
+        const double* old_nptr = sbm_to_arma_xd(SNmat, Nmat);
         arma::rowvec realFs; double* Nvec;
         
         SEXP SH2mat;
@@ -56,7 +55,7 @@ SEXP mdmr_worker(SEXP SfirstVox, SEXP SlastVox, SEXP SGmat, SEXP SFperms,
             UNPROTECT(1);
 
             PROTECT(SFmat = VECTOR_ELT(SFperms, i));
-            sub_sbm_to_arma_xd(SFmat, Fmat, SfirstVox, SlastVox);
+            sbm_to_arma_xd(SFmat, Fmat);
             UNPROTECT(1);
             
             ExplainedVariance = arma::trans(H2mat) * Gmat;
