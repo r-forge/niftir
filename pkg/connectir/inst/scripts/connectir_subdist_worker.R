@@ -15,7 +15,7 @@ option_list <- list(
     make_option("--no-link-functionals", action="store_true", default=FALSE, help="Will not create soft links to each of the functional images with the subdist directory"),
     make_option(c("-q", "--quiet"), action="store_false", dest="verbose", help="Print little output"), 
     make_option(c("-v", "--verbose"), action="store_true", default=TRUE, help="Print extra output [default]"),
-    make_option(c("-d", "--debug"), action="store_true", default=TRUE, help="Like verbose but will also print more helpful error messages when --forks is >1")
+    make_option(c("-d", "--debug"), action="store_true", default=FALSE, help="Like verbose but will also print more helpful error messages when --forks is >1")
 )
 
 # Make class/usage

@@ -128,8 +128,11 @@ mdmr.prepare.permutations <- function(modelinfo, nperms, strata, max.iter, facto
         }
     }
     
-    if (modelinfo$nobs < 2^31)
+    if (modelinfo$nobs < 2^31) {
+        dims <- dim(p)
         p <- as.integer(p)
+        dim(p) <- dims
+    }
     
     return(p)
 }
@@ -174,7 +177,7 @@ mdmr.prepare.permIH <- function(modelinfo, p, firstRow, lastRow, ...) {
     if (nperms > ncol(p))
         stop("more rows requested than permutations")
     
-    IHmat <- big.matrix(modelinfo$nobs^2, nperms, ...)
+    IHmat <- big.matrix(modelinfo$nobs^2, nperms+1, ...)
     IHmat[,1] <- as.vector(modelinfo$IH)
     
     l_ply(1:nperms, function(kk) {
@@ -295,14 +298,14 @@ mdmr <- function(G, formula, model,
     modelinfo <- mdmr.prepare.model(formula, model, contr.unordered, contr.ordered, 
                                     factors2perm, verbose)
     vcat(verbose, "...will calculate p-values for the following factors: %s", 
-         paste(modelinfo$factor2perm.names, sep=", "))
+         paste(modelinfo$factor2perm.names, collapse=", "))
     
     # Permutation Business
     p <- mdmr.prepare.permutations(modelinfo, nperms, strata, max.iter, factors2perm)
     
     # Create output matrices
     Pmat <- mdmr.prepare.pmat(modelinfo, nvoxs, 
-                              init=0, type=type, shared=shared)
+                              init=0, type=type, shared=TRUE)
     if (!is.null(fperms.path)) {
         save_fperms <- TRUE
         Fperms <- mdmr.prepare.fperms(modelinfo, nperms, nvoxs, 
@@ -315,7 +318,6 @@ mdmr <- function(G, formula, model,
     dfRes <- as.double(modelinfo$df.Res)
     dfExp <- as.double(modelinfo$df.Exp)
     
-    # TODO: loop through superblocks
     vcat(verbose, "Computing MDMR across %i large blocks", 
          superblocks$n)
     vcat(verbose, "...with %i smaller blocks within each larger one",
@@ -332,33 +334,49 @@ mdmr <- function(G, formula, model,
         lastVox <- superblocks$ends[si]
         sub_nvoxs <- lastVox - firstVox + 1
         
+        tmp_Pmat <- mdmr.prepare.pmat(modelinfo, sub_nvoxs, init=0, 
+                                      type=type, shared=shared)
+        
         vcat(verbose, "...copying distance matrices into memory")
         tmpG <- deepcopy(x=G, cols=firstVox:lastVox, type=type, shared=shared)
         if (is.filebacked(G))
             G <- free.memory(G, G.path)
         
-        vcat(verbose, "...almost MDMR time")
+        vcat(verbose, "...preparing pseudo-F permutation matrices")
         list_tmpFperms <- llply(1:blocks$n, function(bi) {
             firstPerm <- as.double(blocks$starts[bi])
             lastPerm <- as.double(blocks$ends[bi])
             sub_nperms <- lastPerm - firstPerm + 1 + 1
-            
             tmpFperms <- mdmr.prepare.fperms(modelinfo, sub_nperms, sub_nvoxs, 
                                              type=type, shared=shared)
+        }, .progress=progress, .inform=inform, .parallel=FALSE)
+        
+        vcat(verbose, "...almost MDMR time")
+        rets <- llply(1:blocks$n, function(bi) {
+            firstPerm <- as.double(blocks$starts[bi])
+            lastPerm <- as.double(blocks$ends[bi])
+            
+            tmpFperms <- list_tmpFperms[[bi]]
             H2mats <- mdmr.prepare.permH2s(modelinfo, p, firstPerm, lastPerm, 
                                            type=type, shared=FALSE)
             IHmat <- mdmr.prepare.permIH(modelinfo, p, firstPerm, lastPerm, 
                                          type=type, shared=FALSE)
             
             .Call("mdmr_worker", tmpG, tmpFperms, 
-                  Pmat, H2mats, IHmat, dfRes, dfExp, 
+                  tmp_Pmat, H2mats, IHmat, dfRes, dfExp, 
                   PACKAGE="connectir")
             
-            rm(H2mats, IHmat)
+            rm(H2mats, IHmat, tmpFperms)
             invisible(gc(FALSE, TRUE))
             
-            return(tmpFperms)
+            return(TRUE)
         }, .progress=progress, .inform=inform, .parallel=parallel)
+        
+        vcat(verbose, "...saving P-values")
+        sub_Pmat <- sub.big.matrix(Pmat, firstRow=firstVox, lastRow=lastVox)
+        deepcopy(x=tmp_Pmat, y=sub_Pmat)
+        rm(tmp_Pmat)
+        invisible(gc(FALSE, TRUE))
         
         if (save_fperms) {
             n <- length(Fperms)

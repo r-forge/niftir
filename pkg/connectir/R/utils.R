@@ -207,7 +207,7 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
     # memory varies based on chunking of # of voxels and # of perms
     mem_limit <- as.numeric(opts$memlimit)
     f <- function(v, p) {
-        mem_limit - mem_fixed - v*mem_by_voxs - p*mem_by_perms - v*p*mem_tmp
+        mem_limit - mem_fixed - v*mem_by_voxs - (p+1)*mem_by_perms - v*(p+1)*mem_tmp
     }
     
     if (opts$blocksize == 0 || opts$superblocksize == 0) {
