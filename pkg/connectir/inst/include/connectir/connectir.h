@@ -75,8 +75,7 @@ RcppExport SEXP big_gower(SEXP SX, SEXP SY,
 
 // adonis.cpp
 RcppExport SEXP mdmr_nmat_to_pmat(SEXP SNmat, SEXP Snperms);
-RcppExport SEXP mdmr_worker(SEXP SfirstVox, SEXP SlastVox, SEXP SGmat, SEXP SFperms, 
-                            SEXP SNmat, 
+RcppExport SEXP mdmr_worker(SEXP SGmat, SEXP SFperms, SEXP SNmat, 
                             SEXP SH2mats, SEXP SIHmat, 
                             SEXP SdfRes, SEXP SdfExp);
 
