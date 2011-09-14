@@ -299,6 +299,8 @@ mdmr <- function(G, formula, model,
                                     factors2perm, verbose)
     vcat(verbose, "...will calculate p-values for the following factors: %s", 
          paste(modelinfo$factor2perm.names, collapse=", "))
+    modelinfo$verbose <- FALSE
+    modelinfo$progress <- "none"
     
     # Permutation Business
     p <- mdmr.prepare.permutations(modelinfo, nperms, strata, max.iter, factors2perm)
