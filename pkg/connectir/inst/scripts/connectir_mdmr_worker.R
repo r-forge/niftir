@@ -251,6 +251,8 @@ tryCatch({
   cat("\nSaving options...\n")
   save(saved_opts, file="called_options.rda")
 }, interrupt = function(ex) {
+    cat("\nSaving options...\n")
+    save(saved_opts, file="called_options.rda")
     cat("\nKill signal sent. Trying to clean up...\n")
     rm(list=ls())
     gc(FALSE)
