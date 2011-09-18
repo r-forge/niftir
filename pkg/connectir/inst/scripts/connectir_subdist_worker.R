@@ -62,6 +62,8 @@ tryCatch({
       stop("The file specified by -i/--infuncs does not exist")
   if (!file.exists(opts$inmasks))
       stop("The file specified by -m/--inmasks does not exist")
+  if (is.null(opts$bg))
+      stop("Please specify background image with --bg option")
   
   # Prepare input functional filenames
   infiles <- sapply(as.character(read.table(opts$infuncs)[,1]), function(fp) {
@@ -88,9 +90,11 @@ tryCatch({
   vcat(opts$verbose, "Checking optional inputs")
   for (optname in c("brainmask", "bg")) {
       arg <- opts[[optname]]
-      if(!file.exists(arg))
-          vstop("--%s file '%s' does not exist", optname, arg)
-      opts[[optname]] <- abspath(arg)
+      if (!is.null(arg)) {
+        if(!file.exists(arg))
+            vstop("--%s file '%s' does not exist", optname, arg)
+        opts[[optname]] <- abspath(arg)
+      }
   }
   
   if (opts$debug) {
@@ -221,7 +225,7 @@ tryCatch({
   save(saved_opts, file="called_options.rda")
 }, interrupt = function(ex) {
   cat("\nKill signal sent. Trying to clean up...\n")
-  rm(list(ls()))
+  rm(list=ls())
   gc(FALSE)
   cat("...success\n")
 }, finally = {
