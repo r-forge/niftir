@@ -104,7 +104,8 @@ vbca2 <- function(inmat, incols=c(1,ncol(inmat)), ztransform=FALSE,
 	outmat <- big_cor(x=inmat, z=outmat, 
 	                  x_firstCol=incols[1], x_lastCol=incols[2], 
 	                  y_firstCol=1, y_lastCol=ncol(inmat), 
-	                  z_firstCol=outcols[1], z_lastCol=z_lastCol)
+	                  z_firstCol=outcols[1], z_lastCol=z_lastCol, 
+	                  ...)
 	if (ztransform) atanh(outmat)
 	
 	invisible(outmat)

@@ -70,7 +70,7 @@ kendall <- function(subs.bigmats, blocksize, ztransform=FALSE, parallel=FALSE,
         cormats <- vbca_batch2(subs.bigmats, incols, ztransform=ztransform, 
                                type="double", shared=FALSE)
         seeds <- as.double(incols[1]:incols[2])
-        seedMaps <- big.matrix(nvoxs-1, length(seeds), type="double", shared=FALSE)
+        seedMaps <- big.matrix(nvoxs-1, nsubs, type="double", shared=FALSE)
         coeffs <- .Call("voxelwise_kendall", cormats, seedMaps, seeds, voxs)
         rm(cormats, seedMaps); gc(FALSE, TRUE)
         return(coeffs)

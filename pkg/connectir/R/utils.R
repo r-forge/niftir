@@ -123,10 +123,15 @@ get_subdist_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts) {
             w <- (length(ds) + 1) - which.min(rev(ds))
             d <- floor(ds[w])
             if (length(d) == 0 || d == 0) {
-                stop("Sh*%, you don't have enough RAM")
-            } else {
-                opts$superblocksize <- d
+                # 2nd attempt
+                ds <- sapply(s.choices, function(s) f(d=nvoxs, s=s))
+                if (any(ds>0)) {
+                    d <- nvoxs
+                } else {
+                    stop("Sh*%, you don't have enough RAM")
+                }
             }
+            opts$superblocksize <- d
             
             # regular blocks (# of seed voxels to chunk)
             s <- tryCatch(floor(uniroot(f, c(2,nvoxs), d=d)$root), 
@@ -322,10 +327,10 @@ get_kendall_limit <- function(blocksize, mem_limit, nvoxs, subs.ntpts, verbose=T
             vcat(verbose, paste("...if you wanted to hold everything in memory",
                                      "you would need at least %.2f GB of RAM"), 
                                mem_limit-m)
-            vcat(verbose, "...autosetting superblocksize and blocksize")
+            vcat(verbose, "...autosetting blocksize")
             
             ss <- tryCatch(floor(uniroot(f, c(2,nvoxs))$root), error=function(ex) NA)
-            w <- (length(vs) + 1) - which.min(rev(vs))
+            w <- (length(ss) + 1) - which.min(rev(ss))
             s <- floor(ss[w])
             if (length(s) == 0 || s == 0) {
                 stop("Sh*%, you don't have enough RAM")
@@ -335,8 +340,8 @@ get_kendall_limit <- function(blocksize, mem_limit, nvoxs, subs.ntpts, verbose=T
         }
     }
     
-    vcat(verbose, "...setting block size to %i (out of %i permutations)", 
-         blocksize, nperms)
+    vcat(verbose, "...setting block size to %i (out of %i voxels)", 
+         blocksize, nvoxs)
     
     # adjust for # of forks
     if (nforks > 1) {
@@ -350,8 +355,8 @@ get_kendall_limit <- function(blocksize, mem_limit, nvoxs, subs.ntpts, verbose=T
         stop("block size is less than 1")
     
     # calculate amount of memory that will be used
-    s <- blocksize
-    m <- f(v, s*nforks); mem_used <- mem_limit - m
+    s <- blocksize*nforks
+    m <- f(s); mem_used <- mem_limit - m
     if (mem_used > mem_limit) {
         vstop("You require %.2f GB of memory but have a limit of %.2f GB", 
               mem_used, mem_limit)
