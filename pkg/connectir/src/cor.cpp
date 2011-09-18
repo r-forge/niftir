@@ -155,13 +155,15 @@ SEXP kendall_worker(SEXP SRatings)
     return R_NilValue;
 }
 
-
-SEXP voxelwise_kendall(SEXP Slist_CorMaps, SEXP SSeedMaps, SEXP Snseeds)
+SEXP voxelwise_kendall(SEXP Slist_CorMaps, SEXP SSeedMaps, SEXP Sseeds, SEXP Svoxs)
 {
     try {
         Rcpp::List list_CorMaps(Slist_CorMaps);
         index_type nsubs = list_CorMaps.size();
-        index_type nseeds = static_cast<index_type>(DOUBLE_DATA(Snseeds)[0]);
+        double *voxs = NUMERIC_DATA(Svoxs);
+        double *seeds = NUMERIC_DATA(Sseeds);
+        Rcpp::NumericVector tmp(Sseeds);
+        index_type nseeds = tmp.size();
         
         SEXP SSubMaps;
         arma::mat SubMaps(1,1);
@@ -175,11 +177,12 @@ SEXP voxelwise_kendall(SEXP Slist_CorMaps, SEXP SSeedMaps, SEXP Snseeds)
         
         arma::vec ks(nseeds);
         
-        index_type seedi, subi, voxi;
+        index_type seedi, subi, voxi, seed, vox;
         double* smap;
+        index_type add;
         // Loop through each seed voxel
         for (seedi = 0; seedi < nseeds; ++seedi) {
-            
+            seed = static_cast<index_type>(seeds[seedi] - 1);
             // Combine seed maps across subjects for given voxel
             for (subi = 0; subi < nsubs; ++subi)
             {
@@ -187,8 +190,14 @@ SEXP voxelwise_kendall(SEXP Slist_CorMaps, SEXP SSeedMaps, SEXP Snseeds)
                 sbm_to_arma_xd(SSubMaps, SubMaps);
                 UNPROTECT(1);
                 smap = SeedMaps.colptr(subi);
+                add = 0;
                 for (voxi = 0; voxi < nvoxs; ++voxi) {
-                    smap[voxi] = SubMaps(seedi,voxi);
+                    vox = static_cast<index_type>(voxs[voxi+add] - 1);
+                    if (vox==seed) {
+                        add = 1;
+                        vox = static_cast<index_type>(voxs[voxi+add] - 1);
+                    }
+                    smap[voxi] = SubMaps(seedi,vox);
                 }
             }
             
@@ -199,7 +208,7 @@ SEXP voxelwise_kendall(SEXP Slist_CorMaps, SEXP SSeedMaps, SEXP Snseeds)
         // Scale
         double d_nvoxs = static_cast<double>(nvoxs);
         double d_nsubs = static_cast<double>(nsubs);
-        ks = (12*ks*d_nvoxs-1) / (pow(d_nsubs,2)*(pow(d_nvoxs,3)-d_nvoxs));
+        ks = (12*ks*(d_nvoxs-1)) / (pow(d_nsubs,2)*(pow(d_nvoxs,3)-d_nvoxs));
         
         smap = NULL;
         free_arma(SubMaps, old_sptr);

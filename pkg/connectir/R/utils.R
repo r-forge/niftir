@@ -262,8 +262,6 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
         opts$blocksize <- floor(opts$blocksize/nforks)
         vcat(opts$verbose, "...adjusting block size to %i based on %i forks", 
              opts$blocksize, nforks)
-    } else {
-        
     }
     
     # checks
@@ -285,6 +283,85 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
     
     return(opts)
 }
+
+get_kendall_limit <- function(blocksize, mem_limit, nvoxs, subs.ntpts, verbose=TRUE) {
+    
+    nforks <- getDoParWorkers()
+    
+    mem_func <- sum(sapply(subs.ntpts, function(x) n2gb(x*nvoxs)))
+    mem_kendall <- n2gb(nvoxs)
+    mem_fixed <- mem_func + mem_kendall
+    
+    # for at least 1 seed
+    mem_seedmap <- n2gb(nvoxs*1*nforks)
+    mem_cormaps <- n2gb(nvoxs*nsubs*1*nforks)
+    mem_by_seeds <- mem_seedmap + mem_cormaps
+    
+    mem_limit <- as.numeric(mem_limit)
+    f <- function(s) {
+        mem_limit - mem_fixed - s*mem_by_seeds
+    }
+    
+    if (blocksize == 0) {
+        # limit good?
+        min_mem_needed <- mem_fixed + 2*mem_by_seeds
+        if (mem_limit < min_mem_needed) {
+            vstop(paste("You require at least %.2f GB of memory but are limited", 
+                        "to %.2f GB. Please reset the --memlimit option."), 
+                  min_mem_needed, mem_limit)
+        } else {
+            vcat(verbose, paste("...memory limit is %.2f GB and a minimum", 
+                                     "of %.3f GB is needed"), 
+                 mem_limit, min_mem_needed)
+        }
+        
+        m <- f(nvoxs)
+        if (m > 0) {
+            blocksize <- nvoxs
+        } else {
+            vcat(verbose, paste("...if you wanted to hold everything in memory",
+                                     "you would need at least %.2f GB of RAM"), 
+                               mem_limit-m)
+            vcat(verbose, "...autosetting superblocksize and blocksize")
+            
+            ss <- tryCatch(floor(uniroot(f, c(2,nvoxs))$root), error=function(ex) NA)
+            w <- (length(vs) + 1) - which.min(rev(vs))
+            s <- floor(ss[w])
+            if (length(s) == 0 || s == 0) {
+                stop("Sh*%, you don't have enough RAM")
+            } else {
+                blocksize <- s
+            }
+        }
+    }
+    
+    vcat(verbose, "...setting block size to %i (out of %i permutations)", 
+         blocksize, nperms)
+    
+    # adjust for # of forks
+    if (nforks > 1) {
+        blocksize <- floor(blocksize/nforks)
+        vcat(verbose, "...adjusting block size to %i based on %i forks", 
+             blocksize, nforks)
+    }
+    
+    # checks
+    if (blocksize < 1)
+        stop("block size is less than 1")
+    
+    # calculate amount of memory that will be used
+    s <- blocksize
+    m <- f(v, s*nforks); mem_used <- mem_limit - m
+    if (mem_used > mem_limit) {
+        vstop("You require %.2f GB of memory but have a limit of %.2f GB", 
+              mem_used, mem_limit)
+    } else {
+        vcat(verbose, "...%.2f GB of RAM will be used", mem_used)
+    }
+    
+    return(blocksize)
+}
+
 
 bm_rowsum <- function(bigmat) {
     as.vector(.Call("bm_rowsum", bigmat, PACKAGE = "connectir"))

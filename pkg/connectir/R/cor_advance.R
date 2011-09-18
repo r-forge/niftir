@@ -49,60 +49,37 @@ kendall_ref <- function(ratings) {
     ratings.rank <- apply(ratings, 2, rank)
     coeff <- (12 * var(rowSums(ratings.rank)) * (ns - 
         1))/(nr^2 * (ns^3 - ns))
-        
+    
     return(coeff)
 }
 
 # This computes a kendall's W examining the consistency of
 # each voxel's connectivity map across participants
-kendall <- function(subs.bigmats, blocksize, ztransform=FALSE, verbose=TRUE) {
-    ## input info
+kendall <- function(subs.bigmats, blocksize, ztransform=FALSE, parallel=FALSE, 
+                    verbosity=1) 
+{
     nsubs <- length(subs.bigmats)
     nvoxs <- ncol(subs.bigmats[[1]])
-    vox_inds <- 1:nvoxs
+    voxs <- as.double(1:nvoxs)
     blocks <- niftir.split.indices(1, nvoxs, by=blocksize)
+    inform <- verbosity==2
+    progress <- ifelse(verbosity>0, "text", "none")
     
-    ## initiate progress bar
-    if (verbose)
-        pb <- progressbar(blocks$n)
-    
-    ## function
-    kfun_worker <- function(ratings) {
-        var(rowSums(apply(ratings, 2, rank)))
-    }
-    
-    kfun <- function(i, ns, nr) {
-        cols <- vox_inds[blocks$starts[i]:blocks$ends[i]]
-        ncols <- length(cols)
-        
-        cormats <- vbca_batch(subs.bigmats, cols, ztransform)
-        
-        vals <- sapply(1:ncols, function(ci) {
-            kfun_worker(sapply(cormats, function(mat) mat[ci,]))
-        })
-        coeffs <- (12 * vals * (ns-1))/(nr^2 * (ns^3 - ns))
-        
-        if (verbose)
-            update(pb, i)
-        
+    kfun <- function(i) {
+        incols <- voxs[c(blocks$starts[i],blocks$ends[i])]
+        cormats <- vbca_batch2(subs.bigmats, incols, ztransform=ztransform, 
+                               type="double", shared=FALSE)
+        seeds <- as.double(incols[1]:incols[2])
+        seedMaps <- big.matrix(nvoxs-1, length(seeds), type="double", shared=FALSE)
+        coeffs <- .Call("voxelwise_kendall", cormats, seedMaps, seeds, voxs)
+        rm(cormats, seedMaps); gc(FALSE, TRUE)
         return(coeffs)
     }
     
-    if (getDoParRegistered() && getDoParWorkers() > 1) {
-        lo <- min(getDoParWorkers()*3, blocks$n)
-        superblocks <- niftir.split.indices(1, blocks$n, length.out=lo)
-        gcor <- foreach(si=1:superblocks$n, .packages=c("connectir")) %dopar% 
-            unlist(lapply(superblocks$starts[si]:superblocks$ends[si], kfun, nvoxs, nsubs))
-        gcor <- unlist(gcor)
-    }
-    else {
-        gcor <- unlist(lapply(1:blocks$n, kfun, nvoxs, nsubs))
-    }
+    ws <- llply(1:blocks$n, kfun, .progress=progress, .parallel=parallel, .inform=inform)
+    ws <- unlist(ws)
     
-    if (verbose)
-        end(pb)
-    
-    return(gcor)
+    return(ws)
 }
 
 reho_worker <- function(mat, ...) {

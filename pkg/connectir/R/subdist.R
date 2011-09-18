@@ -283,7 +283,7 @@ compute_subdist2 <- function(sub.funcs, firstSeed, lastSeed,
             sub.firstDist <- dists[starti]; sub.lastDist <- dists[lasti]
             compute_subdist_worker2(sub.funcs, sub.firstSeed, sub.lastSeed, 
                                     dmats, sub.firstDist, sub.lastDist, 
-                                    shared=use_shared, ...)
+                                    shared=FALSE, ...)
             return(NULL)
         }
     } else {
@@ -293,7 +293,7 @@ compute_subdist2 <- function(sub.funcs, firstSeed, lastSeed,
             compute_subdist_worker2_regress(sub.funcs, sub.firstSeed, sub.lastSeed, 
                                             dmats, sub.firstDist, sub.lastDist, 
                                             design_mat, 
-                                            shared=use_shared, ...)
+                                            shared=FALSE, ...)
             return(NULL)
         }
     }
