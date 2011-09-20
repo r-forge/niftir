@@ -118,11 +118,6 @@ tryCatch({
   # model
   vcat(opts$verbose, "...model")
   model <- read.csv(opts$model)
-  ## checks
-  for (v in vars) {
-      if (is.null(model[[v]]))
-          vstop("Factor '%s' doesn't match any column in model file", x)
-  }
   
   # filter subjects
   if (!is.null(opts$whichsubs)) {
