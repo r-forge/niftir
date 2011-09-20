@@ -541,12 +541,16 @@ mdmr <- function(G, formula, model,
                  type="double", shared=parallel)
 
 # svm
-svm_subdist <- function(subdist, y, voxs=1:ncol(subdist), blocksize=500, 
+svm_subdist <- function(sdist, y, voxs=1:ncol(sdist), blocksize=500, 
                         verbosity=1, parallel=FALSE, 
                         cross=floor(sqrt(nrow(subdist))/2), ...)
 {
+    if (!is.shared(sdist))
+        stop("input big matrix must be shared")
     
-    dscopy()
+    dmat <- big.matrix(nsubs, nsubs, type="double", shared=FALSE)
+    sub_sdist <- sub.big.matrix(sdist, firstCol=i, lastCol=i)
+    dcopy()
     fit <- svm(dmat, y, cross=cross, ...)
     fit$tot.accuracy
     

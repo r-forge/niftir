@@ -548,21 +548,27 @@ filter_subdist_fb <- function(fname, which.subs, output.path, memlimit,
             stop("you don't have enough memory, consider changing --memlimit")
         blocksize <- v
     }
+    blocksize <- max(1, floor(blocksize/2))
     blocks <- niftir.split.indices(1, nc, by=blocksize)
     
     vcat(verbose, "...looping through in %i blocks", blocks$n)
     l_ply(1:blocks$n, function(bi) {
+        vcat(verbose, "...block %i", bi)
+        
         fCol <- blocks$starts[bi]; lCol <- blocks$ends[bi]
         sub_cols <- fCol:lCol; sub_ncol <- length(sub_cols)
         
         # copy
-        tmp_sdist2 <- deepcopy(x=sdist1, rows=matinds, cols=sub_cols, 
+        vcat(verbose, "\t...copying")
+        tmp_sdist1 <- deepcopy(x=sdist1, rows=matinds, cols=sub_cols, 
                                type=type, shared=parallel)
         sdist1 <- free.memory(sdist1, input.path)
         
         # gower?
         if (gower) {
-            tmp_gdist1 <- gower.subdist2(tmp_sdist1, verbose=0, parallel=parallel)
+            vcat(verbose, "\t...gowering")
+            tmp_gdist1 <- gower.subdist2(tmp_sdist1, verbose=verbose*1, 
+                                         parallel=parallel)
             rm(tmp_sdist1)
             tmp_sdist1 <- tmp_gdist1
             rm(tmp_gdist1)
@@ -570,13 +576,14 @@ filter_subdist_fb <- function(fname, which.subs, output.path, memlimit,
         }
         
         # save
+        vcat(verbose, "\t...saving")
         sub_sdist2 <- sub.big.matrix(sdist2, firstCol=fCol, lastCol=lCol, 
                                      backingpath=output.path)
         deepcopy(x=tmp_sdist1, y=sub_sdist2)
         flush(sub_sdist2); flush(sdist2)
         sdist2 <- free.memory(sdist2, output.path)
         gc(FALSE, TRUE)
-    }, .progress=progress)
+    })
     
     return(sdist2)
 }
