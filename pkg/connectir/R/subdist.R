@@ -541,7 +541,7 @@ filter_subdist_fb <- function(fname, which.subs, dist.paths, memlimit,
         stop("you do not have enough memory")
     blocks <- niftir.split.indices(1, nc, by=blocksize)
     
-    vcat(verbose, "...creating new gower matrices in %s", outpath$bpath)
+    vcat(verbose, "...creating new gower matrices")
     ## setup
     outfile <- filepath(dist.paths$bpath, dist.paths$dfile)
     if (file.exists(outfile) && !overwrite)
