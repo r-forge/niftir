@@ -164,10 +164,7 @@ tryCatch({
   
   vcat(opts$verbose, "Saving model")
   write.csv(model, file=m.path)
-  
-  vcat(opts$verbose, "Clean up")
-  rm(tmp); gc(FALSE, TRUE)
-  
+    
 }, warning = function(ex) {
   cat("\nA warning was detected: \n")
   cat(ex$message, "\n\n")
