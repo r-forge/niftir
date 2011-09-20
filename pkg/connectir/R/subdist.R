@@ -543,7 +543,7 @@ filter_subdist_fb <- function(fname, which.subs, dist.paths, memlimit,
     
     vcat(verbose, "...creating new gower matrices")
     ## setup
-    outfile <- filepath(dist.paths$bpath, dist.paths$dfile)
+    outfile <- file.path(dist.paths$bpath, dist.paths$dfile)
     if (file.exists(outfile) && !overwrite)
         vstop("output '%s' already exists", backingfile)
     ## create
