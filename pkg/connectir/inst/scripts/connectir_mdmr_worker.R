@@ -100,7 +100,7 @@ tryCatch({
   
   # data dimensions
   vcat(opts$verbose, "...data dimensions")
-  tmp <- attach.big.matrix(file.path(opts$indir, "subdist.desc"))
+  tmp <- attach.big.matrix(opts$subdist)
   nsubs <- sqrt(nrow(tmp))
   nvoxs <- ncol(tmp)
   rm(tmp); gc(FALSE, TRUE)
