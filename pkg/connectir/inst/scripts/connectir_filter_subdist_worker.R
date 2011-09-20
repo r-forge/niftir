@@ -136,18 +136,14 @@ tryCatch({
       which.subs <- 1:nrow(model)
   }
   ## model
-  if (filter.subs) {
-      if (nrow(model) == nsubs) {
-          model <- model[which.subs,]
-      } else if (nrow(model) != length(which.subs)) {
-          stop(paste("# of rows in model don't match # of subjects in", 
-                     "distance matrix or # of filtered subjects"))
-      }
+  if (nrow(model) == nsubs) {
+      model <- model[which.subs,]
+  } else if (nrow(model) != length(which.subs)) {
+      stop(paste("# of rows in model don't match # of subjects in", 
+                 "distance matrix or # of filtered subjects"))
   } else {
-      if (nrow(model) != nsubs)
-          stop("# of rows in model file don't match # of subjects in distance matrix")
+      stop("error")
   }
-  
   
   ###
   # Filter / Save
