@@ -511,7 +511,7 @@ filter_subdist_fb <- function(fname, which.subs, output.path, memlimit,
     nr1 <- nrow(sdist1); nobs1 <- sqrt(nr1)
     nc <- ncol(sdist1)
     nobs2 <- length(which.subs); nr2 <- nobs2^2
-    if (nobs2 <= nobs1)
+    if (nobs2 >= nobs1)
         stop("length error for which.subs: no filtering can be done")
     matinds <- matrix(1:nr1, nobs1, nobs1)
     matinds <- as.vector(matinds[which.subs,which.subs])

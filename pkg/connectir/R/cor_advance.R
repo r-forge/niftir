@@ -1,41 +1,39 @@
-gcor <- function(bigmat, blocksize, ztransform=FALSE, verbose=TRUE) {
+gcor <- function(bigmat, blocksize, ztransform=FALSE, 
+                thresh=0, threshType=0, verbosity=1, 
+                parallel=FALSE) 
+{
     ## input info
     nvoxs <- ncol(bigmat)
-    vox_inds <- 1:nvoxs
+    vox_inds <- as.double(1:nvoxs)
+    if (ztransform)
+        thresh <- atanh(thresh)
     blocks <- niftir.split.indices(1, nvoxs, by=blocksize)
+    thresh <- as.double(thresh)
+    threshType <- as.integer(threshType)
+    
+    verbose <- as.logical(verbosity)
+    inform <- verbosity==2
+    progress <- ifelse(verbose, "text", "none")
     
     ## function that computes correlation maps for subset of voxels
     ## + gets average of each correlation map
     dfun <- function(i) {
-        if (verbose)
-            update(pb, i)
+        inds_CHUNK <- vox_inds[c(blocks$starts[i],blocks$ends[i])]
+        cormat_CHUNK <- vbca2(bigmat, inds_CHUNK, ztransform=ztransform)
         
-        inds_CHUNK <- vox_inds[blocks$starts[i]:blocks$ends[i]]
-        cormat_CHUNK <- vbca(bigmat, inds_CHUNK, ztransform=ztransform)
+        inds <- as.double(inds_CHUNK[1]:inds_CHUNK[2])
+        gs <- .Call("gcor_worker", cormat_CHUNK, thresh, threshType, 
+                    inds, vox_inds, package="connectir")
+        rm(inds_CHUNK, cormat_CHUNK); gc(FALSE, TRUE)
         
-        return(bm_rowmean(cormat_CHUNK))
+        as.vector(gs)
     }
     
-    ## initiate progress bar
-    if (verbose)
-        pb <- progressbar(blocks$n)
-    
-    ## loop
-    if (getDoParRegistered() && getDoParWorkers() > 1) {
-        lo <- min(getDoParWorkers()*3, blocks$n)
-        superblocks <- niftir.split.indices(1, blocks$n, length.out=lo)
-        gcor <- foreach(si=1:superblocks$n, .packages=c("connectir")) %dopar% 
-            unlist(lapply(superblocks$starts[si]:superblocks$ends[si], dfun))
-    }
-    else {
-        gcor <- lapply(1:blocks$n, dfun)
-    }
-    
+    gcor <- llply(1:blocks$n, dfun, .progress=progress, .inform=inform, 
+                  .parallel=parallel)
     gcor <- unlist(gcor)
-    
-    ## end progress bar
-    if (verbose)
-        end(pb)
+    if (ztransform)
+        gcor <- tanh(gcor)
     
     return(gcor)
 }
@@ -83,18 +81,21 @@ kendall <- function(subs.bigmats, blocksize, ztransform=FALSE, parallel=FALSE,
 }
 
 reho_worker <- function(mat, ...) {
-    return(kendall_ref(mat, ...))
+    return(.Call("kendall_worker", mat, ...))
 }
 
-reho <- function(bigmat, nei=1, nei.dist=3, min.nei=0.5, verbose=TRUE, FUN=reho_worker, ...) {
+reho <- function(bigmat, nei=1, nei.dist=3, min.nei=0.5, verbose=TRUE, 
+                 parallel=FALSE, FUN=reho_worker, ...)
+{
     header <- bigmat@header
     header$dim <- header$dim[1:3]
     header$pixdim <- header$pixdim[1:3]
+    progress <- ifelse(verbose, "text", "none")
     
     mask <- bigmat@mask
     nvoxs <- ncol(bigmat)
     if (sum(mask) != nvoxs)
-        stop("Number of TRUE elements in mask does not equal number of columns in bigmat")
+        stop("Number of TRUE elems in mask does not equal number of columns in bigmat")
     
     dims <- header$dim
     moffsets <- expand.grid(list(i=-nei:nei, j=-nei:nei, k=-nei:nei))
@@ -115,12 +116,7 @@ reho <- function(bigmat, nei=1, nei.dist=3, min.nei=0.5, verbose=TRUE, FUN=reho_
     opts$arr2mat_inds <- arr2mat_inds
     opts$offsets <- offsets
     
-    # have list of mask inds
-    
     rfun <- function(i, ...) {
-        if (verbose)
-            update(pb, i)
-        
         raw_inds <- opts$offsets + opts$mat2arr_inds[i]
         raw_inds <- raw_inds[raw_inds > opts$rawi.min & raw_inds < opts$rawi.max]
         filt_inds <- opts$arr2mat_inds[raw_inds]
@@ -129,26 +125,16 @@ reho <- function(bigmat, nei=1, nei.dist=3, min.nei=0.5, verbose=TRUE, FUN=reho_
         if (length(filt_inds) < opts$min.nei)
             return(0)
         
-        return(FUN(bigmat[,filt_inds], ...))        
+        x <- deepcopy(bigmat, cols=filt_inds)
+        rs <- FUN(x, ...)
+        rm(x); gc(FALSE, TRUE)
+        
+        return(rs)
     }
     
-    if (verbose) {
-        pb <- progressbar(nvoxs)
-    } else {
-        pb <- NULL
-    }
-    
-    if (getDoParRegistered() && getDoParWorkers() > 1) {
-        blocks <- niftir.split.indices(1, nvoxs, length.out=getDoParWorkers())
-        reho.vals <- foreach(bi=1:blocks$n, .inorder=TRUE) %dopar% 
-            sapply(blocks$starts[bi]:blocks$ends[bi], rfun, ...)
-        reho.vals <- unlist(reho.vals)
-    } else {
-        reho.vals <- sapply(1:nvoxs, rfun)
-    }
-    
-    if (verbose)
-        end(pb)
+    reho.vals <- llply(1:nvoxs, rfun, ..., 
+                       .progress=progress, .inform=TRUE, .verbose=verbose)
+    reho.vals <- unlist(reho.vals)
     
     return(list(reho=reho.vals, hdr=header, mask=mask))
 }

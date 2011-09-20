@@ -87,22 +87,8 @@ test_that("wrapper vbca works with ztransform", {
     dat <- create_data(nc=5)
     ref <- atanh(cor(dat$m))
     comp <- vbca2(dat$bm, ztransform=TRUE)
+    diag(ref) <- 0
+    diag(comp) <- 0
     expect_that(ref, is_equivalent_to(as.matrix(comp)))
-})
-
-
-context("Kendell's W")
-
-test_that("kendall's W worker works", {
-    dat <- create_data()
-    
-    ref <- kendall_ref(dat$m)
-    
-    ws <- .Call("kendall_worker", dat$bm)
-    ns <- nrow(dat$bm)
-    nr <- ncol(dat$bm)
-    comp <- (12 * ws * (ns - 1))/(nr^2 * (ns^3 - ns))
-    
-    expect_that(ref, equals(comp))
 })
 

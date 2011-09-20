@@ -222,3 +222,90 @@ SEXP voxelwise_kendall(SEXP Slist_CorMaps, SEXP SSeedMaps, SEXP Sseeds, SEXP Svo
     }
     return R_NilValue;
 }
+
+SEXP gcor_worker(SEXP ScorMaps, SEXP Sthresh, SEXP SthreshType, 
+                 SEXP Sseeds, SEXP Svoxs) 
+{
+    try {
+        arma::mat corMaps(1,1);
+        const double* old_cptr = sbm_to_arma_xd(ScorMaps, corMaps);
+        index_type nr = static_cast<index_type>(corMaps.n_rows);
+        index_type nc = static_cast<index_type>(corMaps.n_cols);
+
+        double thresh = DOUBLE_DATA(Sthresh)[0];
+        int threshType = INTEGER_DATA(SthreshType)[0];
+        
+        double *seeds = NUMERIC_DATA(Sseeds);
+        double *voxs = NUMERIC_DATA(Svoxs);
+
+        index_type i, j, n, seed, vox;
+        LDOUBLE s = 0;
+        double tmp;
+        arma::vec res(nr);
+
+        for (i = 0; i < nr; ++i) {
+            seed = static_cast<index_type>(seeds[i] - 1);
+            s = n = 0;
+
+            for (j = 0; j < nc; ++j) {
+                vox = static_cast<index_type>(voxs[j] - 1);
+                tmp = corMaps(i,j);
+                
+                if (seed != vox) {
+                    switch (threshType) {
+                        case 0:
+                            s += static_cast<LDOUBLE>(tmp);
+                            n += 1;
+                            break;
+                        case 1:
+                        case 2:
+                            if (tmp > thresh) {
+                                s += static_cast<LDOUBLE>(tmp);
+                                n += 1;
+                            }
+                            break;
+                        case 3:
+                        case 4:
+                            if (tmp < thresh) {
+                                s += static_cast<LDOUBLE>(tmp);
+                                n += 1;
+                            }
+                            break;
+                        default:
+                            Rf_error("unrecognized threshType");
+                            break;
+                    }
+                }
+            }
+            
+            switch (threshType) {
+                case 0:
+                case 1:
+                case 3:
+                    res(i) = static_cast<double>(s/static_cast<LDOUBLE>(n));
+                    break;
+                case 2:
+                case 4:
+                    res(i) = static_cast<double>(n);
+                    break;
+                default:
+                    Rf_error("unrecognized threshType");
+                    break;            
+            }
+            
+            //printf("i = %i; seed = %i; s = %.3f; n = %i; r = %.3f; val = %.3f\n", 
+            //        i, seed, s, n, res(i), tmp);
+        }
+
+        free_arma(corMaps, old_cptr);
+
+        return Rcpp::wrap( res );
+        
+    } catch( std::exception &ex ) {
+      forward_exception_to_r( ex );
+    } catch(...) { 
+      ::Rf_error( "c++ exception (unknown reason)" ); 
+    }
+    
+    return R_NilValue;
+}
