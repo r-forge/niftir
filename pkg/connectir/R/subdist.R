@@ -577,7 +577,7 @@ filter_subdist_fb <- function(fname, which.subs, dist.paths, memlimit,
                                      backingpath=dist.paths$bpath)
         deepcopy(x=tmp_sdist1, y=sub_sdist2)
         flush(sub_sdist2); flush(sdist2)
-        sdist2 <- free.memory(sdist2, output.path)
+        sdist2 <- free.memory(sdist2, dist.paths$bpath)
         
         # gower?
         if (gower) {
@@ -590,7 +590,7 @@ filter_subdist_fb <- function(fname, which.subs, dist.paths, memlimit,
                                          backingpath=gower.paths$bpath)
             deepcopy(x=tmp_gdist1, y=sub_gdist2)
             flush(sub_gdist2); flush(gdist2)
-            gdist2 <- free.memory(gdist2, output.path)
+            gdist2 <- free.memory(gdist2, gower.paths$bpath)
             
             rm(tmp_gdist1); gc(FALSE, TRUE)
         }
