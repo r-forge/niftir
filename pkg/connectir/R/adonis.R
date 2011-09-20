@@ -99,7 +99,7 @@ mdmr.prepare.model <- function(formula, model,
     ))
 }
 
-mdmr.prepare.permutations <- function(modelinfo, nperms, strata, max.iter, factors2perm) {
+mdmr.prepare.permutations <- function(modelinfo, nperms, strata, max.iter) {
     vcat(modelinfo$verbose, "...preparing permutations")
 
     # get matrix containing different permutations of observations
@@ -112,7 +112,7 @@ mdmr.prepare.permutations <- function(modelinfo, nperms, strata, max.iter, facto
         which.cor <- 1:nperms
         for (iter in 1:max.iter) {
             # get correlations between real model and permuted ones
-            which.cor <- unique(unlist(lapply(factors2perm, function(i) {
+            which.cor <- unique(unlist(lapply(modelinfo$factors2perm, function(i) {
                 H <- modelinfo$H2s[[i]]
                 tmp <- sapply(which.cor, function(j) cor(H[,1], H[p[,j],1]))
                 which(abs(tmp)>rthresh)
@@ -303,7 +303,7 @@ mdmr <- function(G, formula, model,
     modelinfo$progress <- "none"
     
     # Permutation Business
-    p <- mdmr.prepare.permutations(modelinfo, nperms, strata, max.iter, factors2perm)
+    p <- mdmr.prepare.permutations(modelinfo, nperms, strata, max.iter)
     
     # Create output matrices
     Pmat <- mdmr.prepare.pmat(modelinfo, nvoxs, type=type, shared=TRUE)
