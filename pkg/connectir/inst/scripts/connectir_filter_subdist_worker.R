@@ -153,7 +153,7 @@ tryCatch({
   # convert
   xdist <- filter_subdist_fb(opts$subdist, which.subs, s.path, opts$memlimit, 
                              parallel=parallel_forks, verbose=opts$verbose, 
-                             gower=!opts$nogower, gower.path=g.path)
+                             gower=!opts$nogower, gower.paths=g.path)
   
   # check
   vcat(opts$verbose, "...checking input")

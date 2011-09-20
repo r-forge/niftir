@@ -493,15 +493,17 @@ filter_subdist <- function(bigmat, subs=1:sqrt(nrow(bigmat)), voxs=1:ncol(bigmat
     deepcopy(bigmat, cols=voxs, rows=matinds, ...)
 }
 
-filter_subdist_fb <- function(fname, which.subs, outpaths, memlimit, 
-                              verbose=TRUE, gower=FALSE, parallel=FALSE, 
-                              type="double", backingfile=NULL, descriptorfile=NULL, 
-                              overwrite=FALSE)
+filter_subdist_fb <- function(fname, which.subs, dist.paths, memlimit, 
+                              verbose=TRUE, parallel=FALSE, 
+                              type="double", overwrite=FALSE, 
+                              gower=FALSE, gower.paths=NULL)
 {
     vcat(verbose, "Filtering subjects in distance matrices")
     
     if (!is.character(fname))
         stop("input must be a filename")
+    if (gower && is.null(gower.paths))
+        stop("must supply gower.paths if giving gower")
     
     vcat(verbose, "...reading input")
     input.path <- dirname(fname)
@@ -516,15 +518,6 @@ filter_subdist_fb <- function(fname, which.subs, outpaths, memlimit,
     matinds <- matrix(1:nr1, nobs1, nobs1)
     matinds <- as.vector(matinds[which.subs,which.subs])
     progress <- ifelse(verbose, "text", "none")
-    
-    vcat(verbose, "...creating new gower matrices in %s", outpath$bpath)
-    ## setup
-    outfile <- filepath(outpath$bpath, outpath$dfile)
-    if (file.exists(outfile) && !overwrite)
-        vstop("output '%s' already exists", backingfile)
-    ## create
-    sdist2 <- big.matrix(nr2, nc, type=type, backingpath=outpath$bpath, 
-                         backingfile=outpath$bfile, descriptorfile=outpath$dfile)
     
     # determine chunks to process
     memlimit <- as.numeric(memlimit)
@@ -542,7 +535,28 @@ filter_subdist_fb <- function(fname, which.subs, outpaths, memlimit,
             stop("you don't have enough memory, consider changing --memlimit")
         blocksize <- v
     }
+    if (gower)
+        blocksize <- floor(blocksize/1.5)
+    if (blocksize < 1)
+        stop("you do not have enough memory")
     blocks <- niftir.split.indices(1, nc, by=blocksize)
+    
+    vcat(verbose, "...creating new gower matrices in %s", outpath$bpath)
+    ## setup
+    outfile <- filepath(dist.paths$bpath, dist.paths$dfile)
+    if (file.exists(outfile) && !overwrite)
+        vstop("output '%s' already exists", backingfile)
+    ## create
+    sdist2 <- big.matrix(nr2, nc, type=type, 
+                         backingpath=dist.paths$bpath, 
+                         backingfile=dist.paths$bfile, 
+                         descriptorfile=dist.paths$dfile)
+    if (gower) {
+        gdist2 <- big.matrix(nr2, nc, type=type, 
+                             backingpath=gower.paths$bpath, 
+                             backingfile=gower.paths$bfile, 
+                             descriptorfile=gower.paths$dfile)
+    }
     
     vcat(verbose, "...looping through in %i blocks", blocks$n)
     for (bi in 1:blocks$n) {
@@ -557,24 +571,31 @@ filter_subdist_fb <- function(fname, which.subs, outpaths, memlimit,
                                type=type, shared=parallel)
         sdist1 <- free.memory(sdist1, input.path)
         
+        # save
+        vcat(verbose, "\t...saving")
+        sub_sdist2 <- sub.big.matrix(sdist2, firstCol=fCol, lastCol=lCol, 
+                                     backingpath=dist.paths$bpath)
+        deepcopy(x=tmp_sdist1, y=sub_sdist2)
+        flush(sub_sdist2); flush(sdist2)
+        sdist2 <- free.memory(sdist2, output.path)
+        
         # gower?
         if (gower) {
             vcat(verbose, "\t...gowering")
             tmp_gdist1 <- gower.subdist2(tmp_sdist1, verbose=0, parallel=parallel)
-            rm(tmp_sdist1)
-            tmp_sdist1 <- tmp_gdist1
-            rm(tmp_gdist1)
-            gc(FALSE, TRUE)
+            
+            # save
+            vcat(verbose, "\t...saving gower")
+            sub_gdist2 <- sub.big.matrix(gdist2, firstCol=fCol, lastCol=lCol, 
+                                         backingpath=gower.paths$bpath)
+            deepcopy(x=tmp_gdist1, y=sub_gdist2)
+            flush(sub_gdist2); flush(gdist2)
+            gdist2 <- free.memory(gdist2, output.path)
+            
+            rm(tmp_gdist1); gc(FALSE, TRUE)
         }
         
-        # save
-        vcat(verbose, "\t...saving")
-        sub_sdist2 <- sub.big.matrix(sdist2, firstCol=fCol, lastCol=lCol, 
-                                     backingpath=output.path)
-        deepcopy(x=tmp_sdist1, y=sub_sdist2)
-        flush(sub_sdist2); flush(sdist2)
-        sdist2 <- free.memory(sdist2, output.path)
-        gc(FALSE, TRUE)
+        rm(tmp_sdist1); gc(FALSE, TRUE)
     }
     
     return(sdist2)
