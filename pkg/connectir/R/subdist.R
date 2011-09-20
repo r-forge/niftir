@@ -517,15 +517,17 @@ filter_subdist_fb <- function(fname, which.subs, output.path, memlimit,
     matinds <- as.vector(matinds[which.subs,which.subs])
     progress <- ifelse(verbose, "text", "none")
     
-    vcat(verbose, "...creating new output in %s", output.path)
+    vcat(verbose, "...creating new gower matrices in %s", output.path)
     ## setup
-    if (is.null(backingfile) && is.null(descriptorfile)) {
-        outfname <- ifelse(gower, "subdist_gower", "subdist")
-        backingfile <- file.path(output.path, sprintf("%s.bin", outfname))
-        descriptorfile <- file.path(output.path, sprintf("%s.desc", outfname))
-        if (file.exists(backingfile) && !overwrite)
-            vstop("output '%s' already exists", backingfile)
+    outfname <- ifelse(gower, "subdist_gower", "subdist")
+    if (is.null(backingfile)) {
+        backingfile <- sprintf("%s.bin", outfname)
     }
+    if (is.null(descriptorfile)) {
+        descriptorfile <- sprintf("%s.desc", outfname)
+    }
+    if (file.exists(backingfile) && !overwrite)
+        vstop("output '%s' already exists", backingfile)
     ## create
     sdist2 <- big.matrix(nr2, nc, type=type, backingpath=output.path, 
                          backingfile=backingfile, descriptorfile=descriptorfile)
