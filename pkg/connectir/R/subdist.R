@@ -493,7 +493,7 @@ filter_subdist <- function(bigmat, subs=1:sqrt(nrow(bigmat)), voxs=1:ncol(bigmat
     deepcopy(bigmat, cols=voxs, rows=matinds, ...)
 }
 
-filter_subdist_fb <- function(fname, which.subs, output.path, memlimit, 
+filter_subdist_fb <- function(fname, which.subs, outpaths, memlimit, 
                               verbose=TRUE, gower=FALSE, parallel=FALSE, 
                               type="double", backingfile=NULL, descriptorfile=NULL, 
                               overwrite=FALSE)
@@ -511,26 +511,20 @@ filter_subdist_fb <- function(fname, which.subs, output.path, memlimit,
     nr1 <- nrow(sdist1); nobs1 <- sqrt(nr1)
     nc <- ncol(sdist1)
     nobs2 <- length(which.subs); nr2 <- nobs2^2
-    if (nobs2 >= nobs1)
+    if (nobs2 > nobs1)
         stop("length error for which.subs: no filtering can be done")
     matinds <- matrix(1:nr1, nobs1, nobs1)
     matinds <- as.vector(matinds[which.subs,which.subs])
     progress <- ifelse(verbose, "text", "none")
     
-    vcat(verbose, "...creating new gower matrices in %s", output.path)
+    vcat(verbose, "...creating new gower matrices in %s", outpath$bpath)
     ## setup
-    outfname <- ifelse(gower, "subdist_gower", "subdist")
-    if (is.null(backingfile)) {
-        backingfile <- sprintf("%s.bin", outfname)
-    }
-    if (is.null(descriptorfile)) {
-        descriptorfile <- sprintf("%s.desc", outfname)
-    }
-    if (file.exists(backingfile) && !overwrite)
+    outfile <- filepath(outpath$bpath, outpath$dfile)
+    if (file.exists(outfile) && !overwrite)
         vstop("output '%s' already exists", backingfile)
     ## create
-    sdist2 <- big.matrix(nr2, nc, type=type, backingpath=output.path, 
-                         backingfile=backingfile, descriptorfile=descriptorfile)
+    sdist2 <- big.matrix(nr2, nc, type=type, backingpath=outpath$bpath, 
+                         backingfile=outpath$bfile, descriptorfile=outpath$dfile)
     
     # determine chunks to process
     memlimit <- as.numeric(memlimit)

@@ -3,11 +3,10 @@ suppressPackageStartupMessages(library("optparse"))
 
 # Make option list
 option_list <- list(
-    make_option(c("-i", "--indir"), type="character", default=NULL, help="Input subdist directory (required)", metavar="subdist"),
+    make_option(c("-i", "--indir"), type="character", default=NULL, help="Input subdist directory (required)", metavar="directory"),
+    make_option("--subdist", type="character", default=NULL, help="Input subject distances descriptor file (optional, defaults to one in --indir)", metavar="file"),
     make_option(c("-f", "--formula"), type="character", default=NULL, help="a typical R model formula that specifies the factors or continuous variables that may expain the variance in each voxel's subject distance matrix", metavar="'A + B:C'"),
     make_option(c("-m", "--model"), type="character", default=NULL, help="Filename of a comma separated file with participant info in R friendly format where column names correspond to formula values... (required)", metavar="csv"),
-    make_option("--whichsubs", type="character", default=NULL, help="Filename with a list of subject indices to use from the subject distance matrices (default is to use all of them)", metavar="text-file"),
-    make_option("--expr", type="character", default=NULL, help="An expression based on the model that is used to restrict the subjects examined (can either use this or --whichsubs, not both)", metavar="expression"),
     make_option("--strata", type="character", default=NULL, help="Only compute permutations within groups, you can specify the name of a column in your '--model' that indicates these groups (optional)", metavar="name"),
     make_option(c("-p", "--permutations"), type="integer", default=4999, help="Number of permutations to conduct for each voxel [default: %default]", metavar="number"),
     make_option("--factors2perm", type="character", default=NULL, help="Which factors (e.g., A and B) to permute from the formula specified [default: all of them]", metavar="'A,B'"),
@@ -64,14 +63,21 @@ tryCatch({
       stop("Right now the overwrite function isn't implemented")
   if (opts$permutations < 2)
       stop("# of permutations must be greater than 1")
-  if (!is.null(opts$expr) && !is.null(opts$whichsubs))
-      stop("cannot specify both --expr and --whichsubs")
   
   # check paths exist
+  ## indir
   opts$indir <- abspath(opts$indir)
   invisible(check_subdist(opts$indir))
+  ## subdist
+  if (is.null(opts$subdist))
+      opts$subdist <- file.path(opts$indir, "subdist_gower.desc")
+  if (!file.exists(opts$subdist))
+      vstop("--subdist '%s' does not exist", opts$subdist)
+  opts$subdist <- abspath(opts$subdist)
+  ## model
   if (!file.exists(opts$model))
       stop("-m/--model ", opts$model, " does not exist")
+  ## output
   opts$outdir <- file.path(opts$indir, args[1])
   if (file.exists(opts$outdir))
       stop("Output mdmr directory '", opts$outdir,  "' already exists")
@@ -126,6 +132,8 @@ tryCatch({
   vcat(opts$verbose, "...model")
   model <- read.csv(opts$model)
   ## checks
+  if (nrow(model) != nsubs)
+      stop("# of rows in model file don't match # of subjects in distance matrix")
   for (v in vars) {
       if (is.null(model[[v]]))
           vstop("Factor '%s' doesn't match any column in model file", x)
@@ -139,56 +147,15 @@ tryCatch({
       else
           opts$strata <- model[[opts$strata]]
   }
-  
-  # filter subjects
-  if (!is.null(opts$whichsubs)) {
-      vcat(opts$verbose, "...whichsubs")
-      filter.subs <- TRUE
-      which.subs <- as.numeric(read.table(opts$whichsubs)[,1])
-      if (all(which.subs==0 || which.subs==1))
-          which.subs <- which(which.subs==1)
-      if (length(which.subs) == 0)
-          stop("no subjects left to analyze based on --whichsubs")
-  } else if (!is.null(opts$expr)) {
-      vcat(opts$verbose, "...expr")
-      filter.subs <- TRUE
-      which.subs <- eval(parse(text=sprintf("with(model, which(%s))", opts$expr)))
-      if (length(which.subs) == 0)
-          stop("no subjects left to analyze based on --expr")
-  } else {
-      filter.subs <- FALSE
-  }
-  ## model
-  if (filter.subs) {
-      if (nrow(model) == nsubs) {
-          model <- model[which.subs,]
-      } else if (nrow(model) != length(which.subs)) {
-          stop(paste("# of rows in model don't match # of subjects in", 
-                     "distance matrix or # of filtered subjects"))
-      }
-  } else {
-      if (nrow(model) != nsubs)
-          stop("# of rows in model file don't match # of subjects in distance matrix")
-  }
-  
+    
   # output
   vcat(opts$verbose, "...creating output directory '%s'", opts$outdir)
   dir.create(opts$outdir)
   
   # subject distances
-  if (filter.subs) {
-      fname <- file.path(opts$indir, "subdist.desc")
-      xdist <- filter_subdist_fb(fname, which.subs, opts$outdir, opts$memlimit, 
-                                 parallel=parallel_forks, verbose=opts$verbose, 
-                                 gower=TRUE)
-      nsubs <- length(which.subs)
-      xdist.path <- opts$outdir
-  } else {
-      vcat(opts$verbose, "Reading in subject distances")
-      fname <- file.path(opts$indir, "subdist_gower.desc")
-      xdist <- attach.big.matrix(fname)
-      xdist.path <- opts$indir
-  }
+  vcat(opts$verbose, "Reading in subject distances")
+  xdist <- attach.big.matrix(opts$subdist)
+  xdist.path <- dirname(opts$subdist)
   
   # check
   vcat(opts$verbose, "...checking input")
