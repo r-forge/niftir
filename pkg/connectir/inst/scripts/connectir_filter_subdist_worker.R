@@ -156,12 +156,10 @@ tryCatch({
                              gower=!opts$nogower, gower.paths=g.path)
   
   # check
+  nsubs <- sqrt(nrow(xdist))
   vcat(opts$verbose, "...checking input")
   tmp <- matrix(xdist[,1], nsubs, nsubs)
-  if (opts$nogower)
-      check_dmat(tmp)
-  else
-      check_gmat(tmp)
+  check_dmat(tmp)
   rm(tmp); invisible(gc(FALSE, TRUE))
   
   vcat(opts$verbose, "Saving model")
