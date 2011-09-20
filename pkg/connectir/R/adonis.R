@@ -526,32 +526,3 @@ save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE) {
     gc(FALSE)
 }
 
-
-####
-# COMPARISONS FUNCTIONS
-####
-
-mdmr <- function(G, formula, model, 
-                 nperms=4999, factors2perm=NULL, superblocksize=nperms, 
-                 voxs=1:ncol(G), blocksize=250, 
-                 contr.unordered="contr.sum", contr.ordered="contr.poly", 
-                 max.iter=10, strata=NULL, 
-                 verbose=1, parallel=FALSE, 
-                 G.path=NULL, fperms.path=NULL, 
-                 type="double", shared=parallel)
-
-# svm
-svm_subdist <- function(sdist, y, voxs=1:ncol(sdist), blocksize=500, 
-                        verbosity=1, parallel=FALSE, 
-                        cross=floor(sqrt(nrow(subdist))/2), ...)
-{
-    if (!is.shared(sdist))
-        stop("input big matrix must be shared")
-    
-    dmat <- big.matrix(nsubs, nsubs, type="double", shared=FALSE)
-    sub_sdist <- sub.big.matrix(sdist, firstCol=i, lastCol=i)
-    dcopy()
-    fit <- svm(dmat, y, cross=cross, ...)
-    fit$tot.accuracy
-    
-}

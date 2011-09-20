@@ -548,7 +548,6 @@ filter_subdist_fb <- function(fname, which.subs, output.path, memlimit,
             stop("you don't have enough memory, consider changing --memlimit")
         blocksize <- v
     }
-    blocksize <- max(1, floor(blocksize/2))
     blocks <- niftir.split.indices(1, nc, by=blocksize)
     
     vcat(verbose, "...looping through in %i blocks", blocks$n)
@@ -567,8 +566,7 @@ filter_subdist_fb <- function(fname, which.subs, output.path, memlimit,
         # gower?
         if (gower) {
             vcat(verbose, "\t...gowering")
-            tmp_gdist1 <- gower.subdist2(tmp_sdist1, verbose=verbose*1, 
-                                         parallel=parallel)
+            tmp_gdist1 <- gower.subdist2(tmp_sdist1, verbose=0, parallel=parallel)
             rm(tmp_sdist1)
             tmp_sdist1 <- tmp_gdist1
             rm(tmp_gdist1)
