@@ -552,7 +552,7 @@ filter_subdist_fb <- function(fname, which.subs, output.path, memlimit,
     blocks <- niftir.split.indices(1, nc, by=blocksize)
     
     vcat(verbose, "...looping through in %i blocks", blocks$n)
-    l_ply(1:blocks$n, function(bi) {
+    for (bi in 1:blocks$n) {
         vcat(verbose, "...block %i", bi)
         
         fCol <- blocks$starts[bi]; lCol <- blocks$ends[bi]
@@ -583,7 +583,7 @@ filter_subdist_fb <- function(fname, which.subs, output.path, memlimit,
         flush(sub_sdist2); flush(sdist2)
         sdist2 <- free.memory(sdist2, output.path)
         gc(FALSE, TRUE)
-    })
+    }
     
     return(sdist2)
 }
