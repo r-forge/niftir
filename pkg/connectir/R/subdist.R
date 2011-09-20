@@ -535,8 +535,6 @@ filter_subdist_fb <- function(fname, which.subs, dist.paths, memlimit,
             stop("you don't have enough memory, consider changing --memlimit")
         blocksize <- v
     }
-    if (gower)
-        blocksize <- floor(blocksize/1.5)
     if (blocksize < 1)
         stop("you do not have enough memory")
     blocks <- niftir.split.indices(1, nc, by=blocksize)
@@ -583,6 +581,7 @@ filter_subdist_fb <- function(fname, which.subs, dist.paths, memlimit,
         if (gower) {
             vcat(verbose, "\t...gowering")
             tmp_gdist1 <- gower.subdist2(tmp_sdist1, verbose=0, parallel=parallel)
+            rm(tmp_sdist1); gc(FALSE, TRUE)
             
             # save
             vcat(verbose, "\t...saving gower")
@@ -593,9 +592,9 @@ filter_subdist_fb <- function(fname, which.subs, dist.paths, memlimit,
             gdist2 <- free.memory(gdist2, gower.paths$bpath)
             
             rm(tmp_gdist1); gc(FALSE, TRUE)
+        } else {
+            rm(tmp_sdist1); gc(FALSE, TRUE)
         }
-        
-        rm(tmp_sdist1); gc(FALSE, TRUE)
     }
     
     return(sdist2)
