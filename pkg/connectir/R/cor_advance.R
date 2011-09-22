@@ -1,3 +1,4 @@
+# threshType: 0=mean all; 1=thresh&mean; 2=thresh&bin&sum...
 gcor <- function(bigmat, blocksize, ztransform=FALSE, 
                 thresh=0, threshType=0, verbosity=1, 
                 parallel=FALSE) 
@@ -32,7 +33,7 @@ gcor <- function(bigmat, blocksize, ztransform=FALSE,
     gcor <- llply(1:blocks$n, dfun, .progress=progress, .inform=inform, 
                   .parallel=parallel)
     gcor <- unlist(gcor)
-    if (ztransform)
+    if (ztransform && (threshType == 0 || threshType == 1 || threshType == 3))
         gcor <- tanh(gcor)
     
     return(gcor)
