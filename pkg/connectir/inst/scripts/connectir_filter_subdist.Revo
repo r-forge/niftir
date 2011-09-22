@@ -4,4 +4,3 @@ source(file.path(
     system.file("scripts", package="connectir"), "connectir_filter_subdist_worker.R"
 ))
 
-source("/home/zarrar/code/Rlibrary/connectir/scripts/connectir_filter_subdist_worker.R")
