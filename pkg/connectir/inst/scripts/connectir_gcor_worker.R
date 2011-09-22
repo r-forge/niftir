@@ -60,8 +60,10 @@ tryCatch({
       stop("Must specify input (-i/--input)")
   if (is.null(opts$mask))
       stop("Must specify mask (-m/--mask)")
-  if (is.null(opts$thresh) && is.null(opts$type))
+  if (is.null(opts$thresh) && !is.null(opts$type))
       stop("If setting thresh, must specify the type of threshold")
+  if (!is.null(opts$thresh) && is.null(opts$type))
+      stop("If setting type of threshold, must specify threshold")  
   if (opts$bin == T && (is.null(opts$type) || is.null(opts$thresh)))
       stop("If using --bin, must set --type and --thresh")
   
