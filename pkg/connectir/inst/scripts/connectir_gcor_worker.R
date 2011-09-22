@@ -5,10 +5,10 @@ suppressPackageStartupMessages(library("optparse"))
 option_list <- list(
     make_option(c("-i", "--input"), type="character", default=NULL, help="Input 4D functional image (required)", metavar="file"),
     make_option(c("-m", "--mask"), type="character", default=NULL, help="3D brain mask (required)", metavar="file"),
-    make_option("--ztransform", type="store_true", default=FALSE, help="Z-transform the data => average => reverse transform"),
-    make_option("--thresh", type="integer", default=NULL, help="Threshold to set (note: --type must also be set for this to work)", metavar="number"),
+    make_option("--ztransform", action="store_true", default=FALSE, help="Z-transform the data => average => reverse transform"),
+    make_option("--thresh", type="double", default=NULL, help="Threshold to set (note: --type must also be set for this to work)", metavar="number"),
     make_option("--type", type="character", default=NULL, help="Type of threshold: positive (r>i) or negative (r<i)", metavar="option"),
-    make_option("--bin", type="store_true", default=FALSE, help="Binarize the correlations based on a threshold and then take the sum; in other words, how many connections are greater than or less than a specific threshold (must set --type as well) [default: %default]", metavar="option"),
+    make_option("--bin", action="store_true", default=FALSE, help="Binarize the correlations based on a threshold and then take the sum; in other words, how many connections are greater than or less than a specific threshold (must set --type as well)"),
     make_option(c("-c", "--forks"), type="integer", default=1, help="Number of computer processors to use in parallel by forking the complete processing stream [default: %default]", metavar="number"),
     make_option(c("-t", "--threads"), type="integer", default=1, help="Number of computer processors to use in parallel by multi-threading matrix algebra operations [default: %default]", metavar="number"),
     make_option("--blocksize", type="integer", default=0, dest="blocksize", help="How many sets of voxels should used in each iteration of computing the pseudo F-statistics (0 = auto) [default: %default]", metavar="number"),
