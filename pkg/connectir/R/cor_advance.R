@@ -1,7 +1,7 @@
 # threshType: 0=mean all; 1=thresh&mean; 2=thresh&bin&sum...
 gcor <- function(bigmat, blocksize, ztransform=FALSE, 
                 thresh=0, threshType=0, verbosity=1, 
-                parallel=FALSE) 
+                parallel=FALSE, ...) 
 {
     ## input info
     nvoxs <- ncol(bigmat)
@@ -20,7 +20,7 @@ gcor <- function(bigmat, blocksize, ztransform=FALSE,
     ## + gets average of each correlation map
     dfun <- function(i) {
         inds_CHUNK <- vox_inds[c(blocks$starts[i],blocks$ends[i])]
-        cormat_CHUNK <- vbca2(bigmat, inds_CHUNK, ztransform=ztransform)
+        cormat_CHUNK <- vbca2(bigmat, inds_CHUNK, ztransform=ztransform, ...)
         
         inds <- as.double(inds_CHUNK[1]:inds_CHUNK[2])
         gs <- .Call("gcor_worker", cormat_CHUNK, thresh, threshType, 

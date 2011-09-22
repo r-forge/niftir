@@ -31,7 +31,8 @@ wrap_gcor <- function(func_file, mask_file, out_file=NULL,
     bmat <- load_and_mask_func_data(func_file, mask, type="double", shared=shared)
     
     vcat(verbose, "...correlating")
-    vec <- gcor(bmat, blocksize, verbosity=verbose*1, parallel=parallel, ...)
+    vec <- gcor(bmat, blocksize, verbosity=verbose*1, parallel=parallel, shared=shared, 
+                ...)
     
     if (!is.null(out_file)) {
         vcat(verbose, "...writing file '%s'", out_file)
