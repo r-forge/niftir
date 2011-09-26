@@ -123,7 +123,7 @@ tryCatch({
   if (!is.null(opts$whichsubs)) {
       vcat(opts$verbose, "...whichsubs")
       which.subs <- as.numeric(read.table(opts$whichsubs)[,1])
-      if (all(which.subs==0 || which.subs==1))
+      if (all(which.subs==0 | which.subs==1))
           which.subs <- which(which.subs==1)
       if (length(which.subs) == 0)
           stop("no subjects left to analyze based on --whichsubs")
