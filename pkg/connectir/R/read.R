@@ -117,8 +117,7 @@ overlap_automasks <- function(xs, read_fun, verbose=FALSE, parallel=FALSE, na.rm
 }
 
 # Load data
-load_and_mask_func_data2 <- function(xs, read_fun, mask=NULL, verbose=FALSE, 
-                                     parallel=FALSE, check=TRUE, ...)
+load_and_mask_func_data2 <- function(xs, read_fun, mask=NULL, verbose=FALSE, ...)
 {
     if (!is.list(xs) && !is.vector(xs))
         stop("input 'xs' must be a vector or list")
@@ -143,28 +142,38 @@ load_and_mask_func_data2 <- function(xs, read_fun, mask=NULL, verbose=FALSE,
         return(y)
     }, .progress=progress, .parallel=FALSE)
     
-    if (check) {
-        vcat(verbose, "checking data")
-        nc <- ncol(dat.list[[1]])
-        l_ply(1:length(dat.list), function(i) {
-            dat <- dat.list[[i]]
-            fname <- xs[[i]]
-            # Everything must have same # of voxels
-            if (nc != ncol(dat)) {
-                vstop("%s must have the same # of nodes (%i vs %i) as other datasets", 
-                      fname, nc, ncol(dat))
-            }
-            
-            # There can't be any NaNs
-            col.nas <- colna(dat.list[[i]])>0
-            if (any(col.nas)) {
-                w <- paste(which(col.nas), collapse=", ")
-                stop(sprintf("%s has NaNs in nodes %s", fname, w))
-            }
-        }, .progress=progress)
-    }
-    
     gc(FALSE, TRUE)
     
     return(dat.list)
+}
+
+check_func_data <- function(dat.list, verbose=FALSE, parallel=FALSE) 
+{
+    vcat(verbose, "checking data")
+    nc <- ncol(dat.list[[1]])
+    n <- length(dat.list)
+    rets <- llply(1:n, function(i) {
+        dat <- dat.list[[i]]
+        fname <- xs[[i]]
+        
+        # Everything must have same # of voxels
+        if (nc != ncol(dat)) {
+            vcat(verbose, 
+                 "%s must have the same # of nodes (%i vs %i) as other datasets", 
+                  fname, nc, ncol(dat))
+            return(1)
+        }
+        
+        # There can't be any NaNs
+        col.nas <- colna(dat.list[[i]])>0
+        if (any(col.nas)) {
+            w <- paste(which(col.nas), collapse=", ")
+            vcat(verbose, "%s has NaNs in nodes %s", fname, w))
+            return(2)
+        }
+        
+        return(0)
+    }, .progress=progress, .parallel=parallel)
+    
+    unlist(rets)
 }

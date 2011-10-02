@@ -170,8 +170,15 @@ tryCatch({
   vcat(opts$verbose, "Loading and masking functional data")
   reader <- gen_big_reader("nifti4d", type="double", shared=parallel_forks)
   funclist <- load_and_mask_func_data2(infiles, reader, mask=brainmask, 
-                                       verbose=opts$verbose, parallel=parallel_forks, 
+                                       verbose=opts$verbose,  
                                        type="double", shared=parallel_forks)
+  checks <- check_func_data(funclist, verbose=opts$verbose, parallel=parallel_forks)
+  if (any(checks!=0)) {
+      vcat(opts$verbose, "Bad data for following files:")
+      vcat(opts$verbose, paste(infiles[checks!=1], collapse="\n")
+      vstop("Quitting due to errors with input functional data")
+  }
+  
   invisible(gc(FALSE, TRUE))
   
   
