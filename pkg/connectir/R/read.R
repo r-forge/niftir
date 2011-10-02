@@ -150,6 +150,7 @@ load_and_mask_func_data2 <- function(xs, read_fun, mask=NULL, verbose=FALSE, ...
 check_func_data <- function(dat.list, verbose=FALSE, parallel=FALSE) 
 {
     vcat(verbose, "checking data")
+    progress <- ifelse(verbose, "text", "none")
     nc <- ncol(dat.list[[1]])
     n <- length(dat.list)
     rets <- llply(1:n, function(i) {
