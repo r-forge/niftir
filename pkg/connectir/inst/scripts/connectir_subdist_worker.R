@@ -6,6 +6,7 @@ option_list <- list(
     make_option(c("-m", "--inmasks"), type="character", default=NULL, dest="inmasks", help="File containing paths of different 3D masks for each functional image (required). Make sure that this list of masks are in the same order as the -i/--infuncs file.", metavar="file"),
     make_option("--ztransform", action="store_true", default=FALSE, dest="ztransform", help="Fischer Z-Transform the correlations before calculating the distance between participants"),
     make_option("--brainmask", type="character", default=NULL, help="When computing each whole-brain connectivity map, this mask will restrict which parts of the whole-brain are to be considered", metavar="file"),
+    make_option("--regress", type="character", default=NULL, help="A design matrix (space delimeted file where first row is a header) containing variables to regress out of each voxel's whole-brain connectivity maps before comparing distances between subjects", metavar="file"),
     make_option("--bg", type="character", default=NULL, help="Background image (e.g., MNI152 standard brain) upon which later results might be overlaid", metavar="file"), 
     make_option("--blocksize", type="integer", default=0, help="How many sets of voxels should be used in each iteration of computing the correlation (0 = auto) [default: %default]", metavar="number"),
     make_option("--memlimit", type="double", default=6, dest="memlimit", help="If blocksize is set to auto (--blocksize=0), then will set the blocksize to use a maximum of RAM specified by this option  [default: %default]", metavar="number"),
@@ -88,7 +89,7 @@ tryCatch({
   ###
 
   vcat(opts$verbose, "Checking optional inputs")
-  for (optname in c("brainmask", "bg")) {
+  for (optname in c("brainmask", "bg", "regress")) {
       arg <- opts[[optname]]
       if (!is.null(arg)) {
         if(!file.exists(arg))
@@ -103,6 +104,12 @@ tryCatch({
       verbosity <- 1
   } else {
       verbosity <- 0
+  }
+  
+  # design matrix
+  if (!is.null(opts$regress)) {
+      vcat(opts$verbose, "Reading in design matrix")
+      opts$regress <- read.table(opts$regress, header=TRUE)
   }
   
   
@@ -194,9 +201,10 @@ tryCatch({
   vcat(opts$verbose, "Computing subject distances")
   checks <- compute_subdist_wrapper(funclist, dists_list, 
                                     opts$blocksize, opts$superblocksize, 
+                                    design_mat=opts$regress, 
                                     verbose=verbosity, parallel=parallel_forks, 
                                     ztransform=opts$ztransform, method="pearson")  
-    
+  
   vcat(opts$verbose, "...saving zchecks")  
   hdr <- read.nifti.header(infiles[1])
   hdr$dim <- hdr$dim[1:3]; hdr$pixdim <- hdr$pixdim[1:3]
