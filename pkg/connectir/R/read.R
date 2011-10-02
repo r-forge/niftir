@@ -147,7 +147,7 @@ load_and_mask_func_data2 <- function(xs, read_fun, mask=NULL, verbose=FALSE, ...
     return(dat.list)
 }
 
-check_func_data <- function(dat.list, verbose=FALSE, parallel=FALSE) 
+check_func_data <- function(xs, dat.list, verbose=FALSE, parallel=FALSE) 
 {
     vcat(verbose, "checking data")
     progress <- ifelse(verbose, "text", "none")

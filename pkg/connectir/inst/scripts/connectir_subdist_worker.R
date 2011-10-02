@@ -172,7 +172,8 @@ tryCatch({
   funclist <- load_and_mask_func_data2(infiles, reader, mask=brainmask, 
                                        verbose=opts$verbose,  
                                        type="double", shared=parallel_forks)
-  checks <- check_func_data(funclist, verbose=opts$verbose, parallel=parallel_forks)
+  checks <- check_func_data(infiles, funclist, verbose=opts$verbose, 
+                            parallel=parallel_forks)
   if (any(checks!=0)) {
       vcat(opts$verbose, "Bad data for following files:")
       vcat(opts$verbose, paste(infiles[checks!=1], collapse="\n"))
