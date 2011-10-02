@@ -168,7 +168,7 @@ check_func_data <- function(dat.list, verbose=FALSE, parallel=FALSE)
         col.nas <- colna(dat.list[[i]])>0
         if (any(col.nas)) {
             w <- paste(which(col.nas), collapse=", ")
-            vcat(verbose, "%s has NaNs in nodes %s", fname, w))
+            vcat(verbose, "%s has NaNs in nodes %s", fname, w)
             return(2)
         }
         
