@@ -109,7 +109,7 @@ tryCatch({
   # design matrix
   if (!is.null(opts$regress)) {
       vcat(opts$verbose, "Reading in design matrix")
-      opts$regress <- read.table(opts$regress, header=TRUE)
+      opts$regress <- as.big.matrix(as.matrix(read.table(opts$regress, header=TRUE)))
   }
   
   

@@ -117,7 +117,57 @@ overlap_automasks <- function(xs, read_fun, verbose=FALSE, parallel=FALSE, na.rm
     return(list(mask=mask, overlap=overlap, sub.masks=masks))
 }
 
-# exclude_sub_mask
+exclude_sub_masks <- function(inmasks, exclude.thresh=0.05, filter.mask=NULL, 
+                              verbose=FALSE, parallel=FALSE) 
+{
+    tmp <- read.mask(inmasks[[1]])
+    nsubs <- length(inmasks)
+    nnodes <- length(tmp)
+    progress <- ifelse(verbose, "text", "none")
+    
+    all.masks <- big.matrix(nsubs, nnodes)
+    
+    vcat(verbose, "reading in data")
+    tmp <- llply(1:nsubs, function(i) {
+        all.masks[i,] <- read.mask(inmasks[[i]])
+        return(NULL)
+    }, .progress=progress, .parallel=parallel)
+    
+    vcat(verbose, "computing overlap")
+    overlap <- colmean(all.masks)
+    
+    vcat(verbose, "filtering")
+    if (!is.null(filter.mask)) {
+        filter <- read.mask(filter.mask) & overlap > 0
+    } else {
+        filter <- overlap > 0
+    }
+    nnodes <- sum(filter)
+    overlap <- overlap[filter]
+    all.masks <- deepcopy(all.masks, cols=which(filter))
+    
+    vcat(verbose, "getting bad subjects to exclude")
+    sub.ns <- big.matrix(nsubs, 1, init=0)
+    tmp <- llply(1:nnodes, function(i) {
+        w <- which(all.masks[,i]!=1)
+        sub.ns[w,1] <- sub.ns[w,1] + 1
+        return(NULL)
+    }, .progress=progress, .parallel=parallel)
+    sub.ns <- sub.ns[,1]/nnodes
+    exclude.subs <- which(sub.ns > exclude.thresh)
+    include.subs <- which(sub.ns < exclude.thresh)
+    
+    vcat(verbose, "re-calculating overlap with only included subjects")
+    use.all.masks <- deepcopy(all.masks, rows=include.subs)
+    overlap2 <- colmean(use.all.masks)
+    
+    vcat(verbose, "getting mask")
+    mask <- overlap2 == 1
+    vcat(verbose, "mask has %i good nodes and %i bad ones", sum(mask), sum(!mask))
+    
+    list(mask=mask, overlap=overlap2, all=all.masks, 
+         bad.ns=sub.ns/nnodes, include=include.subs, exclude=exclude.subs)
+}
 
 # Load data
 load_and_mask_func_data2 <- function(xs, read_fun, mask=NULL, verbose=FALSE, ...)
