@@ -176,7 +176,7 @@ tryCatch({
                             parallel=parallel_forks)
   if (any(checks!=0)) {
       vcat(opts$verbose, "Bad data for following files:")
-      vcat(opts$verbose, paste(infiles[checks!=1], collapse="\n"))
+      vcat(opts$verbose, paste(infiles[checks!=0], collapse="\n"))
       vstop("Quitting due to errors with input functional data")
   }
   

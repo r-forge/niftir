@@ -9,7 +9,6 @@ vstop <- function(msg, ...) stop(sprintf(msg, ...))
 
 set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE) {
     vcat(verbose, "Setting %i parallel forks", nforks)
-    suppressPackageStartupMessages(library("blasctl"))
     suppressPackageStartupMessages(library("doMC"))
     registerDoMC()
     nprocs <- getDoParWorkers()
@@ -21,7 +20,7 @@ set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE) {
     
     vcat(verbose, "Setting %i threads for matrix algebra operations", 
          nthreads)
-    nprocs <- omp_get_max_threads()
+    #nprocs <- omp_get_max_threads()
     if (nthreads > nprocs) {
         vstop("# of threads %i is greater than the actual # of processors (%i)", 
               nthreads, nprocs)
@@ -33,6 +32,7 @@ set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE) {
     } else {
         # cover all our blases
         vcat(verbose, "...using GOTOBLAS or Other")
+        suppressPackageStartupMessages(library("blasctl"))
         blas_set_num_threads(nthreads)
         omp_set_num_threads(nthreads)
     }

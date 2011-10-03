@@ -107,6 +107,7 @@ overlap_automasks <- function(xs, read_fun, verbose=FALSE, parallel=FALSE, na.rm
     for (i in 1:nnodes) 
         sub.ns[subs.nbad[[i]]] <- sub.ns[subs.nbad[[i]]] + 1
     exclude.subs <- which(sub.ns/nnodes > exclude.thresh)
+    # include.subs <- which(sub.ns/nnodes < exclude.thresh)
     
     overlap <- colMeans(masks[-exclude.subs,])
     
@@ -115,6 +116,8 @@ overlap_automasks <- function(xs, read_fun, verbose=FALSE, parallel=FALSE, na.rm
     
     return(list(mask=mask, overlap=overlap, sub.masks=masks))
 }
+
+# exclude_sub_mask
 
 # Load data
 load_and_mask_func_data2 <- function(xs, read_fun, mask=NULL, verbose=FALSE, ...)
