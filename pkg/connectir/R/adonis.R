@@ -38,12 +38,17 @@ mdmr.prepare.model <- function(formula, model,
     options(contrasts = op.c)
     grps <- attr(rhs, "assign")
     qrhs <- qr(rhs)
+    
+    # deal with rank deficiency
+    if (qrhs$rank < ncol(rhs)) {
+        bad_cols <- paste(qrhs$pivot[-c(1:qrhs$rank)], collapse=", ")
+        bad_colnames <- paste(colnames(rhs)[bad_cols], collapse=", ")
+        vcat(verbose, " warning: model is rank deficient")
+        vcat(verbose, " will drop cols %s (%s) from design matrix", 
+                        bad_cols, bad_colnames)
+    }
     rhs <- rhs[, qrhs$pivot, drop = FALSE]
     rhs <- rhs[, 1:qrhs$rank, drop = FALSE]
-    
-    # Check if rank deficient?
-    if (qrhs$rank < ncol(rhs))
-        stop("model is rank deficient")
     
     # Get different groups of variables
     grps <- grps[qrhs$pivot][1:qrhs$rank]

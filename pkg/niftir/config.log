@@ -30,12 +30,16 @@ Kernel configured for up to 2 processors.
 Processor type: i486 (Intel 80486)
 Processors active: 0 1
 Primary memory available: 4.00 gigabytes
-Default processor set: 107 tasks, 535 threads, 2 processors
-Load average: 1.50, Mach factor: 0.92
+Default processor set: 124 tasks, 596 threads, 2 processors
+Load average: 0.64, Mach factor: 1.40
 /bin/machine           = unknown
 /usr/bin/oslevel       = unknown
 /bin/universe          = unknown
 
+PATH: /Users/zarrar/.rvm/gems/ruby-1.9.2-p290@rails3tutorial/bin
+PATH: /Users/zarrar/.rvm/gems/ruby-1.9.2-p290@global/bin
+PATH: /Users/zarrar/.rvm/rubies/ruby-1.9.2-p290/bin
+PATH: /Users/zarrar/.rvm/bin
 PATH: /Users/Shared/ants/bin
 PATH: /Users/Shared/freesurfer/bin
 PATH: /Users/Shared/freesurfer/fsfast/bin

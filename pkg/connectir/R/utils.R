@@ -47,12 +47,14 @@ set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE) {
     invisible(TRUE)
 }
 
-bm_rowsum <- function(bigmat) {
-    as.vector(.Call("bm_rowsum", bigmat, PACKAGE = "connectir"))
+big_rowsum <- function(bigmat, firstCol=1, lastCol=ncol(bigmat)) {
+    as.vector(.Call("big_rowsum", bigmat, as.double(firstCol), as.double(lastCol), 
+              PACKAGE="connectir"))
 }
 
-bm_rowmean <- function(bigmat) {
-    as.vector(.Call("bm_rowmean", bigmat, PACKAGE = "connectir"))
+big_rowmean <- function(bigmat, firstCol=1, lastCol=ncol(bigmat)) {
+    as.vector(.Call("big_rowmean", bigmat, as.double(firstCol), as.double(lastCol), 
+              PACKAGE="connectir"))
 }
 
 # x = a*x + b

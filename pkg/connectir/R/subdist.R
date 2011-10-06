@@ -187,6 +187,13 @@ compute_subdist_wrapper <- function(sub.funcs, list.dists,
     nvoxs <- ncol(sdist)
     superblocks <- niftir.split.indices(1, nvoxs, by=superblocksize)
     
+    if (!is.null(design_mat)) {
+        k <- qlm_rank(design_mat)
+        if (k < ncol(design_mat))
+            stop("design matrix is rank deficient")
+    }
+    
+    
     vcat(verbose, "will run through %i large blocks", superblocks$n)
     for (i in 1:superblocks$n) {
         vcat(verbose, "large block %i", i)
