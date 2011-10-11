@@ -110,8 +110,9 @@ tryCatch({
   if (!is.null(opts$regress)) {
       vcat(opts$verbose, "Reading in design matrix")
       tmp_fname <- opts$regress
-      opts$regress <- as.big.matrix(as.matrix(read.table(opts$regress, header=TRUE)), 
-                                    type="double")
+      tmp <- as.matrix(read.table(opts$regress, header=TRUE))
+      opts$regress <- big.matrix(nrow(tmp), ncol(tmp), type="double", shared=TRUE)
+      opts$regress[,] <- tmp[,]; rm(tmp)
       k <- qlm_rank(opts$regress)
       if (k < ncol(opts$regress))
           vstop("design matrix (--regress %s) is rank deficient", tmp_fname)
