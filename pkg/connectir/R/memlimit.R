@@ -242,6 +242,7 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
 
 get_kendall_limit <- function(blocksize, mem_limit, nvoxs, subs.ntpts, verbose=TRUE) {
     
+    nsubs <- length(subs.ntpts)
     nforks <- getDoParWorkers()
     
     mem_func <- sum(sapply(subs.ntpts, function(x) n2gb(x*nvoxs)))
