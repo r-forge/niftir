@@ -122,11 +122,17 @@ wrap_kendall <- function(func_files, mask_file, out_file=NULL, to_return=FALSE,
     blocksize <- get_kendall_limit(0, memlimit, sum(mask), ntpts, verbose)
     
     vcat(verbose, "...reading %i functionals", length(func_files))
-    bmats <- load_and_mask_func_data(func_files, mask, type="double", shared=shared)
+    reader <- gen_big_reader("nifti4d", type="double", shared=shared)
+    funclist <- load_and_mask_func_data2(func_files, reader, mask=mask, 
+                                         verbose=verbose,  
+                                         type="double", shared=shared)
+    
+    vcat(verbose, "...checking functionals")
+    checks <- check_func_data(func_files, funclist, verbose=verbose, parallel=parallel)
     
     vcat(verbose, "...kendalling")
     verbosity <- ifelse(verbose, 2, 0)
-    vec <- kendall(bmats, blocksize, verbosity=verbosity, parallel=parallel, ...)
+    vec <- kendall(funclist, blocksize, verbosity=verbosity, parallel=parallel, ...)
     
     if (!is.null(out_file)) {
         vcat(verbose, "...writing file '%s'", out_file)
