@@ -85,7 +85,7 @@ wrap_reho <- function(func_file, mask_file, out_file=NULL,
 
 
 wrap_kendall <- function(func_files, mask_file, out_file=NULL, to_return=FALSE, 
-                            overwrite=FALSE, verbose=TRUE, ...)
+                            overwrite=FALSE, verbose=TRUE, parallel=FALSE, ...)
 {
     vcat(verbose, "Running kendall's W")
     
