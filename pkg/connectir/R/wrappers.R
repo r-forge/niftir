@@ -88,6 +88,7 @@ wrap_kendall <- function(func_files, mask_file, out_file=NULL, to_return=FALSE,
                             overwrite=FALSE, verbose=TRUE, parallel=FALSE, ...)
 {
     vcat(verbose, "Running kendall's W")
+    progress <- ifelse(verbose, "text", "none")
     
     if (!is.character(func_files) && length(func_files) < 2)
         stop("func_files must be a vector of at least 2 filenames")
