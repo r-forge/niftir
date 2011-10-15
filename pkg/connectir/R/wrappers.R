@@ -85,7 +85,8 @@ wrap_reho <- function(func_file, mask_file, out_file=NULL,
 
 
 wrap_kendall <- function(func_files, mask_file, out_file=NULL, to_return=FALSE, 
-                            overwrite=FALSE, verbose=TRUE, parallel=FALSE, ...)
+                            overwrite=FALSE, verbose=TRUE, parallel=FALSE, 
+                            shared=parallel, memlimit=4, ...)
 {
     vcat(verbose, "Running kendall's W")
     progress <- ifelse(verbose, "text", "none")
