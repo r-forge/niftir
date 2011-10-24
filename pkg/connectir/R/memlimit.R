@@ -319,6 +319,96 @@ get_kendall_limit <- function(blocksize, mem_limit, nvoxs, subs.ntpts, verbose=T
     return(blocksize)
 }
 
+# loop through a set of voxels
+# calculate connectivity maps
+# get fit for given seed map
+# get contrasts (results)
+get_glm_limit <- function(blocksize, mem_limit, nvoxs, subs.ntpts, 
+                          nevs, ncons, verbose=TRUE) 
+{
+    
+    nsubs <- length(subs.ntpts)
+    nforks <- getDoParWorkers()
+    
+    # fixed
+    mem_func <- sum(sapply(subs.ntpts, function(x) n2gb(x*nvoxs)))
+    mem_evs <- n2gb(nevs*nsubs)
+    mem_cons <- n2gb(ncons*nevs)
+    mem_seedmap <- n2gb(nsubs*nvoxs*nforks)
+    mem_dd <- n2gb(nsubs*nsubs)
+    mem_coefs1 <- n2gb(nevs*nvoxs*nforks)       # qlm_fit
+    mem_residuals <- n2gb(nsubs*nvoxs*nforks)   # qlm_fit
+    mem_mse <- n2gb(nvoxs*nforks)               # qlm_fit
+    mem_coefs2 <- n2gb(ncons*nvoxs*nforks)      # qlm_contrast
+    mem_stderrs <- n2gb(ncons*nvoxs*nforks)     # qlm_contrast
+    mem_tvals1 <- n2gb(ncons*nvoxs*nforks)      # qlm_contrast
+    mem_fixed <- mem_func + mem_evs + mem_cons + mem_seedmap + mem_dd + 
+                 mem_coefs1 + mem_residuals + mem_mse + 
+                 mem_coefs2 + mem_stderrs + mem_tvals1
+    
+    # for at least 1 seed
+    mem_cormaps <- n2gb(nvoxs*nsubs)
+    mem_tvals2 <- n2gb(ncons*nvoxs*2)
+    mem_by_seeds <- mem_cormaps + mem_tvals2
+    
+    mem_limit <- as.numeric(mem_limit)
+    f <- function(s) {
+        mem_limit - mem_fixed - s*mem_by_seeds
+    }
+    
+    if (blocksize == 0) {
+        # limit good?
+        min_mem_needed <- mem_fixed + 2*mem_by_seeds
+        if (mem_limit < min_mem_needed) {
+            vstop(paste("You require at least %.2f GB of memory but are limited", 
+                        "to %.2f GB. Please reset the --memlimit option."), 
+                  min_mem_needed, mem_limit)
+        } else {
+            vcat(verbose, paste("...memory limit is %.2f GB and a minimum", 
+                                     "of %.3f GB is needed"), 
+                 mem_limit, min_mem_needed)
+        }
+        
+        m <- f(nvoxs)
+        if (m > 0) {
+            blocksize <- nvoxs
+        } else {
+            vcat(verbose, paste("...if you wanted to hold everything in memory",
+                                     "you would need at least %.2f GB of RAM"), 
+                               mem_limit-m)
+            vcat(verbose, "...autosetting blocksize")
+            
+            ss <- tryCatch(floor(uniroot(f, c(2,nvoxs))$root), error=function(ex) NA)
+            w <- (length(ss) + 1) - which.min(rev(ss))
+            s <- floor(ss[w])
+            if (length(s) == 0 || s == 0) {
+                stop("Sh*%, you don't have enough RAM")
+            } else {
+                blocksize <- s
+            }
+        }
+    }
+    
+    vcat(verbose, "...setting block size to %i (out of %i voxels)", 
+         blocksize, nvoxs)
+    
+    # checks
+    if (blocksize < 1)
+        stop("block size is less than 1")
+    
+    # calculate amount of memory that will be used
+    s <- blocksize
+    m <- f(s); mem_used <- mem_limit - m
+    if (mem_used > mem_limit) {
+        vstop("You require %.2f GB of memory but have a limit of %.2f GB", 
+              mem_used, mem_limit)
+    } else {
+        vcat(verbose, "...%.2f GB of RAM will be used", mem_used)
+    }
+    
+    return(blocksize)
+}
+
 
 get_gcor_limit <- function(blocksize, mem_limit, nvoxs, ntpts, verbose=TRUE)
 {

@@ -156,3 +156,105 @@ setMethod('qlm_contrasts',
         return(outputs)
     }
 )
+
+# Checks design matrix
+# and if rank deficient removes offending columns
+check_design_matrix <- function(X, to.quit=FALSE) {
+    qrhs <- qr(X)
+    if (qrhs$rank < ncol(X)) {
+        if (to.quit)
+            stop("model is rank deficient")
+        
+        vcat(verbose, " warning: model is rank deficient")
+        bad_cols <- paste(qrhs$pivot[-c(1:qrhs$rank)], collapse=", ")
+        bad_colnames <- paste(colnames(X)[bad_cols], collapse=", ")
+        vcat(verbose, " will drop cols %s (%s) from design matrix", 
+                        bad_cols, bad_colnames)
+        
+        X <- rhs[, X$pivot, drop = FALSE]
+        X <- rhs[, 1:X$rank, drop = FALSE]
+
+    }
+    
+    return(X)
+}
+
+vox_glm <- function(funclist, evs, cons, blocksize, outmats, bp=NULL, 
+                    verbose=TRUE, parallel=FALSE, shared=parallel, 
+                    ztransform=FALSE)
+{
+    vcat(verbose, "...setup")
+    nsubs <- length(funclist)
+    nvoxs <- ncol(funclist[[1]])
+    voxs <- 1:nvoxs
+    ncons <- nrow(cons)
+    blocks <- niftir.split.indices(1, nvoxs, by=blocksize)
+    progress <- ifelse(verbosity>0, "text", "none")
+    k <- qlm_rank(evs)
+    if (k < ncol(evs))
+        stop("EV matrix is rank deficient")
+    dd <- qlm_dd(evs)
+    if (!is.shared(outmats[[1]]))
+        stop("outmats must be shared")
+    if (is.filebacked(outmats[[1]]) && is.null(bp))
+        stop("backingpath (bp) must be given if outmats are file-baced")
+    
+    gfun <- function(bi) {
+        vcat("...block %i", bi)
+        
+        first <- blocks$starts[bi]; last <- blocks$ends[bi]
+        sub_voxs <- first:last
+        sub_nvoxs <- length(sub_voxs)
+        
+        tmp_outmats <- lapply(1:ncons, function(x) {
+                            big.matrix(nvoxs, sub_nvoxs, type="double", shared=shared)
+                        })
+        
+        # correlate
+        vcat(verbose, "....correlate")
+        subs.cormaps <- vbca_batch2(funclist, c(first, last), 
+                                    ztransform=ztransform, 
+                                    type="double", shared=shared)
+        
+        # loop through each seed
+        vcat(verbose, '....glm')
+        sfun <- function(si) {
+            # combine and transpose correlation maps for 1 seed
+            seedCorMaps <- big.matrix(nsubs, nvoxs-1, type="double", shared=FALSE)
+            .Call("subdist_combine_and_trans_submaps", subs.cormaps, as.double(si), 
+                  as.double(voxs[-sub_voxs[si]]), seedCorMaps, PACKAGE="connectir")
+                        
+            # glm
+            fit <- qlm_fit(seedCorMaps, evs, shared=FALSE)
+            res <- qlm_contrasts(fit, cons, dd, shared=FALSE)
+            
+            for (ci in 1:ncons)
+                tmp_outmats[[ci]][,si] <- res$tvalues[ci,]
+            
+            rm(seedCorMaps, fit, res); gc(FALSE)
+            
+            return(NULL)
+        }
+        
+        llply(1:sub_nvoxs, sfun, .parallel=parallel, .progress=progress, .inform=T)
+        
+        # copy over temp data
+        vcat(verbose, '....save')
+        for (ci in 1:ncons) {
+            sub_outmat <- sub.big.matrix(outmats[[ci]], firstCol=first, lastCol=last)
+            deepcopy(tmp_outmats[[ci]], sub_outmat)
+            if (!is.null(bp)) {
+                flush(sub_outmat); flush(outmats[[ci]])
+                outmats[[ci]] <- free.memory(outmats[[ci]], bp)
+            }
+        }
+        
+        rm(subs.cormaps, tmp_outmats); gc(FALSE)
+    }
+    
+    vcat("...%i blocks", blocks$n)
+    for (bi in 1:blocks$n)
+        gfun(bi)
+    
+    invisible(outmats)
+}
