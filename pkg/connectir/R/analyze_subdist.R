@@ -12,7 +12,7 @@ svm_subdist_cross <- function(Xs, y, memlimit=2, bpath=NULL,
         stop("input Xs must be big matrix")
     if (!is.shared(Xs))
         stop("input Xs must be a SHARED big matrix")
-    if (is.file.backed(Xs) && is.null(bpath))
+    if (is.filebacked(Xs) && is.null(bpath))
         stop("must specify bpath when Xs input is file-backed")
     if (!is.null(bpath) && !file.exists(bpath))
         vstop("couldn't find backing path '%s'", bpath)
@@ -40,7 +40,7 @@ svm_subdist_cross <- function(Xs, y, memlimit=2, bpath=NULL,
         fit$tot.accuracy
     }
     
-    vcat("...%i blocks", blocks$n)
+    vcat(verbose, "...%i blocks", blocks$n)
     dmat <- matrix(0, nsubs, nsubs)
     for (bi in 1:blocks$n) {
         vcat(verbose, "...block %i", bi)
@@ -49,7 +49,7 @@ svm_subdist_cross <- function(Xs, y, memlimit=2, bpath=NULL,
             X <- sub.big.matrix(Xs, firstCol=i, lastCol=i, backingpath=bpath)
             dcopy(N=nr, Y=dmat, X=X)
             fun1(dmat, y, cross, kernel, ...)
-        })
+        }, .progress=progress, .inform=verbose, .parallel=parallel)
         accuracies <- c(accuracies, unlist(res))
         Xs <- free.memory(Xs, bpath)
         gc(FALSE, TRUE)
