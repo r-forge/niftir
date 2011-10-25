@@ -180,8 +180,8 @@ wrap_glm <- function(func_files, mask_file, ev_file, contrast_file,
     }
     tmp <- big.matrix(nrow(evs), ncol(evs), type="double", shared=shared)
     tmp[,] <- evs; evs <- tmp; rm(tmp)
-    tmp <- big.matrix(nrow(cons), ncol(cons), type="double", shared=shared)
-    tmp[,] <- cons; cons <- tmp; rm(tmp)
+    #tmp <- big.matrix(nrow(cons), ncol(cons), type="double", shared=shared)
+    #tmp[,] <- cons; cons <- tmp; rm(tmp)
     k <- qlm_rank(evs)
     if (k < ncol(evs))
         vstop("EV file '%s' is rank deficient", ev_file)

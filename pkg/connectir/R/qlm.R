@@ -183,6 +183,8 @@ vox_glm <- function(funclist, evs, cons, blocksize, outmats, bp=NULL,
                     verbose=TRUE, parallel=FALSE, shared=parallel, 
                     ztransform=FALSE)
 {
+    if (!is.matrix(cons))
+        stop("cons must be a matrix")
     vcat(verbose, "...setup")
     nsubs <- length(funclist)
     nvoxs <- ncol(funclist[[1]])
