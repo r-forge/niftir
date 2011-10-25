@@ -485,3 +485,23 @@ get_gcor_limit <- function(blocksize, mem_limit, nvoxs, ntpts, verbose=TRUE)
     
     return(blocksize)
 }
+
+get_sdist_analysis_limit <- function(mem_limit, Xs) {
+    nvoxs <- ncol(Xs)
+    nr <- nrow(Xs)
+    mem_dmat <- n2gb(nr)
+    mem_result <- n2gb(nvoxs)
+    nforks <- getDoParWorkers()
+    f <- function(v) mem_limit - mem_result - nforks*mem_dmat - v*nforks*mem_dmat
+    if (f(nvoxs) > 0) {
+        blocksize <- nvoxs
+    } else {
+        if (!is.file.backed(Xs))
+            stop("not enough memory...you might want to give file-backed subject distances as input")        
+        blocksize <- tryCatch(floor(uniroot(f, c(2, nvoxs))$root), error=function(ex) NA)
+        if (is.na(blocksize))
+            stop("not enough memory")
+    }
+    
+    return(blocksize)
+}

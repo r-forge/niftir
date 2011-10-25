@@ -199,7 +199,7 @@ vox_glm <- function(funclist, evs, cons, blocksize, outmats, bp=NULL,
     if (!is.shared(outmats[[1]]))
         stop("outmats must be shared")
     if (is.filebacked(outmats[[1]]) && is.null(bp))
-        stop("backingpath (bp) must be given if outmats are file-baced")
+        stop("backingpath (bp) must be given if outmats are file-backed")
     if (length(outmats) != ncons)
         stop("cons doesn't match with outmats")
     
@@ -245,7 +245,7 @@ vox_glm <- function(funclist, evs, cons, blocksize, outmats, bp=NULL,
         # copy over temp data
         vcat(verbose, '....save')
         for (ci in 1:ncons) {
-            sub_outmat <- sub.big.matrix(outmats[[ci]], firstCol=first, lastCol=last)
+            sub_outmat <- sub.big.matrix(outmats[[ci]], firstCol=first, lastCol=last, backingpath=bp)
             deepcopy(x=tmp_outmats[[ci]], y=sub_outmat)
             if (!is.null(bp)) {
                 flush(sub_outmat); flush(outmats[[ci]])
