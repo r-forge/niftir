@@ -496,7 +496,7 @@ get_sdist_analysis_limit <- function(mem_limit, Xs) {
     if (f(nvoxs) > 0) {
         blocksize <- nvoxs
     } else {
-        if (!is.file.backed(Xs))
+        if (!is.filebacked(Xs))
             stop("not enough memory...you might want to give file-backed subject distances as input")        
         blocksize <- tryCatch(floor(uniroot(f, c(2, nvoxs))$root), error=function(ex) NA)
         if (is.na(blocksize))
