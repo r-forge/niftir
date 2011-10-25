@@ -189,7 +189,7 @@ vox_glm <- function(funclist, evs, cons, blocksize, outmats, bp=NULL,
     voxs <- 1:nvoxs
     ncons <- nrow(cons)
     blocks <- niftir.split.indices(1, nvoxs, by=blocksize)
-    progress <- ifelse(verbosity>0, "text", "none")
+    progress <- ifelse(verbose, "text", "none")
     k <- qlm_rank(evs)
     if (k < ncol(evs))
         stop("EV matrix is rank deficient")
