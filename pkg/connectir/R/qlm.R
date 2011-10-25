@@ -203,7 +203,7 @@ vox_glm <- function(funclist, evs, cons, blocksize, outmats, bp=NULL,
     if (length(outmats) != ncons)
         stop("cons doesn't match with outmats")
     
-    gfun <- function(bi) {
+    gfun <- function(bi, outmats) {
         vcat(verbose, "...block %i", bi)
         
         first <- blocks$starts[bi]; last <- blocks$ends[bi]
@@ -254,11 +254,13 @@ vox_glm <- function(funclist, evs, cons, blocksize, outmats, bp=NULL,
         }
         
         rm(subs.cormaps, tmp_outmats); gc(FALSE)
+        
+        return(outmats)
     }
     
     vcat(verbose, "...%i blocks", blocks$n)
     for (bi in 1:blocks$n)
-        gfun(bi)
+        outmats <- gfun(bi, outmats)
     
     invisible(outmats)
 }
