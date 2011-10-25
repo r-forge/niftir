@@ -206,6 +206,8 @@ wrap_glm <- function(func_files, mask_file, ev_file, contrast_file,
             system(sprintf("rm %s/*", outdir))
             system(sprintf("rmdir %s", outdir))
         }
+    } else {
+        dir.create(outdir)
     }
     ## copy evs
     file.copy(ev_file, file.path(outdir, "model_evs.txt"))
@@ -216,7 +218,7 @@ wrap_glm <- function(func_files, mask_file, ev_file, contrast_file,
     ## soft-link functionals
     dir.create(file.path(outdir, "infuncs"))
     for (i in 1:length(func_files)) {
-        file.link(func_files[i], file.path(outdir, "infuncs", 
+        file.symlink(func_files[i], file.path(outdir, "infuncs", 
                                            sprintf("func%04i.nii.gz", i)))
     }
     ## create output matrices
