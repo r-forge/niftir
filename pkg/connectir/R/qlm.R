@@ -198,16 +198,18 @@ vox_glm <- function(funclist, evs, cons, blocksize, outmats, bp=NULL,
         stop("outmats must be shared")
     if (is.filebacked(outmats[[1]]) && is.null(bp))
         stop("backingpath (bp) must be given if outmats are file-baced")
+    if (length(outmats) != ncons)
+        stop("cons doesn't match with outmats")
     
     gfun <- function(bi) {
-        vcat("...block %i", bi)
+        vcat(verbose, "...block %i", bi)
         
         first <- blocks$starts[bi]; last <- blocks$ends[bi]
         sub_voxs <- first:last
         sub_nvoxs <- length(sub_voxs)
         
         tmp_outmats <- lapply(1:ncons, function(x) {
-                            big.matrix(nvoxs, sub_nvoxs, type="double", shared=shared)
+                            big.matrix(nvoxs, sub_nvoxs, init=0, type="double", shared=shared)
                         })
         
         # correlate
@@ -229,7 +231,7 @@ vox_glm <- function(funclist, evs, cons, blocksize, outmats, bp=NULL,
             res <- qlm_contrasts(fit, cons, dd, shared=FALSE)
             
             for (ci in 1:ncons)
-                tmp_outmats[[ci]][,si] <- res$tvalues[ci,]
+                tmp_outmats[[ci]][-voxs[sub_voxs[si]],si] <- res$tvalues[ci,]
             
             rm(seedCorMaps, fit, res); gc(FALSE)
             
@@ -242,7 +244,7 @@ vox_glm <- function(funclist, evs, cons, blocksize, outmats, bp=NULL,
         vcat(verbose, '....save')
         for (ci in 1:ncons) {
             sub_outmat <- sub.big.matrix(outmats[[ci]], firstCol=first, lastCol=last)
-            deepcopy(tmp_outmats[[ci]], sub_outmat)
+            deepcopy(x=tmp_outmats[[ci]], y=sub_outmat)
             if (!is.null(bp)) {
                 flush(sub_outmat); flush(outmats[[ci]])
                 outmats[[ci]] <- free.memory(outmats[[ci]], bp)
@@ -252,7 +254,7 @@ vox_glm <- function(funclist, evs, cons, blocksize, outmats, bp=NULL,
         rm(subs.cormaps, tmp_outmats); gc(FALSE)
     }
     
-    vcat("...%i blocks", blocks$n)
+    vcat(verbose, "...%i blocks", blocks$n)
     for (bi in 1:blocks$n)
         gfun(bi)
     

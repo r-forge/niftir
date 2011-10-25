@@ -92,3 +92,12 @@ test_that("wrapper vbca works with ztransform", {
     expect_that(ref, is_equivalent_to(as.matrix(comp)))
 })
 
+test_that("wrapper vbca works with ztransform when taking a subsample", {
+    dat <- create_data(nc=5)
+    ref <- atanh(cor(dat$m[,1:3], dat$m))
+    comp <- vbca2(dat$bm, c(1,3), ztransform=TRUE)
+    diag(ref) <- 0
+    diag(comp) <- 0
+    expect_that(ref, is_equivalent_to(as.matrix(comp)))
+})
+
