@@ -260,9 +260,13 @@ wrap_glm <- function(func_files, mask_file, ev_file, contrast_file,
     ## get contrasts (results)
     ## save contrasts and clear file-backed stuff
     vcat(verbose, "...GLMing")
+    start.time <- Sys.time()
     vox_glm(funclist, evs, cons, blocksize, outmats=tmats, bp=outdir, 
             verbose=verbose, parallel=parallel, shared=shared, 
             ztransform=ztransform)
+    end.time <- Sys.time()
+    vcat(verbose, "GLMing is done! It took: %.2f minutes\n", 
+         as.numeric(end.time-start.time, units="mins"))
     
     invisible(tmats)
 }
