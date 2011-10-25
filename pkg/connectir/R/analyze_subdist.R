@@ -42,6 +42,7 @@ svm_subdist_cross <- function(Xs, y, memlimit=2, bpath=NULL,
     
     vcat(verbose, "...%i blocks", blocks$n)
     dmat <- matrix(0, nsubs, nsubs)
+    accuracies <- c()
     for (bi in 1:blocks$n) {
         vcat(verbose, "...block %i", bi)
         first <- blocks$starts[bi]; last <- blocks$ends[bi]
