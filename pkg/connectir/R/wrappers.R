@@ -149,7 +149,7 @@ wrap_glm <- function(func_files, mask_file, ev_file, contrast_file,
                      outdir, overwrite=FALSE, 
                      blocksize=0, memlimit=4, 
                      verbose=TRUE, parallel=FALSE, shared=parallel, 
-                     ztranform=FALSE) 
+                     ztransform=FALSE) 
 {
     vcat(verbose, "Running GLM")
     
@@ -171,6 +171,7 @@ wrap_glm <- function(func_files, mask_file, ev_file, contrast_file,
     vcat(verbose, "...reading and setting up EV and contrast files")
     evs <- as.matrix(read.table(ev_file, header=T))
     cons <- as.matrix(read.table(contrast_file, header=T))
+    contrast_names <- rownames(cons)
     if (is.numeric(contrast_names))
         stop("must have row names for contrast matrix")
     if (ncol(evs) != ncol(cons)) {
