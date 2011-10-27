@@ -139,7 +139,7 @@ tryCatch({
       if (is.null(infiles2))
           infiles2 <- infiles1
       if (is.null(inmasks2))
-          inmasks2 <- inmasks2
+          inmasks2 <- inmasks1
   } else {
       use.set2 <- FALSE
   }
