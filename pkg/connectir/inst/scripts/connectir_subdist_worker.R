@@ -239,7 +239,7 @@ tryCatch({
           return(hdr$dim[[4]])
       })
       for (i in 1:nsubs) {
-          if (ntpts1[i] != ntpts2)
+          if (ntpts1[i] != ntpts2[i])
               vstop("subject #%i does not have the same # of timepoints for the first and second functional datasets", i)
       }
   } else {
