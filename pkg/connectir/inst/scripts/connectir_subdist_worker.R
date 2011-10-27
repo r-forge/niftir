@@ -305,7 +305,7 @@ tryCatch({
   
   vcat(opts$verbose, "Computing subject distances")
   if (use.set2) {
-      checks <- compute_subdist3_wrapper(funclist1, dists_list, 
+      checks <- compute_subdist_wrapper3(funclist1, dists_list, 
                                         opts$blocksize, opts$superblocksize, 
                                         funclist2, 
                                         design_mat=opts$regress, 
