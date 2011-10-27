@@ -9,8 +9,8 @@ option_list <- list(
     make_option("--in2D1", action="store_true", default=FALSE, dest="in2d1", help="ask"), 
     make_option("--in2D2", action="store_true", default=FALSE, dest="in2d2", help="ask"), 
     make_option("--ztransform", action="store_true", default=FALSE, dest="ztransform", help="Fischer Z-Transform the correlations before calculating the distance between participants"),
-    make_option("--brainmask1", type="character", default=NULL, help="When computing each whole-brain connectivity map, this mask will restrict which parts of the whole-brain are to be considered", metavar="file", dest="brainmask"),
-    make_option("--brainmask2", type="character", default=NULL, help="When computing each whole-brain connectivity map, this mask will restrict which parts of the whole-brain are to be considered only for --infuncs2", metavar="file"), 
+    make_option("--brainmask1", type="character", default=NULL, help="When computing each whole-brain connectivity map, this mask will restrict which parts of the whole-brain are to be considered", metavar="file", dest="brainmask1"),
+    make_option("--brainmask2", type="character", default=NULL, help="When computing each whole-brain connectivity map, this mask will restrict which parts of the whole-brain are to be considered only for --infuncs2", metavar="file", dest="brainmask2"), 
     make_option("--regress", type="character", default=NULL, help="A design matrix (space delimeted file where first row is a header) containing variables to regress out of each voxel's whole-brain connectivity maps before comparing distances between subjects", metavar="file"),
     make_option("--bg", type="character", default=NULL, help="Background image (e.g., MNI152 standard brain) upon which later results might be overlaid", metavar="file"), 
     make_option("--blocksize", type="integer", default=0, help="How many sets of voxels should be used in each iteration of computing the correlation (0 = auto) [default: %default]", metavar="number"),
@@ -94,7 +94,7 @@ tryCatch({
   ###
 
   vcat(opts$verbose, "Checking optional inputs")
-  for (optname in c("brainmask", "bg", "regress", "infuncs2", "inmasks2", "brainmask2")) {
+  for (optname in c("brainmask1", "bg", "regress", "infuncs2", "inmasks2", "brainmask2")) {
       arg <- opts[[optname]]
       if (!is.null(arg)) {
         if(!file.exists(arg))
@@ -207,7 +207,7 @@ tryCatch({
       )
   }
   
-  masks1 <- get_masks(inmasks1, opts$brainmask, opts$verbose)
+  masks1 <- get_masks(inmasks1, opts$brainmask1, opts$verbose)
   if (use.set2)
       masks2 <- get_masks(inmasks2, opts$brainmask2, opts$verbose)
   else

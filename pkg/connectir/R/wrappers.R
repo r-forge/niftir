@@ -1,5 +1,10 @@
 # Higher-level wrappers around certain R functions
 
+#roi_mean_wrapper <- function(func_file, roi_file, 
+#                              out_file=NULL, outtype="nifti", 
+#                              to_
+#                             )
+
 wrap_gcor <- function(func_file, mask_file, out_file=NULL, 
                       blocksize=0, memlimit=4, 
                       to_return=FALSE, overwrite=FALSE, 

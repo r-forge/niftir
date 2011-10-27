@@ -1,3 +1,11 @@
+# txt2nifti <- function()
+
+roi_mean <- function(infunc, rois) {
+    uniqs <- unique(rois)
+    n <- length(uniqs)
+    sapply(uniqs, function(x) rowMeans(infunc[,rois==x]))
+}
+
 load_func_data <- function(fnames) lapply(fnames, read.big.nifti4d)
 
 create_maskoverlap_fromfuncs <- function(funcs) {
