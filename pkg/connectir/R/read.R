@@ -14,9 +14,16 @@ read.big.matlab <- function(file, ...) {
     as.big.matrix(m[[1]], ...)
 }
 
+# assume that rows are time-points & columns are nodes/voxels
+read.big.nifti2d <- function(file, ...) {
+    img <- read.nifti.image(file)
+    bigmat <- as.big.matrix(img, ...)
+    return(bigmat)
+}
+
 # Read input data as big matrix
 gen_big_reader <- function(intype, ...) {
-    choices <- c("nifti4d", "tab", "space", "csv", "matlab")
+    choices <- c("nifti2d", "nifti4d", "tab", "space", "csv", "matlab")
     if (!(intype %in% choices))
         stop("unrecognized input type: ", intype)
     
@@ -58,7 +65,7 @@ detect_ftypes <- function(fnames, force.type=NULL, verbose=TRUE) {
     })
     
     if (any(formats != formats[1]))
-        warning("not all extensions are ", formats[1], " like in ", fnames[1])
+        warning("not all extensions are ", formats[1], " like in ", fnames[1], immediate.=TRUE)
     if (!is.null(force.type) && any(formats != force.type))
         vcat(verbose, "not all extensions are the same as the forced one ", force.type)
     

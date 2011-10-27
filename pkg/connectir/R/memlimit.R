@@ -6,7 +6,7 @@ mb2n <- function(x) x/8*1024^2
 
 # opts => list(blocksize=0, memlimit=6, verbose=TRUE)
 # return opts
-get_subdist_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts) {
+get_subdist_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts, nvoxs2=NULL) {
     vcat(opts$verbose, "Determining memory demands")
 
     nforks <- getDoParWorkers()
@@ -14,7 +14,13 @@ get_subdist_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts) {
     
     # RAM for functionals
     mem_used4func <- sum(sapply(subs.ntpts, function(x) n2gb(x*nvoxs)))
-    vcat(opts$verbose, "...%.2f GB used for functional data", mem_used4func)
+    if (!is.null(nvoxs2)) {
+        vcat(opts$verbose, "...%.2f GB used for 1st set of functional data", mem_used4func)
+        mem_used4func2 <- sum(sapply(subs.ntpts, function(x) n2gb(x*nvoxs2)))
+        vcat(opts$verbose, "...%.2f GB used for 2nd set of functional data", mem_used4func2)
+        mem_used4func <- mem_used4func + mem_used4func2
+    } 
+    vcat(opts$verbose, "...%.2f GB used for all functional data", mem_used4func)
     
     # RAM for 2 distance matrices
     mem_by_dists <- n2gb(nsubs^2 * 2)

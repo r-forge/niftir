@@ -52,6 +52,7 @@ svm_subdist_cross <- function(Xs, y, memlimit=2, bpath=NULL,
                                 verbose=T, parallel=F, ...) 
 {
     vcat(verbose, "SVM on Subject Distances")
+    library(e1071)
         
     # TODO: test this function
     FUN <- function(dmat, y, cross, kernel, ...) {

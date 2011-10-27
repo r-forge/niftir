@@ -116,3 +116,49 @@ vbca_batch2 <- function(subs.bigmats, cols, ztransform=FALSE, ...) {
     lapply(subs.bigmats, function(x) vbca2(x, cols, ztransform, ...))
 }
 
+# TODO:
+# allow code to do correlation between two different time-series objects
+# for now allow that will look at every single voxel
+# but for the second input can be some ROI type thing...
+
+vbca3 <- function(inmat1, incols1=c(1,ncol(inmat1)), 
+                  inmat2=NULL, incols2=NULL, 
+                  ztransform=FALSE, 
+                  outmat=NULL, outcols=c(1,incols2[2]), 
+                  ...)
+{
+    if (is.null(inmat2) && !is.null(incols2))
+        stop("cannot specify incols2 without specifying inmat2")
+    if (is.null(inmat2))
+        inmat2 <- inmat1
+    if (is.null(incols2))
+        incols2 <- c(1,ncol(inmat2))
+    
+    if (length(incols1)!=2 || length(incols2)!=2 || length(outcols)!=2)
+        stop("incols and outcols must be a vector of length 2: c(firstCol, lastCol)")
+    
+    if (is.null(outmat))
+        z_lastCol <- NULL
+    else
+        z_lastCol <- outcols[2]
+    
+    outmat <- big_cor(x=inmat1, y=inmat2, z=outmat, 
+	                  x_firstCol=incols1[1], x_lastCol=incols1[2], 
+	                  y_firstCol=incols2[1], y_lastCol=incols2[2], 
+	                  z_firstCol=outcols[1], z_lastCol=z_lastCol, 
+	                  ...)
+	if (ztransform) atanh(outmat)
+	
+	invisible(outmat)
+}
+
+vbca_batch3 <- function(subs.bigmats1, cols1, subs.bigmats2=NULL, cols2=NULL, 
+                        ztransform=FALSE, ...) 
+{
+    if (is.null(subs.bigmats2)) {
+        lapply(subs.bigmats1, function(x) vbca2(x, cols1, ztransform, ...))
+    } else {
+        mapply(function(x, y) vbca3(x, cols1, y, cols2, ztransform, ...), 
+                x=subs.bigmats1, y=subs.bigmats2)
+    }
+}

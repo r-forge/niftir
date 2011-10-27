@@ -106,40 +106,82 @@ check_subdist <- function(sdir) {
 
 # This creates a new subdist directory and relevant files
 # and returns a new subdist object
-create_subdist <- function(outdir, infiles, masks, opts, ...) {
+create_subdist <- function(outdir, infiles1, masks1, infiles2, masks2, opts, ...) {
     if (file.exists(outdir))
         stop("output directory cannot exist")
     
+    if (is.null(infiles2) || is.null(masks2))
+        use.set2 <- FALSE
+    else
+        use.set2 <- TRUE
+    
     infuncdir <- file.path(outdir, "input_funcs")
     inmaskdir <- file.path(outdir, "input_masks")
+    
+    if (use.set2) {
+        infuncdir2 <- file.path(outdir, "input_funcs2")
+        inmaskdir2 <- file.path(outdir, "input_masks2")
+    }
     
     # Create directories
     vcat(opts$verbose, "...creating directories in %s", outdir)
     dir.create(outdir)
     dir.create(infuncdir)
     dir.create(inmaskdir)
+    if (use.set2) {
+        dir.create(infuncdir2)
+        dir.create(inmaskdir2)
+    }
     
     # Create symlinks for the input funcs
     if (!opts$"no-link-functionals") {
         vcat(opts$verbose, "...creating soft links to subject functional data")
-        for (i in 1:length(infiles)) {
-            from <- infiles[i]
+        for (i in 1:length(infiles1)) {
+            from <- infiles1[i]
             to <- file.path(infuncdir, sprintf("scan%04i.%s", i, getext(from)))
             file.symlink(from, to)
+        }
+        if (use.set2) {
+            for (i in 1:length(infiles2)) {
+                from <- infiles2[i]
+                to <- file.path(infuncdir2, sprintf("scan%04i.%s", i, getext(from)))
+                file.symlink(from, to)
+            }
         }
     }
     
     # Get a header file from the first functional
-    hdr <- read.nifti.header(infiles[1])
-    hdr$dim <- hdr$dim[1:3]
-    hdr$pixdim <- hdr$pixdim[1:3]
+    hdr <- read.nifti.header(infiles1[1])
+    if (length(hdr$dim) == 4) {
+        hdr$dim <- hdr$dim[1:3]
+        hdr$pixdim <- hdr$pixdim[1:3]
+    }
+    
+    if (use.set2) {
+        hdr2 <- read.nifti.header(infiles2[1])
+        if (length(hdr2$dim) == 4) {
+            hdr2$dim <- hdr2$dim[1:3]
+            hdr2$pixdim <- hdr2$pixdim[1:3]
+        }
+    }
     
     # Write the brain masks
     vcat(opts$verbose, "...saving masks")
-    tmpnames <- names(masks)
-    for (i in 1:length(masks)) {
-        outfile <- file.path(inmaskdir, sprintf("%s.nii.gz", tmpnames[[i]]))
-        write.nifti(masks[[i]], hdr, outfile=outfile, odt="char")
+    tmpnames <- names(masks1)
+    for (i in 1:length(masks1)) {
+        if (!is.null(masks1[[i]])) {
+            outfile <- file.path(inmaskdir, sprintf("%s.nii.gz", tmpnames[[i]]))
+            write.nifti(masks1[[i]], hdr, outfile=outfile, odt="char")
+        }
+    }
+    if (use.set2) {
+        tmpnames <- names(masks2)
+        for (i in 1:length(masks2)) {
+            if (!is.null(masks2[[i]])) {
+                outfile <- file.path(inmaskdir2, sprintf("%s.nii.gz", tmpnames[[i]]))
+                write.nifti(masks2[[i]], hdr2, outfile=outfile, odt="char")
+            }
+        }
     }
     
     # Copy over standard brain
@@ -150,13 +192,14 @@ create_subdist <- function(outdir, infiles, masks, opts, ...) {
     # Save options
     vcat(opts$verbose, "...saving options")
     opts$outdir <- outdir
-    opts$infiles <- infiles
+    opts$infiles <- infiles1
+    opts$infiles2 <- infiles2
     save(opts, file=file.path(outdir, "options.rda"))
     
     # Create file-backed subject distances and gower matrices
     vcat(opts$verbose, "...creating file-backed distance matrices")
-    nsubs <- length(infiles)
-    nvoxs <- sum(masks$brainmask)
+    nsubs <- length(infiles1)
+    nvoxs <- sum(masks1$brainmask)
     sdist <- big.matrix(nsubs^2, nvoxs, type="double", 
                         backingpath=outdir, 
                         backingfile="subdist.bin", 
@@ -192,7 +235,6 @@ compute_subdist_wrapper <- function(sub.funcs, list.dists,
         if (k < ncol(design_mat))
             stop("design matrix is rank deficient")
     }
-    
     
     vcat(verbose, "will run through %i large blocks", superblocks$n)
     for (i in 1:superblocks$n) {
@@ -550,7 +592,7 @@ filter_subdist_fb <- function(fname, which.subs, dist.paths, memlimit,
     ## setup
     outfile <- file.path(dist.paths$bpath, dist.paths$dfile)
     if (file.exists(outfile) && !overwrite)
-        vstop("output '%s' already exists", backingfile)
+        vstop("output '%s' already exists", dist.paths$bpath)
     ## create
     sdist2 <- big.matrix(nr2, nc, type=type, 
                          backingpath=dist.paths$bpath, 

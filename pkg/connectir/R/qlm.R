@@ -159,7 +159,7 @@ setMethod('qlm_contrasts',
 
 # Checks design matrix
 # and if rank deficient removes offending columns
-check_design_matrix <- function(X, to.quit=FALSE) {
+check_design_matrix <- function(X, to.quit=FALSE, verbose=TRUE) {
     qrhs <- qr(X)
     if (qrhs$rank < ncol(X)) {
         if (to.quit)
@@ -171,9 +171,8 @@ check_design_matrix <- function(X, to.quit=FALSE) {
         vcat(verbose, " will drop cols %s (%s) from design matrix", 
                         bad_cols, bad_colnames)
         
-        X <- rhs[, X$pivot, drop = FALSE]
-        X <- rhs[, 1:X$rank, drop = FALSE]
-
+        X <- X[, X$pivot, drop = FALSE]
+        X <- X[, 1:X$rank, drop = FALSE]
     }
     
     return(X)
