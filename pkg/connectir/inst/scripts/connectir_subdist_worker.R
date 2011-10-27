@@ -324,9 +324,9 @@ tryCatch({
   if (length(hdr$dim) == 4) {
       hdr$dim <- hdr$dim[1:3]; hdr$pixdim <- hdr$pixdim[1:3]
   }
-  write.nifti(checks$sdist, hdr, brainmask, odt="char", 
+  write.nifti(checks$sdist, hdr, masks1$brainmask, odt="char", 
               outfile=file.path(outdir, "zcheck_subdist.nii.gz"))
-  write.nifti(checks$gdist, hdr, brainmask, odt="char", 
+  write.nifti(checks$gdist, hdr, masks1$brainmask, odt="char", 
               outfile=file.path(outdir, "zcheck_subdist_gower.nii.gz"))
 
   end.time <- Sys.time()
