@@ -107,10 +107,12 @@ tryCatch({
   # Are we going to use a 2nd set of functionals?
   if (!is.null(infiles2) || !is.null(opts$brainmask2)) {
       use.set2 <- TRUE
+      vcat(opts$verbose, "...using 2nd set of functional images")
       if (is.null(infiles2))
           infiles2 <- infiles1
   } else {
       use.set2 <- FALSE
+      vcat(opts$verbose, "...NOT using 2nd set of functional images")
   }
   
   if (opts$debug) {
@@ -173,26 +175,24 @@ tryCatch({
   # Set Memory Demands
   ###
   
+  get_tpts <- function(x) {
+      hdr <- read.nifti.header(x)
+      n <- length(hdr$dim)
+      if (n == 4) {
+          return(hdr$dim[4])
+      } else if (n == 2) {
+          return(hdr$dim[1])
+      } else {
+          vstop("Input functional file '%s' must be 2 or 4 dimensions but is %i dimensional", x, n)
+      }
+  }
+  
   nsubs <- length(infiles1)
   nvoxs1 <- sum(mask1)
-  ntpts1 <- sapply(infiles1, function(x) {
-      hdr <- read.nifti.header(x)
-      if (length(hdr$dim) != 4) {
-          vstop("Input functional file '%s' must be 4 dimensions but is %i dimensional", 
-                x, length(hdr$dim))
-      }
-      return(hdr$dim[[4]])
-  })
+  ntpts1 <- sapply(infiles1, get_tpts)
   if (use.set2) {
       nvoxs2 <- sum(mask2)
-      ntpts2 <- sapply(infiles2, function(x) {
-          hdr <- read.nifti.header(x)
-          if (length(hdr$dim) != 4) {
-              vstop("Input functional file '%s' must be 4 dimensions but is %i dimensional", 
-                    x, length(hdr$dim))
-          }
-          return(hdr$dim[[4]])
-      })
+      ntpts2 <- sapply(infiles2, get_tpts)
       for (i in 1:nsubs) {
           if (ntpts1[i] != ntpts2[i])
               vstop("subject #%i does not have the same # of timepoints for the first and second functional datasets", i)
