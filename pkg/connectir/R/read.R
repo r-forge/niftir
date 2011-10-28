@@ -207,7 +207,7 @@ load_and_mask_func_data2 <- function(xs, read_fun, mask=NULL, verbose=FALSE, ...
     return(dat.list)
 }
 
-check_func_data <- function(xs, dat.list, verbose=FALSE, parallel=FALSE) 
+check_func_data <- function(xs, dat.list, extra=FALSE, verbose=FALSE, parallel=FALSE) 
 {
     vcat(verbose, "checking data")
     progress <- ifelse(verbose, "text", "none")
@@ -225,12 +225,22 @@ check_func_data <- function(xs, dat.list, verbose=FALSE, parallel=FALSE)
             return(1)
         }
         
-        # There can't be any NaNs
-        col.nas <- colna(dat.list[[i]])>0
-        if (any(col.nas)) {
-            w <- paste(which(col.nas), collapse=", ")
-            vcat(verbose, "%s has NaNs in nodes %s", fname, w)
-            return(2)
+        if (extra) {
+            # There can't be any NaNs
+            col.nas <- colna(dat.list[[i]])>0
+            if (any(col.nas)) {
+                w <- paste(which(col.nas), collapse=", ")
+                vcat(verbose, "%s has NaNs in nodes %s", fname, w)
+                return(2)
+            }
+            
+            # Extra check (ensure standard deviation greater than 0)
+            col.sds <- colsd(dat.list[[1]])==0
+            if (any(col.sds)) {
+                w <- paste(which(col.sds), collapse=", ")
+                vcat(verbose, "%s has 0 sd in nodes %s", fname, w)
+                return(3)
+            }
         }
         
         return(0)
