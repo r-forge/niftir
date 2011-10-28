@@ -90,7 +90,7 @@ tryCatch({
   }
   
   # Prepare 2nd set of input functional filenames
-  if (!is.null(opts$infiles2)) {
+  if (!is.null(opts$infuncs2)) {
       infiles2 <- sapply(as.character(read.table(opts$infuncs2)[,1]), function(fp) {
             if (!file.exists(fp))
                 stop("One of the input functionals does not exist: ", fp)
