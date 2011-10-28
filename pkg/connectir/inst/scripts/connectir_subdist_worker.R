@@ -59,15 +59,15 @@ tryCatch({
   outdir <- abspath(args[1])
   if (file.exists(outdir) && !opts$overwrite)
       stop("Output directory '", outdir, "' already exists, you can use --overwrite")
-  if (is.null(opts$infuncs))
+  if (is.null(opts$infuncs1))
       stop("You must specify the -i/--infuncs option")
-  if (!file.exists(opts$infuncs))
+  if (!file.exists(opts$infuncs1))
       stop("The file specified by -i/--infuncs does not exist")
   if (is.null(opts$bg))
       stop("Please specify background image with --bg option")
   
   # Prepare input functional filenames
-  infiles1 <- sapply(as.character(read.table(opts$infuncs)[,1]), function(fp) {
+  infiles1 <- sapply(as.character(read.table(opts$infuncs1)[,1]), function(fp) {
       if (!file.exists(fp))
           stop("One of the input functionals does not exist: ", fp)
       abspath(fp)
