@@ -28,7 +28,9 @@ get_subdist_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts, nvoxs2=NULL) {
          mem_by_dists*1024)
     
     # RAM for 1 connectivity map
-    n2onemap <- nvoxs * nsubs
+    if (is.null(nvoxs2))
+        nvoxs2 <- nvoxs
+    n2onemap <- nvoxs2 * nsubs
     mem_by_seeds <- n2gb(n2onemap)
     vcat(opts$verbose, "...%.1f MB used for 2 connectivity maps across %i subjects", 
          2*mem_by_seeds*1024, nsubs)
