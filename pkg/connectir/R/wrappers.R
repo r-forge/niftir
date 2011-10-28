@@ -1,6 +1,6 @@
 # Higher-level wrappers around certain R functions
 
-roi_mean_wrapper <- function(func_file, roi_file, 
+roi_mean_wrapper <- function(func_file, roi_file, mask_file=NULL, 
                               out_file=NULL, outtype="nifti", 
                               to_return=FALSE, overwrite=FALSE, 
                               verbose=TRUE)
@@ -22,11 +22,15 @@ roi_mean_wrapper <- function(func_file, roi_file,
     
     vcat(verbose, "...reading data")
     func <- read.big.nifti4d(func_file)
-    rois <- read.mask(roi_file)
+    rois <- read.mask(roi_file, NULL)
     hdr <- read.nifti.header(func)
+    if (!is.null(mask_file)) {
+        mask <- read.mask(mask_file) & rois!=0
+    } else {
+        mask <- rois!=0
+    }
     
     vcat(verbose, "...masking")
-    mask <- rois!=0
     func <- do.mask(func, mask)
     rois <- rois[mask]
     
