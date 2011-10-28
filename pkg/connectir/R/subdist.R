@@ -148,8 +148,8 @@ create_subdist <- function(outdir, infiles1, mask1, infiles2, mask2, opts, ...) 
         hdr$dim <- hdr$dim[1:3]
         hdr$pixdim <- hdr$pixdim[1:3]
     } else if (length(hdr$dim) == 2) {
-        hdr$dim <- hdr$dim[2]
-        hdr$pixdim <- hdr$pixdim[2]
+        hdr$dim <- c(hdr$dim[2], 1)
+        hdr$pixdim <- c(hdr$pixdim[2], 1)
     }
     
     if (use.set2) {
