@@ -1,5 +1,3 @@
-# txt2nifti <- function()
-
 roi_mean <- function(infunc, rois) {
     uniqs <- unique(rois)
     n <- length(uniqs)

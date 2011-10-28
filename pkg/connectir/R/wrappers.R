@@ -1,12 +1,56 @@
 # Higher-level wrappers around certain R functions
 
-#roi_mean_wrapper <- function(func_file, roi_file, 
-#                              out_file=NULL, outtype="nifti", 
-#                              to_return=FALSE, overwrite=FALSE, 
-#                              verbose=TRUE)
-#{
-#  
-#}
+roi_mean_wrapper <- function(func_file, roi_file, 
+                              out_file=NULL, outtype="nifti", 
+                              to_return=FALSE, overwrite=FALSE, 
+                              verbose=TRUE)
+{
+    vcat(verbose, "Averaging mean signal in '%s' with '%s' ROIs", func_file, roi_file)
+    
+    if (!is.character(func_file) || !file.exists(func_file))
+        stop("Could not find functional file ", func_file)
+    if (!is.character(roi_file) || !file.exists(roi_file))
+        stop("Could not find roi file ", roi_file)
+    if (!is.null(out_file) && file.exists(out_file) && !overwrite) {
+        vcat(verbose, "File '%s' already exists, not re-running", out_file)
+        return(NULL)
+    }
+    if (is.null(out_file) && !to_return)
+        stop("You haven't specified an output file or asked to return the data")
+    if (!(outtype %in% c("nifti", "text")))
+        stop("output type can only be nifti or text")
+    
+    vcat(verbose, "...reading data")
+    func <- read.big.nifti4d(func_file)
+    rois <- read.mask(roi_file)
+    hdr <- read.nifti.header(func)
+    
+    vcat(verbose, "...masking")
+    mask <- rois!=0
+    func <- do.mask(func, mask)
+    rois <- rois[mask]
+    
+    vcat(verbose, "...averaging")
+    new_func <- roi_mean(func, rois)
+    
+    if (!is.null(out_file)) {
+        vcat(verbose, "...writing file '%s'", out_file)
+        if (outtype == "nifti") {
+            hdr$dim <- dim(new_func)
+            hdr$pixdim <- c(new_func[4], 1)
+            write.nifti(new_func, hdr, odt="float", 
+                        outfile=out_file, overwrite=overwrite)
+        } else if (outtype == "text") {
+            write.table(new_func, file=out_file, quote=FALSE, 
+                        row.names=F, col.names=unique(rois))
+        }
+    }
+    
+    if (to_return) {
+        vcat(verbose, "...returning data")
+        return(new_func)
+    }
+}
 
 wrap_gcor <- function(func_file, mask_file, out_file=NULL, 
                       blocksize=0, memlimit=4, 
@@ -87,7 +131,7 @@ wrap_reho <- function(func_file, mask_file, out_file=NULL,
     
     if (to_return) {
         vcat(verbose, "...returning data")
-        return(ret)
+        return(res)
     }
 }
 
