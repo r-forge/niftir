@@ -154,6 +154,8 @@ tryCatch({
               nvoxs <- prod(hdr$dim[-length(hdr$dim)])
           }
           mask <- rep(1, nvoxs)
+      } else {
+          mask <- read.mask(mask)
       }
       
       return(mask)
