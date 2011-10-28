@@ -29,13 +29,6 @@ void BigTanh(BigMatrix *pMat) {
 }
 
 template<typename CType, typename BMAccessorType>
-void BigAtanh(BigMatrix *pMat) {
-    BIG_FUNCTION_SETUP(BMAccessorType)
-    BIG_FUNCTION_LOOP_EVAL(double, CType, atanh)
-    return;
-}
-
-template<typename CType, typename BMAccessorType>
 void BigLog(BigMatrix *pMat) {
     BIG_FUNCTION_SETUP(BMAccessorType)
     BIG_FUNCTION_LOOP_EVAL(double, CType, log)
@@ -69,12 +62,39 @@ void BigPow(BigMatrix *pMat, SEXP exponent) {
     
     double value = NUMERIC_DATA(exponent)[0];
     
-    CType *pColumn;    \
-    for (i = 0; i < numCols; ++i) {   \
-        pColumn = m[i];   \
-        for (j = 0; j < numRows; ++j)     \
-            if (!ISNAN(pColumn[j]))   \
-                pColumn[j] = (CType)(pow((double)pColumn[j], value));  \
+    CType *pColumn;
+    for (i = 0; i < numCols; ++i) {
+        pColumn = m[i];
+        for (j = 0; j < numRows; ++j)
+            if (!ISNAN(pColumn[j]))
+                pColumn[j] = (CType)(pow((double)pColumn[j], value));
+    }
+    
+    return;
+}
+
+template<typename CType, typename BMAccessorType>
+void BigAtanh(BigMatrix *pMat, SEXP Rlimit) {
+    BIG_FUNCTION_SETUP(BMAccessorType)
+    
+    double limit = NUMERIC_DATA(Rlimit)[0];
+    double tmp;
+    
+    CType *pColumn;
+    for (i = 0; i < numCols; ++i) {
+        pColumn = m[i];
+        for (j = 0; j < numRows; ++j) {
+            if (!ISNAN(pColumn[j])) {
+                tmp = (CType)(atanh((double)pColumn[j]));
+                if (isnan(tmp) || isinf(tmp)) {
+                    if ((double)pColumn[j]>0)
+                        tmp = limit;
+                    else
+                        tmp = -1*limit;
+                }
+                pColumn[j] = tmp;
+            }
+        }
     }
     
     return;
@@ -129,11 +149,6 @@ extern "C" {
 
     SEXP BigTanhMain(SEXP bigaddr) {       
         CALL_CPLUSPLUS_FUN_NOVALUE(BigTanh)
-        return R_NilValue;
-    }
-
-    SEXP BigAtanhMain(SEXP bigaddr) {
-        CALL_CPLUSPLUS_FUN_NOVALUE(BigAtanh)
         return R_NilValue;
     }
     
@@ -205,7 +220,11 @@ extern "C" {
           CALL_CPLUSPLUS_FUN_ONEVALUE(BigPow)
           return R_NilValue;
       }
-
+      
+      SEXP BigAtanhMain(SEXP bigaddr, SEXP arg) {
+          CALL_CPLUSPLUS_FUN_ONEVALUE(BigAtanh)
+          return R_NilValue;
+      }
 }
 
 #endif //BIGEXTENSIONS_MATH

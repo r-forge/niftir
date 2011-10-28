@@ -208,11 +208,11 @@ tryCatch({
   }
   
   masks1 <- get_masks(inmasks1, opts$brainmask1, opts$verbose)
-  if (use.set2)
+  if (use.set2) {
       masks2 <- get_masks(inmasks2, opts$brainmask2, opts$verbose)
-  else
+  } else {
       masks2 <- NULL
-  
+  }
   
   ###
   # Set Memory Demands

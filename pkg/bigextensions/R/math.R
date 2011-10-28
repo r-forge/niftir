@@ -8,7 +8,8 @@ setMethod('tanh',
 setMethod('atanh', 
     signature(x="big.matrix"),
     function(x) {
-        .Call("BigAtanhMain", x@address)
+        limit <- atanh(1-10^(-.Machine$double.exponent))
+        .Call("BigAtanhMain", x@address, as.double(limit))
     }
 )
 

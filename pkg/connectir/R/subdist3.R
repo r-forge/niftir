@@ -158,7 +158,7 @@ compute_subdist_worker3 <- function(sub.funcs1, firstSeed, lastSeed, sub.funcs2,
                                     type="double", shared=FALSE, ...)
 {
     nsubs <- length(sub.funcs1)
-    nvoxs <- ncol(sub.funcs1[[1]])
+    nvoxs <- ncol(sub.funcs2[[1]])
     nseeds <- lastSeed - firstSeed + 1
     ndists <- lastDist - firstDist + 1
     if (nseeds != ndists)
@@ -171,10 +171,12 @@ compute_subdist_worker3 <- function(sub.funcs1, firstSeed, lastSeed, sub.funcs2,
                                 ztransform=ztransform, 
                                 type=type, shared=shared, ...)
     
-    seedCorMaps <- big.matrix(nvoxs-1, nsubs, type=type, shared=shared, ...)
+    # check first subject for any inf or NAs and save those
+    
+    seedCorMaps <- big.matrix(nvoxs, nsubs, type=type, shared=shared, ...)
     for (i in 1:nseeds) {
         .Call("subdist_combine_and_scale_submaps", subs.cormaps, as.double(i), 
-              as.double(voxs[-seeds[i]]), seedCorMaps, PACKAGE="connectir")
+              as.double(voxs), seedCorMaps, PACKAGE="connectir")
         .Call("subdist_pearson_distance", seedCorMaps, dmats, as.double(dists[i]), 
               FALSE, PACKAGE="connectir")
     }
@@ -192,7 +194,7 @@ compute_subdist_worker3_regress <- function(sub.funcs1, firstSeed, lastSeed, sub
                                             type="double", shared=FALSE, ...)
 {
     nsubs <- length(sub.funcs1)
-    nvoxs <- ncol(sub.funcs1[[1]])
+    nvoxs <- ncol(sub.funcs2[[1]])
     nseeds <- lastSeed - firstSeed + 1
     ndists <- lastDist - firstDist + 1
     if (nseeds != ndists)
@@ -205,11 +207,11 @@ compute_subdist_worker3_regress <- function(sub.funcs1, firstSeed, lastSeed, sub
                                 ztransform=ztransform, 
                                 type=type, shared=shared, ...)
     
-    seedCorMaps <- big.matrix(nsubs, nvoxs-1, type=type, shared=shared, ...)
-    r_seedCorMaps <- big.matrix(nsubs, nvoxs-1, type=type, shared=shared, ...)
+    seedCorMaps <- big.matrix(nsubs, nvoxs, type=type, shared=shared, ...)
+    r_seedCorMaps <- big.matrix(nsubs, nvoxs, type=type, shared=shared, ...)
     for (i in 1:nseeds) {
         .Call("subdist_combine_and_trans_submaps", subs.cormaps, as.double(i), 
-              as.double(voxs[-seeds[i]]), seedCorMaps, PACKAGE="connectir")
+              as.double(voxs), seedCorMaps, PACKAGE="connectir")
         qlm_residuals(seedCorMaps, design_mat, FALSE, r_seedCorMaps)
         scale_fast(r_seedCorMaps, to.copy=FALSE, byrows=TRUE)
         .Call("subdist_pearson_distance", r_seedCorMaps, dmats, as.double(dists[i]), 
