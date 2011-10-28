@@ -461,7 +461,7 @@ save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE) {
     mpath <- function(...) file.path(mdmr.output, ...)
     
     vcat(verbose, "...reading in brain mask")
-    seedfn <- file.path(sdir, "input_masks", "brainmask.nii.gz")
+    seedfn <- file.path(sdir, "mask.nii.gz")
     mask <- read.mask(seedfn)
     header <- read.nifti.header(seedfn)
     
