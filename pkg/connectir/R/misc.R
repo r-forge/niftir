@@ -1,7 +1,7 @@
 roi_mean <- function(infunc, rois) {
     uniqs <- unique(rois)
     n <- length(uniqs)
-    sapply(uniqs, function(x) rowMeans(infunc[,rois==x]))
+    sapply(uniqs, function(x) rowMeans(infunc[,rois==x,drop=FALSE]))
 }
 
 load_func_data <- function(fnames) lapply(fnames, read.big.nifti4d)
