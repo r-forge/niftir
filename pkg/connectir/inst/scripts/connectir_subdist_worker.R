@@ -165,7 +165,7 @@ tryCatch({
   
   mask1 <- get_mask(infiles1, opts$brainmask1)
   if (use.set2) {
-      mask2 <- get_masks(infiles2, opts$brainmask2)
+      mask2 <- get_mask(infiles2, opts$brainmask2)
   } else {
       mask2 <- NULL
   }
