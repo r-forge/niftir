@@ -194,8 +194,9 @@ tryCatch({
       nvoxs2 <- sum(mask2)
       ntpts2 <- sapply(infiles2, get_tpts)
       for (i in 1:nsubs) {
-          if (ntpts1[i] != ntpts2[i])
+          if (ntpts1[i] != ntpts2[i]) {
               vstop("subject #%i does not have the same # of timepoints for the first and second functional datasets", i)
+          }
       }
   } else {
       nvoxs2 <- NULL
@@ -213,7 +214,7 @@ tryCatch({
   funclist1 <- load_and_mask_func_data2(infiles1, reader1, mask=mask1, 
                                         verbose=opts$verbose,  
                                         type="double", shared=parallel_forks)
-  check1 <- check_func_data(infiles1[[1]], funclist1[[1]], extra=TRUE, 
+  check1 <- check_func_data(infiles1[1], funclist1[1], extra=TRUE, 
                             verbose=opts$verbose, parallel=FALSE)
   check2 <- check_func_data(infiles1[-1], funclist1[-1], extra=opts$extrachecks, 
                             verbose=opts$verbose, parallel=parallel_forks)
@@ -231,7 +232,7 @@ tryCatch({
       funclist2 <- load_and_mask_func_data2(infiles2, reader2, mask=mask2, 
                                             verbose=opts$verbose,  
                                             type="double", shared=parallel_forks)
-      check1 <- check_func_data(infiles2[[1]], funclist2[[1]], extra=opts$extrachecks, 
+      check1 <- check_func_data(infiles2[1], funclist2[1], extra=opts$extrachecks, 
                                 verbose=opts$verbose, parallel=parallel_forks)
       check2 <- check_func_data(infiles2[-1], funclist2[-1], extra=opts$extrachecks, 
                                 verbose=opts$verbose, parallel=parallel_forks)
