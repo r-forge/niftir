@@ -265,11 +265,10 @@ mdmr_worker <- function(firstVox, lastVox, Gmat, H2mats, IHmat, df.Res, df.Exp, 
     return(NULL)
 }
 
-
 # assume each column of x has been gower centered
 mdmr <- function(G, formula, model, 
-                 nperms=4999, factors2perm=NULL, superblocksize=nperms, 
-                 voxs=1:ncol(G), blocksize=250, 
+                 nperms=4999, factors2perm=NULL, superblocksize=length(voxs), 
+                 voxs=1:ncol(G), blocksize=nperms, 
                  contr.unordered="contr.sum", contr.ordered="contr.poly", 
                  max.iter=10, strata=NULL, 
                  verbose=1, parallel=FALSE, 
