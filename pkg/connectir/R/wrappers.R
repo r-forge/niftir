@@ -352,13 +352,13 @@ wrap_svm_subdist_cross <- function(sdist_file, mask_file, label_file,
     hdr <- read.nifti.header(mask_file)
     
     if (is.null(type)) {
-        accs <- svm_subdist_cross(Xs, y, kernel=kernel, cross=cross, memlimit=memlimit, verbose=verbose, parallel=parallel, bpath=bpath)
+        res <- svm_subdist_cross(Xs, y, kernel=kernel, cross=cross, memlimit=memlimit, verbose=verbose, parallel=parallel, bpath=bpath)
     } else {
-        accs <- svm_subdist_cross(Xs, y, kernel=kernel, cross=cross, memlimit=memlimit, verbose=verbose, parallel=parallel, bpath=bpath, type=type)
+        res <- svm_subdist_cross(Xs, y, kernel=kernel, cross=cross, memlimit=memlimit, verbose=verbose, parallel=parallel, bpath=bpath, type=type)
     }
     
     if (!is.null(out_file))
-        write.nifti(accs, hdr, mask, odt="float", outfile=out_file)
+        write.nifti(res$results, hdr, mask, odt="float", outfile=out_file)
     
     if (to_return)
         return(accs)
@@ -387,12 +387,12 @@ wrap_kmeans_subdist_cross <- function(sdist_file, mask_file, label_file,
     mask <- read.mask(mask_file)
     hdr <- read.nifti.header(mask_file)
     
-    accs <- kmeans_subdist_cross(Xs, y, iter.max=iter.max, nstart=nstart, 
+    res <- kmeans_subdist_cross(Xs, y, iter.max=iter.max, nstart=nstart, 
                                  algorithm=algorithm, memlimit=memlimit, 
                                  verbose=verbose, parallel=parallel, bpath=bpath)
     
     if (!is.null(out_file))
-        write.nifti(accs, hdr, mask, odt="float", outfile=out_file)
+        write.nifti(res$results, hdr, mask, odt="float", outfile=out_file)
     
     if (to_return)
         return(accs)

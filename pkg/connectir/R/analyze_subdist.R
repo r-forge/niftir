@@ -30,7 +30,7 @@ base_analyze_subdist <- function(FUN, Xs, y, memlimit=2, bpath=NULL,
     
     vcat(verbose, "...%i blocks", blocks$n)
     dmat <- matrix(0, nsubs, nsubs)
-    results <- c()
+    results <- list()
     for (bi in 1:blocks$n) {
         vcat(verbose, "...block %i", bi)
         first <- blocks$starts[bi]; last <- blocks$ends[bi]
@@ -39,12 +39,15 @@ base_analyze_subdist <- function(FUN, Xs, y, memlimit=2, bpath=NULL,
             dcopy(N=nr, Y=dmat, X=X)
             FUN(dmat, y, ...)
         }, .progress=progress, .inform=verbose, .parallel=parallel)
-        results <- c(results, unlist(res))
+        results[[bi]] <- unlist(res)
         Xs <- free.memory(Xs, bpath)
         gc(FALSE, TRUE)
     }
     
-    return(results)
+    list(
+      results=unlist(results),
+      Xs=Xs
+    )
 }
 
 svm_subdist_cross <- function(Xs, y, memlimit=2, bpath=NULL, 
@@ -84,8 +87,10 @@ kmeans_subdist_cross <- function(Xs, y, memlimit=2, bpath=NULL,
         return(acc)
     }
     
-    base_analyze_subdist(FUN, Xs, y, memlimit, bpath, verbose, parallel, 
-                         k=k, iter.max=iter.max, nstart=nstart, ...)
+    tmp <- base_analyze_subdist(FUN, Xs, y, memlimit, bpath, verbose, parallel, 
+                                k=k, iter.max=iter.max, nstart=nstart, ...)
+    
+    return(tmp)
 }
 
 
