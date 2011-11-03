@@ -60,8 +60,10 @@ svm_subdist_cross <- function(Xs, y, memlimit=2, bpath=NULL,
         fit$tot.accuracy
     }
     
-    base_analyze_subdist(FUN, Xs, y, memlimit, bpath, verbose, parallel, 
-                         cross=cross, kernel=kernel, ...)
+    tmp <- base_analyze_subdist(FUN, Xs, y, memlimit, bpath, verbose, parallel, 
+                                cross=cross, kernel=kernel, ...)
+    
+    return(tmp)
 }
 
 kmeans_subdist_cross <- function(Xs, y, memlimit=2, bpath=NULL, 
