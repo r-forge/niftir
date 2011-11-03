@@ -346,7 +346,7 @@ wrap_svm_subdist_cross <- function(sdist_file, mask_file, label_file,
     
     bpath <- dirname(sdist_file)
     Xs <- attach.big.matrix(sdist_file)
-    y <- as.numeric(read.table(label_file)[,1])
+    y <- read.table(label_file)[,1]
     
     mask <- read.mask(mask_file)
     hdr <- read.nifti.header(mask_file)

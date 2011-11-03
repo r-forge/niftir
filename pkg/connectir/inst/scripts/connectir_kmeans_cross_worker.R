@@ -4,13 +4,13 @@ suppressPackageStartupMessages(library("optparse"))
 option_list <- list(
     make_option(c("-i", "--subdist"), type="character", default=NULL, help="Input subject distances descriptor (*.desc) file (required)", metavar="file"), 
     make_option(c("-m", "--mask"), type="character", default=NULL, help="Brain mask file (required)", metavar="file"), 
-    make_option(c("-l", "--labels"), type="character", default=NULL, help="File with labels/responses where # of rows correspond to # of subjects in the subject distances matrices (required)", metavar="file"), 
+    make_option(c("-l", "--labels"), type="character", default=NULL, help="File with labels/responses where # of rows correspond to # of subjects in the subject distances matrices (required; note currently can only do clustering of 2 groups)", metavar="file"), 
     make_option(c("-c", "--forks"), type="integer", default=1, help="Number of computer processors to use in parallel by forking the complete processing stream [default: %default]", metavar="number"),
     make_option(c("-t", "--threads"), type="integer", default=1, help="Number of computer processors to use in parallel by multi-threading matrix algebra operations [default: %default]", metavar="number"),
-    make_option("--cross", type="integer", default=10, help="Number of folds for cross-validation (default: %default)", metavar="option"),  
-    make_option("--type", type="character", default=NULL, help="Type of classification: 'C-classification', 'nu-classification', 'one-classification', 'eps-regression', 'nu-regression' (default is to auto-select between C-classification or eps-regression)", metavar="option"), 
-    make_option("--kernel", type="character", default="linear", help="Kernel used to create the support vectors: 'linear', 'polynomial', 'radial', 'sigmoid' (default: %default)", metavar="option"),    
-    make_option("--memlimit", type="double", default=1, dest="memlimit", help="Maximum amount of RAM to use. It is preferable to keep this number as small as possible for speed reasons (this rule of thumb just applies to this script and connectir_kmeans_cross).  [default: %default]", metavar="RAM"),
+    make_option("--itermax", type="integer", default=200, help="Maximum number of iterations allows for each clustering operation (default: %default)", metavar="iterations"),  
+    make_option("--nstart", type="integer", default=20, help="How many random sets of starting points should be used for each clustering operation (default %default)", metavar="sets"), 
+    make_option("--algorithm", type="character", default="Hartigan-Wong", help="Type of algorithm: 'Hartigan-Wong', 'Lloyd', 'Forgy', 'MacQueen' (default %default", metavar="option"), 
+    make_option("--memlimit", type="double", default=1, dest="memlimit", help="Maximum amount of RAM to use. It is preferable to keep this number as small as possible for speed reasons (this rule of thumb just applies to this script and connectir_svm_cross).  [default: %default]", metavar="RAM"),
     make_option("--overwrite", action="store_true", default=FALSE, help="Overwrite output if it already exists (default is not to overwrite already existing output)"),
     make_option(c("-v", "--verbose"), action="store_true", default=TRUE, help="Print extra output [default]"),
     make_option(c("-q", "--quiet"), action="store_false", dest="verbose", help="Print little output")
@@ -57,18 +57,25 @@ tryCatch({
       stop("Subject distances file (-i/--subdist) must have a '.desc' extension")
   opts$output <- args[1]
   
+  wrap_kmeans_subdist_cross <- function(sdist_file, mask_file, label_file, 
+                                        out_file=NULL, to_return=FALSE, overwrite=FALSE, 
+                                        iter.max=200, nstart=20, algorithm="Hartigan-Wong", 
+                                        memlimit=1, verbose=TRUE, parallel=FALSE)
+
+  
   
   ###
   # Compute Baby Compute
   ###
   start.time <- Sys.time()
-  wrap_svm_subdist_cross(opts$subdist, opts$mask, opts$labels, 
-                         out_file=opts$output, overwrite=opts$overwrite, 
-                         kernel=opts$kernel, type=opts$type, cross=opts$cross, 
-                         memlimit=opts$memlimit, parallel=parallel_forks, 
-                         verbose=opts$verbose)
+  wrap_kmeans_subdist_cross(opts$subdist, opts$mask, opts$labels, 
+                            out_file=opts$output, overwrite=opts$overwrite, 
+                            iter.max=opts$itermax, nstart=opts$nstart, 
+                            algorithm=opts$algorithm, 
+                            memlimit=opts$memlimit, parallel=parallel_forks, 
+                            verbose=opts$verbose)
   end.time <- Sys.time()
-  vcat(opts$verbose, "SVM is done! It took: %.2f minutes\n", 
+  vcat(opts$verbose, "K-Means is done! It took: %.2f minutes\n", 
        as.numeric(end.time-start.time, units="mins"))
 
 }, warning = function(ex) {
@@ -99,5 +106,3 @@ tryCatch({
   cat("...sucesss\n")
 })
 
-  
-  
