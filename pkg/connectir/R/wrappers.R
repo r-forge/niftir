@@ -327,3 +327,73 @@ wrap_glm <- function(func_files, mask_file, ev_file, contrast_file,
     
     invisible(tmats)
 }
+
+wrap_svm_subdist_cross <- function(sdist_file, mask_file, label_file, 
+                                    out_file=NULL, to_return=FALSE, overwrite=FALSE, 
+                                    kernel="linear", type=NULL, cross=10, 
+                                    memlimit=1, verbose=TRUE, parallel=FALSE)
+{
+    if (!file.exists(sdist_file))
+        vstop("Subject Distances '%s' does not exist", sdist_file)
+    if (!file.exists(mask_file))
+        vstop("Mask file '%s' does not exist", mask_file)
+    if (!file.exists(label_file))
+        vstop("Label file '%s' does not exist", label_file)
+    if (is.null(out_file) && !to_return)
+        vstop("Must specify either out_file or to_return")
+    if (!is.null(out_file) && file.exist(out_file) && !overwrite)
+        vstop("Output file '%s' already exists (must specify overwrite)", out_file)
+    
+    bpath <- dirname(sdist_file)
+    Xs <- attach.big.matrix(sdist_file)
+    y <- as.numeric(read.table(label_file)[,1])
+    
+    mask <- read.mask(mask_file)
+    hdr <- read.nifti.header(mask_file)
+    
+    if (is.null(type)) {
+        accs <- svm_subdist_cross(Xs, y, kernel=kernel, cross=cross, memlimit=memlimit, verbose=verbose, parallel=parallel, bpath=bpath)
+    } else {
+        accs <- svm_subdist_cross(Xs, y, kernel=kernel, cross=cross, memlimit=memlimit, verbose=verbose, parallel=parallel, bpath=bpath, type=type)
+    }
+    
+    if (!is.null(out_file))
+        write.nifti(accs, hdr, mask, odt="float", outfile=out_file)
+    
+    if (to_return)
+        return(accs)
+}
+
+wrap_kmeans_subdist_cross <- function(sdist_file, mask_file, label_file, 
+                                      out_file=NULL, to_return=FALSE, overwrite=FALSE, 
+                                      iter.max=200, nstart=20, algorithm="Hartigan-Wong", 
+                                      memlimit=1, verbose=TRUE, parallel=FALSE)
+{
+    if (!file.exists(sdist_file))
+        vstop("Subject Distances '%s' does not exist", sdist_file)
+    if (!file.exists(mask_file))
+        vstop("Mask file '%s' does not exist", mask_file)
+    if (!file.exists(label_file))
+        vstop("Label file '%s' does not exist", label_file)
+    if (is.null(out_file) && !to_return)
+        vstop("Must specify either out_file or to_return")
+    if (!is.null(out_file) && file.exist(out_file) && !overwrite)
+        vstop("Output file '%s' already exists (must specify overwrite)", out_file)
+    
+    bpath <- dirname(sdist_file)
+    Xs <- attach.big.matrix(sdist_file)
+    y <- as.numeric(read.table(label_file)[,1])
+    
+    mask <- read.mask(mask_file)
+    hdr <- read.nifti.header(mask_file)
+    
+    accs <- kmeans_subdist_cross(Xs, y, iter.max=iter.max, nstart=nstart, 
+                                 algorithm=algorithm, memlimit=memlimit, 
+                                 verbose=verbose, parallel=parallel, bpath=bpath)
+    
+    if (!is.null(out_file))
+        write.nifti(accs, hdr, mask, odt="float", outfile=out_file)
+    
+    if (to_return)
+        return(accs)
+}

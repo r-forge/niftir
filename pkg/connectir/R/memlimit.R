@@ -513,3 +513,4 @@ get_sdist_analysis_limit <- function(mem_limit, Xs) {
     
     return(blocksize)
 }
+    
