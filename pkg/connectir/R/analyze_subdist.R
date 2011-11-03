@@ -38,18 +38,7 @@ base_analyze_subdist <- function(FUN, Xs, y, memlimit=2, bpath=NULL,
     }
     
     vcat(verbose, "...testing 1 voxel")
-    tryCatch({ test <- afun(1) }, 
-              warning = function(ex) {
-               cat("\nA warning was detected: \n")
-               cat(ex$message, "\n\n")
-               cat("Called by: \n")
-               print(ex$call)
-             }, error = function(ex) {
-               cat("\nAn error was detected: \n")
-               cat(ex$message, "\n\n")
-               cat("Called by: \n")
-               print(ex$call)
-             })
+    test <- afun(1)
     if (is.null(test) || is.na(test))
         stop("...test failed")
     
@@ -78,7 +67,8 @@ svm_subdist_cross <- function(Xs, y, memlimit=2, bpath=NULL,
     # TODO: test this function
     FUN <- function(dmat, y, cross, kernel, ...) {
         fit <- svm(dmat, y, cross=cross, kernel=kernel, fitted=FALSE, ...)
-        fit$tot.accuracy
+        res <- c(fit$tot.accuracy, fit$tot.MSE[[1]])
+        res[!is.null(res)]
     }
     
     tmp <- base_analyze_subdist(FUN, Xs, y, memlimit, bpath, verbose, parallel, 
