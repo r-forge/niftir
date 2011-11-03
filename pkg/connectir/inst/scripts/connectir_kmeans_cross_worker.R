@@ -55,14 +55,7 @@ tryCatch({
       stop("Must specify -l/--labels")
   if (getext(opts$subdist) != "desc")
       stop("Subject distances file (-i/--subdist) must have a '.desc' extension")
-  opts$output <- args[1]
-  
-  wrap_kmeans_subdist_cross <- function(sdist_file, mask_file, label_file, 
-                                        out_file=NULL, to_return=FALSE, overwrite=FALSE, 
-                                        iter.max=200, nstart=20, algorithm="Hartigan-Wong", 
-                                        memlimit=1, verbose=TRUE, parallel=FALSE)
-
-  
+  opts$output <- args[1]  
   
   ###
   # Compute Baby Compute
