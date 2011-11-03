@@ -358,10 +358,10 @@ wrap_svm_subdist_cross <- function(sdist_file, mask_file, label_file,
     }
     
     if (!is.null(out_file))
-        write.nifti(res$results, hdr, mask, odt="float", outfile=out_file)
+        write.nifti(res, hdr, mask, odt="float", outfile=out_file)
     
     if (to_return)
-        return(res$results)
+        return(res)
 }
 
 wrap_kmeans_subdist_cross <- function(sdist_file, mask_file, label_file, 
@@ -392,8 +392,8 @@ wrap_kmeans_subdist_cross <- function(sdist_file, mask_file, label_file,
                                  verbose=verbose, parallel=parallel, bpath=bpath)
     
     if (!is.null(out_file))
-        write.nifti(res$results, hdr, mask, odt="float", outfile=out_file)
+        write.nifti(res, hdr, mask, odt="float", outfile=out_file)
     
     if (to_return)
-        return(res$results)
+        return(res)
 }

@@ -23,31 +23,38 @@ base_analyze_subdist <- function(FUN, Xs, y, memlimit=2, bpath=NULL,
     blocks <- niftir.split.indices(1, nvoxs, by=blocksize)
     progress <- ifelse(verbose, "text", "none")
     
-    if (!is.null(bpath)) {
-        vcat(verbose, "...freeing memory of subject distances")
-        Xs <- free.memory(Xs, bpath)
+    if (is.filebacked(Xs)) {
+        vcat(verbose, "...re-loading subject distances")
+        bfile <- describe(Xs)@description$filename
+        dfile <- sprintf("%s.desc", rmext(bfile))
+        tmp_Xs <- attach.big.matrix(file.path(bpath, dfile))
     }
     
-    vcat(verbose, "...%i blocks", blocks$n)
     dmat <- matrix(0, nsubs, nsubs)
+    afun <- function(i) {
+        X <- sub.big.matrix(Xs, firstCol=i, lastCol=i, backingpath=bpath)
+        dcopy(N=nr, Y=dmat, X=X)
+        FUN(dmat, y, ...)
+    }
+    
+    vcat(verbose, "...testing 1 voxel")
+    test <- afun(1)
+    if (is.null(test) || is.na(test))
+        stop("...test failed")
+    
+    vcat(verbose, "...%i blocks", blocks$n)
     results <- list()
     for (bi in 1:blocks$n) {
         vcat(verbose, "...block %i", bi)
         first <- blocks$starts[bi]; last <- blocks$ends[bi]
-        res <- llply(first:last, function(i) {
-            X <- sub.big.matrix(Xs, firstCol=i, lastCol=i, backingpath=bpath)
-            dcopy(N=nr, Y=dmat, X=X)
-            FUN(dmat, y, ...)
-        }, .progress=progress, .inform=verbose, .parallel=parallel)
+        res <- llply(first:last, afun, 
+                     .progress=progress, .inform=verbose, .parallel=parallel)
         results[[bi]] <- unlist(res)
         Xs <- free.memory(Xs, bpath)
         gc(FALSE, TRUE)
     }
     
-    list(
-      results=unlist(results),
-      Xs=Xs
-    )
+    return(unlist(results))
 }
 
 svm_subdist_cross <- function(Xs, y, memlimit=2, bpath=NULL, 
