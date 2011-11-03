@@ -38,7 +38,18 @@ base_analyze_subdist <- function(FUN, Xs, y, memlimit=2, bpath=NULL,
     }
     
     vcat(verbose, "...testing 1 voxel")
-    test <- afun(1)
+    tryCatch({ test <- afun(1) }, 
+              warning = function(ex) {
+               cat("\nA warning was detected: \n")
+               cat(ex$message, "\n\n")
+               cat("Called by: \n")
+               print(ex$call)
+             }, error = function(ex) {
+               cat("\nAn error was detected: \n")
+               cat(ex$message, "\n\n")
+               cat("Called by: \n")
+               print(ex$call)
+             })
     if (is.null(test) || is.na(test))
         stop("...test failed")
     
