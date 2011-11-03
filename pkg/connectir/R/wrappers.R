@@ -341,7 +341,7 @@ wrap_svm_subdist_cross <- function(sdist_file, mask_file, label_file,
         vstop("Label file '%s' does not exist", label_file)
     if (is.null(out_file) && !to_return)
         vstop("Must specify either out_file or to_return")
-    if (!is.null(out_file) && file.exist(out_file) && !overwrite)
+    if (!is.null(out_file) && file.exists(out_file) && !overwrite)
         vstop("Output file '%s' already exists (must specify overwrite)", out_file)
     
     bpath <- dirname(sdist_file)
@@ -377,7 +377,7 @@ wrap_kmeans_subdist_cross <- function(sdist_file, mask_file, label_file,
         vstop("Label file '%s' does not exist", label_file)
     if (is.null(out_file) && !to_return)
         vstop("Must specify either out_file or to_return")
-    if (!is.null(out_file) && file.exist(out_file) && !overwrite)
+    if (!is.null(out_file) && file.exists(out_file) && !overwrite)
         vstop("Output file '%s' already exists (must specify overwrite)", out_file)
     
     bpath <- dirname(sdist_file)
