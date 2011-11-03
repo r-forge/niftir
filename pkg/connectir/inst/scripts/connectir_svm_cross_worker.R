@@ -38,7 +38,7 @@ tryCatch({
   suppressWarnings(suppressPackageStartupMessages(library("connectir")))
 
   # parallel processing setup
-  set_parallel_procs(opts$forks, opts$threads, opts$verbose)  
+  set_parallel_procs(opts$forks, 2, opts$verbose)  
   # use foreach parallelization and shared memory?
   parallel_forks <- ifelse(opts$forks == 1, FALSE, TRUE)
   
