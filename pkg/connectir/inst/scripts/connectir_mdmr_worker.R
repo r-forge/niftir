@@ -119,8 +119,10 @@ tryCatch({
       opts$factors2perm <- strsplit(opts$factors2perm, ",")[[1]]
       
       for (x in opts$factors2perm) {
-          if (!(x %in% vars))
-              vstop("Factor to permute '%s' not found in formula", x)
+          if (!(x %in% vars)) {
+              vstop("Factor to permute '%s' not found in formula (%s)", 
+                    x, paste(vars, collapse=", "))
+          }
       }
       
       nfactors <- length(opts$factors2perm)
@@ -135,8 +137,10 @@ tryCatch({
   if (nrow(model) != nsubs)
       stop("# of rows in model file don't match # of subjects in distance matrix")
   for (v in vars) {
-      if (is.null(model[[v]]))
-          vstop("Factor '%s' doesn't match any column in model file", x)
+      if (is.null(model[[v]])) {
+          vstop("Factor '%s' doesn't match any column in model file (%s)", 
+                v, paste(colnames(model), collapse=", "))
+      }
   }
   
   # strata
