@@ -56,7 +56,14 @@ tryCatch({
       stop("The file specified by -i/--infuncs does not exist")
   if (!is.null(opts$infuncs2) && !file.exists(opts$infuncs2))
       stop("The file specified by --infuncs2 does not exist")
-
+  
+  func_files1 <- as.character(read.table(opts$infuncs1))
+  if (!is.null(opts$infuncs2)) {
+      func_files2 <- as.character(read.table(opts$infuncs2))
+  } else {
+      func_files2 <- NULL
+  }
+  
   # Running kendall wrapper
   start.time <- Sys.time()
   wrap_kendall(opts$infuncs1, opts$brainmask1, 
