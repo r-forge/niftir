@@ -225,13 +225,6 @@ wrap_kendall <- function(func_files1, mask_file1,
     }
 }
 
-wrap_kendall <- function(func_files1, mask_file1, 
-                            func_files2=NULL, mask_file2=NULL, 
-                            to_return=FALSE, out_file=NULL, overwrite=FALSE, 
-                            verbose=TRUE, parallel=FALSE, shared=parallel, 
-                            memlimit=4, extra_checks=FALSE, ...)
-
-
 wrap_glm <- function(func_files1, mask_file1, ev_file, contrast_file, 
                      outdir, summarize=FALSE, overwrite=FALSE, 
                      func_files2=NULL, mask_file2=NULL, 
