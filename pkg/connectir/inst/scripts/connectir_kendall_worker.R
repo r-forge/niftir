@@ -57,9 +57,9 @@ tryCatch({
   if (!is.null(opts$infuncs2) && !file.exists(opts$infuncs2))
       stop("The file specified by --infuncs2 does not exist")
   
-  func_files1 <- as.character(read.table(opts$infuncs1))
+  func_files1 <- as.character(read.table(opts$infuncs1)[,1])
   if (!is.null(opts$infuncs2)) {
-      func_files2 <- as.character(read.table(opts$infuncs2))
+      func_files2 <- as.character(read.table(opts$infuncs2)[,1])
   } else {
       func_files2 <- NULL
   }
