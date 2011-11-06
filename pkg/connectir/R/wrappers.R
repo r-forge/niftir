@@ -140,60 +140,81 @@ wrap_reho <- function(func_file, mask_file, out_file=NULL,
     }
 }
 
+.wrap_functionals <- function(func_files1, mask_file1, 
+                              func_files2=NULL, mask_file2=NULL, 
+                              verbose=TRUE, parallel=FALSE, shared=parallel, 
+                              memlimit=1, memfunc=NULL, 
+                              extra_checks=FALSE)
+{
+    if (!is.null(mask_file2) && is.null(func_files2))
+        func_files2 <- func_files1
+    .check_mask_paths(mask_file1, mask_file2)
+    .check_func_paths(func_files1, func_files2)
+    hdr <- read.nifti.header(mask_file1)
+    
+    vcat(verbose, "...reading mask")
+    mask1 <- .get_mask(func_files1, mask_file1)
+    nvoxs1 <- sum(mask1)
+    if (!is.null(func_files2)) {
+        mask2 <- .get_mask(func_files2, mask_file2)
+        nvoxs2 <- sum(mask2)
+    } else {
+        mask2 <- NULL
+        nvoxs2 <- NULL
+    }
+        
+    vcat(verbose, "...getting # of time-points for functional data")
+    ntpts <- .get_nifti_nvols(func_files1, func_files2, verbose)
+    
+    if (!is.null(memlimit) || !is.null(memfunc)) {
+        vcat(verbose, "...calculating memory demands")
+        blocksize <- memfunc(0, memlimit, nvoxs1, ntpts, nvoxs2, verbose)
+    } else {
+        blocksize <- NULL
+    }
+    
+    vcat(verbose, "...reading %i functionals", length(func_files1))
+    ret <- .read_funcs(func_files1, mask1, func_files2, mask2, 
+                       verbose, parallel, extra_checks)
+    
+    ret$blocksize <- blocksize
+    ret$hdr <- hdr
+    ret$mask <- mask1
+    
+    return(ret)
+}
 
-wrap_kendall <- function(func_files, mask_file, out_file=NULL, to_return=FALSE, 
-                            overwrite=FALSE, verbose=TRUE, parallel=FALSE, 
-                            shared=parallel, memlimit=4, ...)
+wrap_kendall <- function(func_files1, mask_file1, 
+                            func_files2=NULL, mask_file2=NULL, 
+                            to_return=FALSE, out_file=NULL, overwrite=FALSE, 
+                            verbose=TRUE, parallel=FALSE, shared=parallel, 
+                            memlimit=4, extra_checks=FALSE, ...)
 {
     vcat(verbose, "Running kendall's W")
     progress <- ifelse(verbose, "text", "none")
     
-    if (!is.character(func_files) && length(func_files) < 2)
-        stop("func_files must be a vector of at least 2 filenames")
-    for (func_file in func_files) {
-        if (!is.character(func_file) || !file.exists(func_file))
-            stop("Could not find functional file ", func_file)
-    }
-    if (!is.character(mask_file) || !file.exists(mask_file))
-        stop("Could not find mask file ", mask_file)    
+    if (is.null(out_file) && !to_return)
+        stop("Must specify at least one of 'out_file' or 'to_return'")
     if (!is.null(out_file) && file.exists(out_file) && !overwrite) {
         vcat(verbose, "File '%s' already exists, not re-running", out_file)
         return(NULL)
     }
     
-    vcat(verbose, "...reading mask")
-    mask <- read.mask(mask_file)
-    hdr <- read.nifti.header(mask_file)
-    
-    vcat(verbose, "...getting # of time-points for functional data")
-    ntpts <- laply(func_files, function(x) {
-        hdr <- read.nifti.header(x)
-        if (length(hdr$dim) != 4) {
-            vstop("Input file '%s' must be 4 dimensions but is %i dimensional", 
-                  x, length(hdr$dim))
-        }
-        return(hdr$dim[[4]])
-    }, .progress=progress)
-    
-    vcat(verbose, "...calculating memory demands")
-    blocksize <- get_kendall_limit(0, memlimit, sum(mask), ntpts, verbose)
-    
-    vcat(verbose, "...reading %i functionals", length(func_files))
-    reader <- gen_big_reader("nifti4d", type="double", shared=shared)
-    funclist <- load_and_mask_func_data2(func_files, reader, mask=mask, 
-                                         verbose=verbose,  
-                                         type="double", shared=shared)
-    
-    vcat(verbose, "...checking functionals")
-    checks <- check_func_data(func_files, funclist, verbose=verbose, parallel=parallel)
+    ret <- .wrap_functionals(func_files1, mask_file1, 
+                             func_files2, mask_file2, 
+                             verbose, parallel, shared, 
+                             memlimit, .get_kendall_limit, 
+                             extra_checks)
     
     vcat(verbose, "...kendalling")
     verbosity <- ifelse(verbose, 2, 0)
-    vec <- kendall(funclist, blocksize, verbosity=verbosity, parallel=parallel, ...)
+    vec <- kendall3(ret$funcs1, ret$blocksize, ret$funcs2, 
+                   verbose=verbose, parallel=parallel, ...)
     
     if (!is.null(out_file)) {
         vcat(verbose, "...writing file '%s'", out_file)
-        write.nifti(vec, hdr, mask, outfile=out_file, overwrite=overwrite, odt="float")
+        write.nifti(vec, ret$hdr, ret$mask, outfile=out_file, 
+                    overwrite=overwrite, odt="float")
     }
     
     if (to_return) {

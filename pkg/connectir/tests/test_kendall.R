@@ -21,6 +21,16 @@ simple_kendall <- function(bigmats) {
     })
     return(coeffs)
 }
+simple_kendall3 <- function(bigmats, bigmats2=NULL) {
+    nsubs <- length(bigmats)
+    nvoxs <- ncol(bigmats[[1]])
+    cormats <- vbca_batch3(bigmats, c(1,nvoxs), bigmats2)
+    coeffs <- sapply(1:nvoxs, function(i) {
+        xmat <- sapply(cormats, function(x) x[i,])
+        kendall_ref(xmat)
+    })
+    return(coeffs)
+}
 
 # test
 test_that("kendall works", {
@@ -65,6 +75,25 @@ test_that("kendall voxelwise works #2", {
 
     ref <- simple_kendall(xs)
     comp <- kendall(xs, blocksize=10)
+    
+    expect_that(ref, equals(comp))
+})
+
+test_that("kendall3 voxelwise works #1", {
+    xs <- create_many_big_matrices(nsubs=10, xdim=200, ydim=100)
+
+    ref <- simple_kendall3(xs)
+    comp <- kendall3(xs, blocksize=10)
+    
+    expect_that(ref, equals(comp))
+})
+
+test_that("kendall3 voxelwise works #2", {
+    xs <- create_many_big_matrices(nsubs=10, xdim=200, ydim=100)
+    xs2 <- create_many_big_matrices(nsubs=10, xdim=200, ydim=200)
+    
+    ref <- simple_kendall3(xs, xs2)
+    comp <- kendall3(xs, blocksize=10, xs2)
     
     expect_that(ref, equals(comp))
 })

@@ -223,6 +223,68 @@ SEXP voxelwise_kendall(SEXP Slist_CorMaps, SEXP SSeedMaps, SEXP Sseeds, SEXP Svo
     return R_NilValue;
 }
 
+SEXP voxelwise_kendall3(SEXP Slist_CorMaps, SEXP SSeedMaps, SEXP Sseeds, SEXP Svoxs)
+{
+    try {
+        Rcpp::List list_CorMaps(Slist_CorMaps);
+        index_type nsubs = list_CorMaps.size();
+        double *voxs = NUMERIC_DATA(Svoxs);
+        double *seeds = NUMERIC_DATA(Sseeds);
+        Rcpp::NumericVector tmp(Sseeds);
+        index_type nseeds = tmp.size();
+        
+        SEXP SSubMaps;
+        arma::mat SubMaps(1,1);
+        const double* old_sptr = SubMaps.memptr();
+        
+        arma::mat SeedMaps(1,1);
+        const double* old_smptr = sbm_to_arma_xd(SSeedMaps, SeedMaps);
+        index_type nvoxs = static_cast<index_type>(SeedMaps.n_rows);
+        if (nsubs != (index_type)SeedMaps.n_cols)
+            Rf_error("number of columns in seedmap incorrect");
+        
+        arma::vec ks(nseeds);
+        
+        index_type seedi, subi, voxi, seed, vox;
+        double* smap;
+        index_type add;
+        // Loop through each seed voxel
+        for (seedi = 0; seedi < nseeds; ++seedi) {
+            seed = static_cast<index_type>(seeds[seedi] - 1);
+            // Combine seed maps across subjects for given voxel
+            for (subi = 0; subi < nsubs; ++subi)
+            {
+                PROTECT(SSubMaps = VECTOR_ELT(Slist_CorMaps, subi));
+                sbm_to_arma_xd(SSubMaps, SubMaps);
+                UNPROTECT(1);
+                smap = SeedMaps.colptr(subi);
+                for (voxi = 0; voxi < nvoxs; ++voxi) {
+                    smap[voxi] = SubMaps(seedi,voxi);
+                }
+            }
+            
+            // Get kendall's w
+            ks(seedi) = kendall_worker_d(SSeedMaps);
+        }
+        
+        // Scale
+        double d_nvoxs = static_cast<double>(nvoxs);
+        double d_nsubs = static_cast<double>(nsubs);
+        ks = (12*ks*(d_nvoxs-1)) / (pow(d_nsubs,2)*(pow(d_nvoxs,3)-d_nvoxs));
+        
+        smap = NULL;
+        free_arma(SubMaps, old_sptr);
+        free_arma(SeedMaps, old_smptr);
+        
+        return Rcpp::wrap( ks );
+    } catch( std::exception &ex ) {
+      forward_exception_to_r( ex );
+    } catch(...) { 
+      ::Rf_error( "c++ exception (unknown reason)" ); 
+    }
+    return R_NilValue;
+}
+
 SEXP gcor_worker(SEXP ScorMaps, SEXP Sthresh, SEXP SthreshType, 
                  SEXP Sseeds, SEXP Svoxs) 
 {

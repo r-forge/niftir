@@ -68,6 +68,8 @@ RcppExport SEXP big_tcor(SEXP As, SEXP Bs, SEXP Cs,
 RcppExport SEXP kendall_worker(SEXP SRatings);
 RcppExport SEXP voxelwise_kendall(SEXP Slist_CorMaps, SEXP SSeedMaps, 
                                   SEXP Sseeds, SEXP Svoxs);
+RcppExport SEXP voxelwise_kendall3(SEXP Slist_CorMaps, SEXP SSeedMaps, 
+                                   SEXP Sseeds, SEXP Svoxs);
 RcppExport SEXP gcor_worker(SEXP ScorMaps, SEXP Sthresh, SEXP SthreshType, 
                             SEXP Sseeds, SEXP Svoxs);
 

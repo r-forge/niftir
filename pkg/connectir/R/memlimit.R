@@ -74,8 +74,8 @@ get_subdist_memlimit <- function(opts, nsubs, nvoxs, subs.ntpts, nvoxs2=NULL) {
             vcat(opts$verbose, "...autosetting superblocksize and blocksize")
             
             # super blocks (# of voxels in distance matrices to chunk)
-            s.choices <- c(2*nforks, floor(seq(0,1,by=0.002)[-1]*nvoxs))
-            s.choices[-1] <- s.choices[-1][s.choices[-1] > 2*nforks]
+            tmp <- c(2*nforks, floor(seq(0,1,by=0.002)[-1]*nvoxs))
+            s.choices <- c(tmp, tmp[-1][tmp[-1] > 2*nforks])
             ds <- sapply(s.choices, function(s) {
                 tryCatch(uniroot(f, c(s,nvoxs), s=s)$root, error=function(ex) NA)
             })
@@ -248,18 +248,29 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
     return(opts)
 }
 
-get_kendall_limit <- function(blocksize, mem_limit, nvoxs, subs.ntpts, verbose=TRUE) {
-    
+.get_kendall_limit <- function(blocksize, mem_limit, nvoxs, subs.ntpts, nvoxs2=NULL, 
+                              verbose=TRUE) 
+{
     nsubs <- length(subs.ntpts)
     nforks <- getDoParWorkers()
     
     mem_func <- sum(sapply(subs.ntpts, function(x) n2gb(x*nvoxs)))
+    if (!is.null(nvoxs2)) {
+        vcat(verbose, "...%.2f GB used for 1st set of functional data", mem_func)
+        mem_func2 <- sum(sapply(subs.ntpts, function(x) n2gb(x*nvoxs2)))
+        vcat(verbose, "...%.2f GB used for 2nd set of functional data", mem_func2)
+        mem_func <- mem_func + mem_func2
+    } 
+    vcat(verbose, "...%.2f GB used for all functional data", mem_func)
     mem_kendall <- n2gb(nvoxs)
     mem_fixed <- mem_func + mem_kendall
     
+    if (is.null(nvoxs2))
+        nvoxs2 <- nvoxs
+    
     # for at least 1 seed
-    mem_seedmap <- n2gb(nvoxs*1*nforks)
-    mem_cormaps <- n2gb(nvoxs*nsubs*1*nforks)
+    mem_seedmap <- n2gb(nvoxs2*1*nforks)
+    mem_cormaps <- n2gb(nvoxs2*nsubs*1*nforks)
     mem_by_seeds <- mem_seedmap + mem_cormaps
     
     mem_limit <- as.numeric(mem_limit)

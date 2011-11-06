@@ -81,6 +81,37 @@ kendall <- function(subs.bigmats, blocksize, ztransform=FALSE, parallel=FALSE,
     return(ws)
 }
 
+kendall3 <- function(subs.func1, blocksize, subs.func2=subs.func1, ztransform=FALSE, 
+                     parallel=FALSE, verbose=TRUE) 
+{
+    nsubs <- length(subs.func1)
+    if (nsubs != length(subs.func2))
+        stop("length mismatch in 2 set of functionals")
+    nseeds <- ncol(subs.func1[[1]])
+    seeds <- as.double(1:nseeds)
+    blocks <- niftir.split.indices(1, nseeds, by=blocksize)
+    nvoxs <- ncol(subs.func2[[1]])
+    voxs <- as.double(1:nvoxs)
+    inform <- verbose
+    progress <- ifelse(verbose, "text", "none")
+    
+    kfun <- function(i) {
+        incols <- seeds[c(blocks$starts[i],blocks$ends[i])]
+        cormats <- vbca_batch3(subs.func1, incols, subs.func2, ztransform=ztransform, 
+                               type="double", shared=FALSE)
+        seeds <- as.double(incols[1]:incols[2])
+        seedMaps <- big.matrix(nvoxs, nsubs, type="double", shared=FALSE)       
+        coeffs <- .Call("voxelwise_kendall3", cormats, seedMaps, seeds, voxs)
+        rm(cormats, seedMaps); gc(FALSE, TRUE)
+        return(coeffs)
+    }
+    
+    ws <- llply(1:blocks$n, kfun, .progress=progress, .parallel=parallel, .inform=inform)
+    ws <- unlist(ws)
+    
+    return(ws)
+}
+
 reho_worker <- function(mat, ...) {
     return(.Call("kendall_worker", mat, ...))
 }

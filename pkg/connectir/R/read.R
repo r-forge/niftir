@@ -74,6 +74,7 @@ detect_ftypes <- function(fnames, force.type=NULL, verbose=TRUE) {
     return(ftype)
 }
 
+
 # Automatically determine the appropriate mask for data
 ## computes variance @ each voxel
 ## if var=0, then vox=0, otherwise vox=1
@@ -247,4 +248,160 @@ check_func_data <- function(xs, dat.list, extra=FALSE, verbose=FALSE, parallel=F
     }, .progress=progress, .parallel=parallel)
     
     unlist(rets)
+}
+
+###
+# HELPER FUNCTIONS
+###
+
+.check_mask_paths <- function(mask_file1, mask_file2=NULL) {
+    if (!is.character(mask_file1) || !file.exists(mask_file1))
+        stop("Could not find mask file ", mask_file1)
+    if (!is.null(mask_file2) && (!is.character(mask_file2) || !file.exists(mask_file2)))
+        stop("Could not find mask file ", mask_file2)
+}
+
+.check_func_paths <- function(func_files1, func_files2=NULL) {
+    if (!is.character(func_files1) && length(func_files1) < 2)
+        stop("func_files must be a vector of at least 2 filenames")
+    if (!is.null(func_files2) && length(func_files1) != length(func_files2))
+        stop("1st set of functional files is a different length than 2nd set")
+    for (func_file in func_files1) {
+        if (!is.character(func_file) || !file.exists(func_file))
+            stop("Could not find functional file ", func_file)
+    }
+    if (!is.null(func_files2)) {
+        for (func_file in func_files2) {
+            if (!is.character(func_file) || !file.exists(func_file))
+                stop("Could not find functional file ", func_file)
+        }
+    }
+}
+
+.get_mask <- function(infiles, mask=NULL) {
+    # Check nvoxs in functional
+    hdr <- read.nifti.header(infiles[[1]])
+    if (length(hdr$dim) == 2) {
+        nvoxs <- hdr$dim[2]
+    } else {
+        nvoxs <- prod(hdr$dim[-length(hdr$dim)])
+    }
+    
+    # Get mask
+    if (is.null(mask)) {
+        mask <- rep(TRUE, nvoxs)
+    } else {
+        mask <- read.mask(mask)
+    }
+    
+    # Check match between functional and mask
+    if (nvoxs != length(mask))
+        stop("length mismatch between mask and functional: ", infiles[1])
+    
+    return(mask)
+}
+
+.get_nifti_nvols <- function(func_files1, func_files2=NULL, verbose=TRUE) {
+    fun <- function(x) {
+        hdr <- read.nifti.header(x)
+        n <- length(hdr$dim)
+        if (n == 4) {
+            return(hdr$dim[4])
+        } else if (n == 2) {
+            return(hdr$dim[1])
+        } else {
+            vstop("Input functional file '%s' must be 2 or 4 dimensions but is %i dimensional", x, n)
+        }
+    }
+    
+    progress <- ifelse(verbose, "text", "none")
+    ntpts1 <- laply(func_files1, fun, .progress=progress)
+    if (!is.null(func_files2)) {
+        ntpts2 <- laply(func_files2, fun, .progress=progress)
+        for (i in 1:length(ntpts1)) {
+            if (ntpts1[i] != ntpts2[i]) {
+                vstop("subject #%i does not have the same # of timepoints for the first and second functional datasets", i)
+            }
+        }
+    }
+    
+    return(ntpts1)
+}
+
+.get_nifti_ndims <- function(func_files1, func_files2=NULL, verbose=TRUE) {
+    fun <- function(x) {
+        hdr <- read.nifti.header(x)
+        length(hdr$dim)
+    }
+    
+    progress <- ifelse(verbose, "text", "none")
+    ndims1 <- laply(func_files1, fun, .progress=progress)
+    if (!all(ndims1==ndims1[1]))
+        stop("Not all dimensions in the first set of functionals are the same")
+    if (ndims1 !=4 || ndims1 != 2)
+        stop("Only allow 2 or 4 dimensional nifti files for first set of files")
+    if (!is.null(func_files2)) {
+        ndims2 <- laply(func_files2, fun, .progress=progress)
+        if (!all(ndims2==ndims2[1]))
+            stop("Not all dimensions in the second set of functionals are the same")
+        if (ndims2 !=4 || ndims2 != 2)
+            stop("Only allow 2 or 4 dimensional nifti files for second set of files")
+    } else {
+        ndims2 <- NULL
+    }
+    
+    list(n1=ndims1[1], n2=ndims2[1])
+}
+
+.read_funcs <- function(infiles1, mask1, infiles2=NULL, mask2=NULL, 
+                        verbose=TRUE, parallel=FALSE, shared=parallel, 
+                        extra_checks=FALSE) 
+{
+    vcat(verbose, "...getting dimensions of functional data")
+    ndims <- .get_nifti_ndims(infiles1, infiles2, verbose)
+    
+    # 1st Set of Functionals
+    vcat(verbose, "Loading and masking functional data (Part 1)")
+    ftype1 <- ifelse(ndims$n1==2, "nifti2d", "nifti4d")
+    reader1 <- gen_big_reader(ftype1, type="double", shared=shared)
+    funclist1 <- load_and_mask_func_data2(infiles1, reader1, mask=mask1, 
+                                          verbose=verbose,  
+                                          type="double", shared=shared)
+    check1 <- check_func_data(infiles1[1], funclist1[1], extra=TRUE, 
+                              verbose=verbose, parallel=FALSE)
+    check2 <- check_func_data(infiles1[-1], funclist1[-1], extra=extra_checks, 
+                              verbose=verbose, parallel=parallel)
+    checks <- c(check1, check2)
+    if (any(checks!=0)) {
+        vcat(verbose, "Bad data for following files:")
+        vcat(verbose, paste(infiles1[checks!=0], collapse="\n"))
+        vstop("Quitting due to errors with 1st set of input functional data")
+    }
+    
+    # 2nd Set of Functionals
+    if ((!is.null(infiles2) && is.null(mask2)) || 
+     (is.null(infiles2) && !is.null(mask2))) {
+        stop("can't specify only infiles2 or only mask2")
+    } else if (!is.null(infiles2) && !is.null(mask2)) {
+        vcat(verbose, "Loading and masking functional data (Part 2)")
+        ftype2 <- ifelse(ndims$n1==2, "nifti2d", "nifti4d")
+        reader2 <- gen_big_reader(ftype2, type="double", shared=shared)
+        funclist2 <- load_and_mask_func_data2(infiles2, reader2, mask=mask2, 
+                                              verbose=verbose,  
+                                              type="double", shared=shared)
+        check1 <- check_func_data(infiles2[1], funclist2[1], extra=TRUE, 
+                                  verbose=verbose, parallel=FALSE)
+        check2 <- check_func_data(infiles2[-1], funclist2[-1], extra=extra_checks, 
+                                  verbose=verbose, parallel=parallel)
+        checks <- c(check1, check2)
+        if (any(checks!=0)) {
+            vcat(verbose, "Bad data for following files:")
+            vcat(verbose, paste(infiles1[checks!=0], collapse="\n"))
+            vstop("Quitting due to errors with 2nd set of input functional data")
+        }
+    } else {
+        funclist2 <- NULL
+    }
+    
+    return(list(funcs1=funclist1, funcs2=funclist2))
 }
