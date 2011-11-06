@@ -342,7 +342,6 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
 # calculate connectivity maps
 # get fit for given seed map
 # get contrasts (results)
-memfunc(0, memlimit, nvoxs1, ntpts, nvoxs2, verbose, ...)
 get_glm_limit <- function(blocksize, mem_limit, nvoxs, subs.ntpts, 
                           nvoxs2, verbose, nevs, ncons) 
 {
