@@ -66,8 +66,8 @@ tryCatch({
   
   # Running kendall wrapper
   start.time <- Sys.time()
-  wrap_kendall(opts$infuncs1, opts$brainmask1, 
-               opts$infuncs2, opts$brainmask2, 
+  wrap_kendall(func_files1, opts$brainmask1, 
+               func_files2, opts$brainmask2, 
                out_file=output, overwrite=opts$overwrite, 
                verbose=opts$verbose, parallel=parallel, shared=parallel, 
                memlimit=opts$memlimit, extra_checks=opts$extrachecks, 

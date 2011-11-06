@@ -342,32 +342,43 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
 # calculate connectivity maps
 # get fit for given seed map
 # get contrasts (results)
+memfunc(0, memlimit, nvoxs1, ntpts, nvoxs2, verbose, ...)
 get_glm_limit <- function(blocksize, mem_limit, nvoxs, subs.ntpts, 
-                          nevs, ncons, verbose=TRUE) 
+                          nvoxs2, verbose, nevs, ncons) 
 {
-    
     nsubs <- length(subs.ntpts)
     nforks <- getDoParWorkers()
     
     # fixed
+    ## functionals
     mem_func <- sum(sapply(subs.ntpts, function(x) n2gb(x*nvoxs)))
+    if (!is.null(nvoxs2)) {
+        vcat(verbose, "...%.2f GB used for 1st set of functional data", mem_func)
+        mem_func2 <- sum(sapply(subs.ntpts, function(x) n2gb(x*nvoxs2)))
+        vcat(verbose, "...%.2f GB used for 2nd set of functional data", mem_func2)
+        mem_func <- mem_func + mem_func2
+    } 
+    vcat(verbose, "...%.2f GB used for all functional data", mem_func)
+    ## everything else
+    if (is.null(nvoxs2))
+        nvoxs2 <- nvoxs
     mem_evs <- n2gb(nevs*nsubs)
     mem_cons <- n2gb(ncons*nevs)
-    mem_seedmap <- n2gb(nsubs*nvoxs*nforks)
+    mem_seedmap <- n2gb(nsubs*nvoxs2*nforks)
     mem_dd <- n2gb(nsubs*nsubs)
-    mem_coefs1 <- n2gb(nevs*nvoxs*nforks)       # qlm_fit
-    mem_residuals <- n2gb(nsubs*nvoxs*nforks)   # qlm_fit
-    mem_mse <- n2gb(nvoxs*nforks)               # qlm_fit
-    mem_coefs2 <- n2gb(ncons*nvoxs*nforks)      # qlm_contrast
-    mem_stderrs <- n2gb(ncons*nvoxs*nforks)     # qlm_contrast
-    mem_tvals1 <- n2gb(ncons*nvoxs*nforks)      # qlm_contrast
+    mem_coefs1 <- n2gb(nevs*nvoxs2*nforks)       # qlm_fit
+    mem_residuals <- n2gb(nsubs*nvoxs2*nforks)   # qlm_fit
+    mem_mse <- n2gb(nvoxs2*nforks)               # qlm_fit
+    mem_coefs2 <- n2gb(ncons*nvoxs2*nforks)      # qlm_contrast
+    mem_stderrs <- n2gb(ncons*nvoxs2*nforks)     # qlm_contrast
+    mem_tvals1 <- n2gb(ncons*nvoxs2*nforks)      # qlm_contrast
     mem_fixed <- mem_func + mem_evs + mem_cons + mem_seedmap + mem_dd + 
                  mem_coefs1 + mem_residuals + mem_mse + 
                  mem_coefs2 + mem_stderrs + mem_tvals1
     
     # for at least 1 seed
-    mem_cormaps <- n2gb(nvoxs*nsubs)
-    mem_tvals2 <- n2gb(ncons*nvoxs*2)
+    mem_cormaps <- n2gb(nvoxs2*nsubs)
+    mem_tvals2 <- n2gb(ncons*nvoxs2*2)
     mem_by_seeds <- mem_cormaps + mem_tvals2
     
     mem_limit <- as.numeric(mem_limit)

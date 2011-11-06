@@ -7,6 +7,13 @@ vcat <- function(verbose, msg, ..., newline=TRUE) {
 
 vstop <- function(msg, ...) stop(sprintf(msg, ...))
 
+vsystem <- function(verbose, cmd, ...) {
+    vcat(verbose, cmd, ...)
+    ret <- system(sprintf(msg, ...))
+    if (ret != 0)
+        stop("command failed")
+}
+
 set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE) {
     vcat(verbose, "Setting %i parallel forks", nforks)
     suppressPackageStartupMessages(library("doMC"))

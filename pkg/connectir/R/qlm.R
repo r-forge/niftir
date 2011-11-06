@@ -264,91 +264,115 @@ vox_glm <- function(funclist, evs, cons, blocksize, outmats, bp=NULL,
     invisible(outmats)
 }
 
-#vox_glm3 <- function(funclist1, evs, cons, blocksize, outmats, bp=NULL, 
-#                      funclist2=funclist2, 
-#                      verbose=TRUE, parallel=FALSE, shared=parallel, 
-#                      ztransform=FALSE)
-#{
-#    if (!is.matrix(cons))
-#        stop("cons must be a matrix")
-#    vcat(verbose, "...setup")
-#    nsubs <- length(funclist)
-#    nvoxs1 <- ncol(funclist1[[1]])
-#    nvoxs2 <- ncol(funclist2[[1]])
-#    voxs1 <- 1:nvoxs1
-#    voxs2 <- 1:nvoxs2
-#    ncons <- nrow(cons)
-#    blocks <- niftir.split.indices(1, nvoxs1, by=blocksize)
-#    progress <- ifelse(verbose, "text", "none")
-#    k <- qlm_rank(evs)
-#    if (k < ncol(evs))
-#        stop("EV matrix is rank deficient")
-#    dd <- qlm_dd(evs)
-#    if (!is.shared(outmats[[1]]))
-#        stop("outmats must be shared")
-#    if (is.filebacked(outmats[[1]]) && is.null(bp))
-#        stop("backingpath (bp) must be given if outmats are file-backed")
-#    if (length(outmats) != ncons)
-#        stop("cons doesn't match with outmats")
-#    
-#    gfun <- function(bi, outmats) {
-#        vcat(verbose, "...block %i", bi)
-#        
-#        first <- blocks$starts[bi]; last <- blocks$ends[bi]
-#        sub_voxs <- first:last
-#        sub_nvoxs <- length(sub_voxs)
-#        
-#        tmp_outmats <- lapply(1:ncons, function(x) {
-#                            big.matrix(nvoxs2, sub_nvoxs, init=0, type="double", shared=shared)
-#                        })
-#        
-#        # correlate
-#        vcat(verbose, "....correlate")
-#        subs.cormaps <- vbca_batch3(funclist1, c(first, last), funclist2, 
-#                                    ztransform=ztransform, 
-#                                    type="double", shared=shared)
-#        
-#        # loop through each seed
-#        vcat(verbose, '....glm')
-#        sfun <- function(si) {
-#            # combine and transpose correlation maps for 1 seed
-#            seedCorMaps <- big.matrix(nsubs, nvoxs2, type="double", shared=FALSE)
-#            .Call("subdist_combine_and_trans_submaps", subs.cormaps, as.double(si), 
-#                  as.double(voxs2), seedCorMaps, PACKAGE="connectir")
-#            
-#            # glm
-#            fit <- qlm_fit(seedCorMaps, evs, shared=FALSE)
-#            res <- qlm_contrasts(fit, cons, dd, shared=FALSE)
-#            
-#            for (ci in 1:ncons)
-#                tmp_outmats[[ci]][,si] <- res$tvalues[ci,]
-#            
-#            rm(seedCorMaps, fit, res); gc(FALSE)
-#            
-#            return(NULL)
-#        }
-#        
-#        llply(1:sub_nvoxs, sfun, .parallel=parallel, .progress=progress, .inform=T)
-#        
-#        # copy over temp data
-#        vcat(verbose, '....save')
-#        for (ci in 1:ncons) {
-#            sub_outmat <- sub.big.matrix(outmats[[ci]], firstCol=first, lastCol=last, backingpath=bp)
-#            deepcopy(x=tmp_outmats[[ci]], y=sub_outmat)
-#            if (!is.null(bp)) {
-#                flush(sub_outmat); flush(outmats[[ci]])
-#                outmats[[ci]] <- free.memory(outmats[[ci]], bp)
-#            }
-#        }
-#        
-#        rm(subs.cormaps, tmp_outmats); gc(FALSE)
-#        
-#        return(outmats)
-#    }
-#    
-#    vcat(verbose, "...%i blocks", blocks$n)
-#    for (bi in 1:blocks$n)
-#        outmats <- gfun(bi, outmats)
-#    
-#    invisible(outmats)
-#}
+vox_glm3 <- function(funclist1, evs, cons, blocksize, 
+                      funclist2=funclist2, 
+                      outmats=NULL, bp=NULL, 
+                      verbose=TRUE, parallel=FALSE, shared=parallel, 
+                      ztransform=FALSE)
+{
+    vcat(verbose, "...checks")
+    if (!is.matrix(cons))
+        stop("cons must be a matrix")
+    if (!is.shared(outmats[[1]]))
+        stop("outmats must be shared")
+    if (is.filebacked(outmats[[1]]) && is.null(bp))
+        stop("backingpath (bp) must be given if outmats are file-backed")
+    if (length(outmats) != ncons)
+        stop("cons doesn't match with outmats")
+    if (length(funclist1) != length(funclist2))
+        stop("length mismatch between first and second set of functionals")
+    
+    
+    vcat(verbose, "...setup")
+    nsubs <- length(funclist1)
+    nvoxs1 <- ncol(funclist1[[1]])
+    nvoxs2 <- ncol(funclist2[[1]])
+    voxs1 <- 1:nvoxs1
+    voxs2 <- 1:nvoxs2
+    ncons <- nrow(cons)
+    blocks <- niftir.split.indices(1, nvoxs1, by=blocksize)
+    progress <- ifelse(verbose, "text", "none")
+    k <- qlm_rank(evs)
+    if (k < ncol(evs))
+        stop("EV matrix is rank deficient")
+    dd <- qlm_dd(evs)
+    
+    vcat(verbose, "...creating output matrices")
+    outmats <- lapply(1:ncons, function(i) {
+        bfile <- sprintf("tvals_%02i.bin", i)
+        dfile <- sprintf("tvals_%02i.desc", i)
+        big.matrix(nvoxs, nvoxs, type="double", 
+                   backingfile=bfile, descriptorfile=dfile, 
+                   backingpath=bp)
+    })
+    
+    gfun <- function(bi, outmats) {
+        vcat(verbose, "...block %i", bi)
+        
+        first <- blocks$starts[bi]; last <- blocks$ends[bi]
+        sub_voxs <- first:last
+        sub_nvoxs <- length(sub_voxs)
+        
+        tmp_outmats <- lapply(1:ncons, function(x) {
+                            big.matrix(nvoxs2, sub_nvoxs, init=0, 
+                                        type="double", shared=shared)
+                        })
+        
+        # correlate
+        vcat(verbose, "....correlate")
+        subs.cormaps <- vbca_batch3(funclist1, c(first, last), funclist2, 
+                                    ztransform=ztransform, 
+                                    type="double", shared=shared)
+        
+        # loop through each seed
+        vcat(verbose, '....glm')
+        sfun <- function(si) {
+            # combine and transpose correlation maps for 1 seed
+            seedCorMaps <- big.matrix(nsubs, nvoxs2, type="double", shared=FALSE)
+            .Call("subdist_combine_and_trans_submaps", subs.cormaps, as.double(si), 
+                  as.double(voxs2), seedCorMaps, PACKAGE="connectir")
+            
+            # glm
+            fit <- qlm_fit(seedCorMaps, evs, shared=FALSE)
+            res <- qlm_contrasts(fit, cons, dd, shared=FALSE)
+            
+            for (ci in 1:ncons)
+                tmp_outmats[[ci]][,si] <- res$tvalues[ci,]
+            
+            rm(seedCorMaps, fit, res); gc(FALSE)
+            
+            return(NULL)
+        }
+        
+        llply(1:sub_nvoxs, sfun, .parallel=parallel, .progress=progress, .inform=T)
+        
+        # copy over temp data
+        vcat(verbose, '....save')
+        for (ci in 1:ncons) {
+            sub_outmat <- sub.big.matrix(outmats[[ci]], firstCol=first, lastCol=last, 
+                                         backingpath=bp)
+            deepcopy(x=tmp_outmats[[ci]], y=sub_outmat)
+            if (!is.null(bp)) {
+                flush(sub_outmat); flush(outmats[[ci]])
+                outmats[[ci]] <- free.memory(outmats[[ci]], bp)
+            }
+        }
+        
+        rm(subs.cormaps, tmp_outmats); gc(FALSE)
+        
+        return(outmats)
+    }
+    
+    vcat(verbose, "...%i blocks", blocks$n)
+    for (bi in 1:blocks$n)
+        outmats <- gfun(bi, outmats)
+    
+    invisible(outmats)
+}
+
+# glm_summarize
+# get average at each voxel
+# get max at each voxel
+# get number of voxels that are significant
+# get number of voxels that are significant after fdr correction
+# 

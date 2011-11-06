@@ -143,9 +143,11 @@ wrap_reho <- function(func_file, mask_file, out_file=NULL,
 .wrap_functionals <- function(func_files1, mask_file1, 
                               func_files2=NULL, mask_file2=NULL, 
                               verbose=TRUE, parallel=FALSE, shared=parallel, 
-                              memlimit=1, memfunc=NULL, 
-                              extra_checks=FALSE)
+                              extra_checks=FALSE, 
+                              memfunc=NULL, memlimit=1, ...)
 {
+    vcat(verbose, "Reading inputs")
+    
     if (!is.null(mask_file2) && is.null(func_files2))
         func_files2 <- func_files1
     .check_mask_paths(mask_file1, mask_file2)
@@ -168,7 +170,7 @@ wrap_reho <- function(func_file, mask_file, out_file=NULL,
     
     if (!is.null(memlimit) || !is.null(memfunc)) {
         vcat(verbose, "...calculating memory demands")
-        blocksize <- memfunc(0, memlimit, nvoxs1, ntpts, nvoxs2, verbose)
+        blocksize <- memfunc(0, memlimit, nvoxs1, ntpts, nvoxs2, verbose, ...)
     } else {
         blocksize <- NULL
     }
@@ -203,8 +205,8 @@ wrap_kendall <- function(func_files1, mask_file1,
     ret <- .wrap_functionals(func_files1, mask_file1, 
                              func_files2, mask_file2, 
                              verbose, parallel, shared, 
-                             memlimit, .get_kendall_limit, 
-                             extra_checks)
+                             extra_checks, 
+                             .get_kendall_limit, memlimit)
     
     vcat(verbose, "...kendalling")
     verbosity <- ifelse(verbose, 2, 0)
@@ -223,30 +225,28 @@ wrap_kendall <- function(func_files1, mask_file1,
     }
 }
 
-wrap_glm <- function(func_files, mask_file, ev_file, contrast_file, 
-                     outdir, overwrite=FALSE, 
-                     blocksize=0, memlimit=4, 
+wrap_kendall <- function(func_files1, mask_file1, 
+                            func_files2=NULL, mask_file2=NULL, 
+                            to_return=FALSE, out_file=NULL, overwrite=FALSE, 
+                            verbose=TRUE, parallel=FALSE, shared=parallel, 
+                            memlimit=4, extra_checks=FALSE, ...)
+
+
+wrap_glm <- function(func_files1, mask_file1, ev_file, contrast_file, 
+                     outdir, summarize=FALSE, overwrite=FALSE, 
+                     func_files2=NULL, mask_file2=NULL, 
+                     blocksize=0, memlimit=4, extra_checks=FALSE, 
                      verbose=TRUE, parallel=FALSE, shared=parallel, 
                      ztransform=FALSE) 
 {
     vcat(verbose, "Running GLM")
-    
-    vcat(verbose, "...setup and checks")
     progress <- ifelse(verbose, "text", "none")
-    if (!is.character(func_files) && length(func_files) < 2)
-        stop("func_files must be a vector of at least 2 filenames")
-    for (func_file in func_files) {
-        if (!is.character(func_file) || !file.exists(func_file))
-            stop("Could not find functional file ", func_file)
-    }
-    if (!is.character(mask_file) || !file.exists(mask_file))
-        stop("Could not find mask file ", mask_file)   
+    
+    vcat(verbose, "...reading and setting up EV and contrast files")
     if (!is.character(ev_file) || !file.exists(ev_file)) 
         stop("Could not find EV file ", ev_file)
     if (!is.character(contrast_file) || !file.exists(contrast_file)) 
         stop("Could not find contrast file ", contrast_file)
-    
-    vcat(verbose, "...reading and setting up EV and contrast files")
     evs <- as.matrix(read.table(ev_file, header=T))
     cons <- as.matrix(read.table(contrast_file, header=T))
     contrast_names <- rownames(cons)
@@ -258,18 +258,18 @@ wrap_glm <- function(func_files, mask_file, ev_file, contrast_file,
     }
     tmp <- big.matrix(nrow(evs), ncol(evs), type="double", shared=shared)
     tmp[,] <- evs; evs <- tmp; rm(tmp)
-    #tmp <- big.matrix(nrow(cons), ncol(cons), type="double", shared=shared)
-    #tmp[,] <- cons; cons <- tmp; rm(tmp)
     k <- qlm_rank(evs)
     if (k < ncol(evs))
         vstop("EV file '%s' is rank deficient", ev_file)
     nevs <- ncol(evs)
     ncons <- nrow(cons)
     
-    vcat(verbose, "...reading mask")
-    mask <- read.mask(mask_file)
-    hdr <- read.nifti.header(mask_file)
-    nvoxs <- sum(mask)
+    # Read in functionals
+    ret <- .wrap_functionals(func_files1, mask_file1, 
+                             func_files2, mask_file2, 
+                             verbose, parallel, shared, 
+                             extra_checks, 
+                             .get_glm_limit, memlimit, nevs, ncons)
     
     vcat(verbose, "...setting up output")
     outdir <- abspath(outdir)
@@ -278,11 +278,13 @@ wrap_glm <- function(func_files, mask_file, ev_file, contrast_file,
             vcat(verbose, "Directory '%s' already exists, not re-running", outdir)
             return(NULL)
         } else {
-            vcat(verbose, "Removing directory '%s'", outdir)
-            system(sprintf("rm %s/infuncs/*", outdir))
-            system(sprintf("rmdir %s/infuncs", outdir))
-            system(sprintf("rm %s/*", outdir))
-            system(sprintf("rmdir %s", outdir))
+            vcat(verbose, "Trying to remove directory '%s'", outdir)
+            vsystem("rm %s/infuncs/*", outdir)
+            vsystem("rmdir %s/infuncs", outdir)
+            vsystem("rm %s/summary/*", outdir)
+            vsystem("rmdir %s/summary", outdir)
+            vsystem("rm %s/*", outdir)
+            vsystem("rmdir %s", outdir)
         }
     } else {
         dir.create(outdir)
@@ -299,52 +301,29 @@ wrap_glm <- function(func_files, mask_file, ev_file, contrast_file,
         file.symlink(func_files[i], file.path(outdir, "infuncs", 
                                            sprintf("func%04i.nii.gz", i)))
     }
-    ## create output matrices
-    tmats <- lapply(1:ncons, function(i) {
-        bfile <- sprintf("tvals_%02i.bin", i)
-        dfile <- sprintf("tvals_%02i.desc", i)
-        big.matrix(nvoxs, nvoxs, type="double", 
-                   backingfile=bfile, descriptorfile=dfile, 
-                   backingpath=outdir)
-    })
+    ## summary output (only given if summarize=TRUE)
+    dir.create(file.path(outdir, "summary"))
     
-    vcat(verbose, "...getting # of time-points for functional data")
-    ntpts <- laply(func_files, function(x) {
-        hdr <- read.nifti.header(x)
-        if (length(hdr$dim) != 4) {
-            vstop("Input file '%s' must be 4 dimensions but is %i dimensional", 
-                  x, length(hdr$dim))
-        }
-        return(hdr$dim[[4]])
-    }, .progress=progress)
-    
-    vcat(verbose, "...calculating memory demands")
-    blocksize <- get_glm_limit(0, memlimit, nvoxs, ntpts, 
-                               nevs, ncons, verbose)
-    
-    vcat(verbose, "...reading %i functionals", length(func_files))
-    reader <- gen_big_reader("nifti4d", type="double", shared=shared)
-    funclist <- load_and_mask_func_data2(func_files, reader, mask=mask, 
-                                         verbose=verbose,  
-                                         type="double", shared=shared)
-    
-    vcat(verbose, "...checking functionals")
-    checks <- check_func_data(func_files, funclist, verbose=verbose, parallel=parallel)
-    
-    # loop through a set of voxels
-    ## calculate connectivity maps
-    ## create temporary contrasts
-    ## get fit for given seed map
-    ## get contrasts (results)
-    ## save contrasts and clear file-backed stuff
+    # Do It!
     vcat(verbose, "...GLMing")
     start.time <- Sys.time()
-    vox_glm(funclist, evs, cons, blocksize, outmats=tmats, bp=outdir, 
-            verbose=verbose, parallel=parallel, shared=shared, 
-            ztransform=ztransform)
+    outmats <- vox_glm3(ret$funcs1, evs, cons, blocksize, ret$funcs2, bp=outdir, 
+                         verbose=verbose, parallel=parallel, shared=shared, 
+                         ztransform=ztransform)
     end.time <- Sys.time()
     vcat(verbose, "GLMing is done! It took: %.2f minutes\n", 
          as.numeric(end.time-start.time, units="mins"))
+    
+    # Summarize
+    if (summarize) {
+        vcat("...summarizing results")
+        start.time <- Sys.time()
+        glm_summarize(outmats, out_dir=outdir, memlimit=memlimit, 
+                      verbose=verbose, parallel=parallel, shared=shared)
+        end.time <- Sys.time()
+        vcat(verbose, "Summarizing is done! It took: %.2f minutes\n", 
+             as.numeric(end.time-start.time, units="mins"))
+    }
     
     invisible(tmats)
 }
