@@ -344,7 +344,7 @@ check_func_data <- function(xs, dat.list, extra=FALSE, verbose=FALSE, parallel=F
         ndims2 <- laply(func_files2, fun, .progress=progress)
         if (!all(ndims2==ndims2[1]))
             stop("Not all dimensions in the second set of functionals are the same")
-        if (ndims2 !=4 || ndims2 != 2)
+        if (ndims2[1] !=4 || ndims2[1] != 2)
             stop("Only allow 2 or 4 dimensional nifti files for second set of files")
     } else {
         ndims2 <- NULL
