@@ -201,10 +201,13 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
             vs <- sapply(p.choices, function(p) {
                 tryCatch(uniroot(f, c(2,nvoxs), p=p)$root, error=function(ex) NA)
             })
+            if (all(is.na(vs)))
+                stop("Sh*%, you don't have enough RAM (1)")
+            vs <- vs[!is.na(vs)]            
             w <- (length(vs) + 1) - which.min(rev(vs))
             v <- floor(vs[w])
             if (length(v) == 0 || v == 0) {
-                stop("Sh*%, you don't have enough RAM")
+                stop("Sh*%, you don't have enough RAM (2)")
             } else {
                 opts$superblocksize <- v
             }
