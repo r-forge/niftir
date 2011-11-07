@@ -291,11 +291,13 @@ wrap_glm <- function(func_files1, mask_file1, ev_file, contrast_file,
     ## copy contrasts
     file.copy(contrast_file, file.path(outdir, "model_contrasts.txt"))
     ## copy mask
-    file.copy(mask_file, file.path(outdir, "mask.nii.gz"))
+    file.copy(mask_file1, file.path(outdir, "mask.nii.gz"))
+    if (!is.null(mask_file2))
+        file.copy(mask_file1, file.path(outdir, "mask2.nii.gz"))
     ## soft-link functionals
     dir.create(file.path(outdir, "infuncs"))
-    for (i in 1:length(func_files)) {
-        file.symlink(func_files[i], file.path(outdir, "infuncs", 
+    for (i in 1:length(func_files1)) {
+        file.symlink(func_files1[i], file.path(outdir, "infuncs", 
                                            sprintf("func%04i.nii.gz", i)))
     }
     ## summary output (only given if summarize=TRUE)
@@ -304,7 +306,7 @@ wrap_glm <- function(func_files1, mask_file1, ev_file, contrast_file,
     # Do It!
     vcat(verbose, "...GLMing")
     start.time <- Sys.time()
-    outmats <- vox_glm3(ret$funcs1, evs, cons, blocksize, ret$funcs2, bp=outdir, 
+    outmats <- vox_glm3(ret$funcs1, evs, cons, ret$blocksize, ret$funcs2, bp=outdir, 
                          verbose=verbose, parallel=parallel, shared=shared, 
                          ztransform=ztransform)
     end.time <- Sys.time()
@@ -328,7 +330,7 @@ wrap_glm <- function(func_files1, mask_file1, ev_file, contrast_file,
              as.numeric(end.time-start.time, units="mins"))
     }
     
-    invisible(tmats)
+    invisible(outmats)
 }
 
 wrap_svm_subdist_cross <- function(sdist_file, mask_file, label_file, 

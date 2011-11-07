@@ -301,7 +301,7 @@ vox_glm3 <- function(funclist1, evs, cons, blocksize,
     outmats <- lapply(1:ncons, function(i) {
         bfile <- sprintf("tvals_%02i.bin", i)
         dfile <- sprintf("tvals_%02i.desc", i)
-        big.matrix(nvoxs, nvoxs, type="double", 
+        big.matrix(nvoxs2, nvoxs1, type="double", 
                    backingfile=bfile, descriptorfile=dfile, 
                    backingpath=bp)
     })
@@ -393,7 +393,7 @@ glm_summarize <- function(tmats, tdir, df, pthr=0.05,
     if (!is.null(outdir) && !file.exists(outdir))
         vstop("output directory '%s' doesn't exist", outdir)
     test <- c(!is.null(outdir), !is.null(outhdr), !is.null(outmask))
-    if (any(test) && !all(test)))
+    if (any(test) && !all(test))
         stop("must specify none or all: outdir, outhdr, outmask")
     if (all(test))
         to_save <- TRUE

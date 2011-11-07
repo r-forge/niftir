@@ -9,7 +9,7 @@ vstop <- function(msg, ...) stop(sprintf(msg, ...))
 
 vsystem <- function(verbose, cmd, ...) {
     vcat(verbose, cmd, ...)
-    ret <- system(sprintf(msg, ...))
+    ret <- system(sprintf(cmd, ...))
     if (ret != 0)
         stop("command failed")
 }
