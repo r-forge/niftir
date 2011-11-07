@@ -197,15 +197,20 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
             vcat(opts$verbose, "...autosetting superblocksize and blocksize")
             
             # super blocks (# of voxels to chunk)
-            p.choices <- c(2*nforks, floor(seq(0,1,by=0.01)[-1]*nperms))
-            vs <- sapply(p.choices, function(p) {
-                tryCatch(uniroot(f, c(2,nvoxs), p=p)$root, error=function(ex) NA)
-            })
-            if (all(is.na(vs)))
-                stop("Sh*%, you don't have enough RAM (1)")
-            vs <- vs[!is.na(vs)]            
-            w <- (length(vs) + 1) - which.min(rev(vs))
-            v <- floor(vs[w])
+            m <- f(nvoxs, floor(nperms/2))
+            if (m > 0) {
+                v <- nvoxs
+            } else {
+                p.choices <- c(2*nforks, floor(seq(0,1,by=0.01)[-1]*nperms))
+                vs <- sapply(p.choices, function(p) {
+                    tryCatch(uniroot(f, c(2,nvoxs), p=p)$root, error=function(ex) NA)
+                })
+                if (all(is.na(vs)))
+                    stop("Sh*%, you don't have enough RAM (1)")
+                vs <- vs[!is.na(vs)]            
+                w <- (length(vs) + 1) - which.min(rev(vs))
+                v <- floor(vs[w])
+            }
             if (length(v) == 0 || v == 0) {
                 stop("Sh*%, you don't have enough RAM (2)")
             } else {
