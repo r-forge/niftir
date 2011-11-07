@@ -208,10 +208,14 @@ wrap_kendall <- function(func_files1, mask_file1,
                              extra_checks, 
                              .get_kendall_limit, memlimit)
     
-    vcat(verbose, "...kendalling")
+    vcat(verbose, "\nKendalling")
     verbosity <- ifelse(verbose, 2, 0)
+    start.time <- Sys.time()
     vec <- kendall3(ret$funcs1, ret$blocksize, ret$funcs2, 
                    verbose=verbose, parallel=parallel, ...)
+    end.time <- Sys.time()
+    vcat(verbose, "Kendalling is done! It took: %.2f minutes\n", 
+         as.numeric(end.time-start.time, units="mins"))
     
     if (!is.null(out_file)) {
         vcat(verbose, "...writing file '%s'", out_file)
@@ -228,7 +232,7 @@ wrap_kendall <- function(func_files1, mask_file1,
 wrap_glm <- function(func_files1, mask_file1, ev_file, contrast_file, 
                      outdir, summarize=FALSE, overwrite=FALSE, 
                      func_files2=NULL, mask_file2=NULL, 
-                     blocksize=0, memlimit=4, extra_checks=FALSE, 
+                     memlimit=4, extra_checks=FALSE, 
                      verbose=TRUE, parallel=FALSE, shared=parallel, 
                      ztransform=FALSE) 
 {
@@ -308,10 +312,16 @@ wrap_glm <- function(func_files1, mask_file1, ev_file, contrast_file,
          as.numeric(end.time-start.time, units="mins"))
     
     # Summarize
+    df <- nrow(evs) - ncol(evs)
+    if (df < 1)
+        stop("non-positive degrees of freedom")
     if (summarize) {
         vcat("...summarizing results")
         start.time <- Sys.time()
-        glm_summarize(outmats, out_dir=outdir, memlimit=memlimit, 
+        sdir <- file.path(outdir, "summary")
+        glm_summarize(tmats=outmats, tdir=outdir, df=df,
+                      outdir=sdir, outhdr=ret$hdr, outmask=ret$mask, 
+                      memlimit=memlimit, 
                       verbose=verbose, parallel=parallel, shared=shared)
         end.time <- Sys.time()
         vcat(verbose, "Summarizing is done! It took: %.2f minutes\n", 

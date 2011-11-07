@@ -376,8 +376,7 @@ compute_subdist_worker2 <- function(sub.funcs, firstSeed, lastSeed,
     for (i in 1:nseeds) {
         .Call("subdist_combine_and_scale_submaps", subs.cormaps, as.double(i), 
               as.double(voxs[-seeds[i]]), seedCorMaps, PACKAGE="connectir")
-        .Call("subdist_pearson_distance", seedCorMaps, dmats, as.double(dists[i]), 
-              FALSE, PACKAGE="connectir")
+        .subdist_distance(seedCorMaps, dmats, dists[i], FALSE, method)
     }
     
     rm(subs.cormaps, seedCorMaps)
@@ -412,9 +411,7 @@ compute_subdist_worker2_regress <- function(sub.funcs, firstSeed, lastSeed,
         .Call("subdist_combine_and_trans_submaps", subs.cormaps, as.double(i), 
               as.double(voxs[-seeds[i]]), seedCorMaps, PACKAGE="connectir")
         qlm_residuals(seedCorMaps, design_mat, FALSE, r_seedCorMaps)
-        scale_fast(r_seedCorMaps, to.copy=FALSE, byrows=TRUE)
-        .Call("subdist_pearson_distance", r_seedCorMaps, dmats, as.double(dists[i]), 
-              TRUE, PACKAGE="connectir")
+        .subdist_distance(r_seedCorMaps, dmats, dists[i], TRUE, method)
     }
     
     rm(subs.cormaps, seedCorMaps)

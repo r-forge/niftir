@@ -375,4 +375,113 @@ vox_glm3 <- function(funclist1, evs, cons, blocksize,
 # get max at each voxel
 # get number of voxels that are significant
 # get number of voxels that are significant after fdr correction
-# 
+# get standard deviation
+glm_summarize <- function(tmats, tdir, df, pthr=0.05, 
+                          outdir=NULL, outhdr=NULL, outmask=NULL, 
+                          to_return=FALSE, 
+                          memlimit=4, 
+                          verbose=TRUE, parallel=FALSE, shared=parallel)
+{
+    vcat(verbose, "Summarizing GLM Results")
+    measures <- c("mean_tstat", "sd_tstat", "max_tstat", "min_tstat", 
+                  sprintf("percent_signif_%f", pthr))
+    nmeasures <- length(measures)
+    thresh <- qt(pthr/2, df, lower.tail=F)
+    
+    if (is.null(outdir) && !to_return)
+        stop("must specify at least one of outdir or to_return")
+    if (!is.null(outdir) && !file.exists(outdir))
+        vstop("output directory '%s' doesn't exist", outdir)
+    test <- c(!is.null(outdir), !is.null(outhdr), !is.null(outmask))
+    if (any(test) && !all(test)))
+        stop("must specify none or all: outdir, outhdr, outmask")
+    if (all(test))
+        to_save <- TRUE
+    else
+        to_save <- FALSE
+    
+    vcat(verbose, "...re-reading file-backed data")
+    tmp_tmats <- lapply(tmats, function(x) {
+        fname <- paste(rmext(describe(x)@description$filename), ".desc", sep="")
+        attach.big.matrix(file.path(tdir, fname))
+    })
+    n <- length(tmats)
+    nr <- nrow(tmp_tmats[[1]])
+    nc <- ncol(tmp_tmats[[1]])
+    
+    vcat(verbose, "...determining memory demands given limit of %.2f GB", memlimit)
+    nforks <- getDoParWorkers()
+    mem_out <- n2gb(n*nc*nmeasures)
+    mem_col <- n2gb(nr*nforks)
+    f <- function(x) memlimit - mem_out - mem_col*x
+    m <- f(nc)
+    if (m > 0) {
+        blocksize <- nc
+    } else {
+        vcat(verbose, paste("...if you wanted to hold everything in memory",
+                                 "you would need at least %.2f GB of RAM"), 
+                           memlimit - m)
+        vcat(verbose, "...autosetting blocksize")
+        x <- tryCatch(floor(uniroot(f, c(1,nc))$root), error=function(ex) NA)
+        if (is.na(x))
+            stop("You don't have enough RAM")
+        blocksize <- x
+    }
+    vcat(verbose, "...setting block size to %i (out of %i columns)", 
+         blocksize, nc)
+    if (blocksize < 1)
+        stop("block size is less than 1")
+    blocks <- niftir.split.indices(1, nc, by=blocksize)
+    
+    vcat(verbose, "...creating output vectors/matrices")
+    outmats <- lapply(1:n, function(i) {
+        tmp <- matrix(NA, nc, nmeasures)
+        colnames(tmp) <- measures
+        tmp
+    })
+    
+    vcat(verbose, "...summarizing")
+    sfun <- function(ci) {
+        inds <- sblocks$starts[ci]:sblocks$ends[ci]
+        # 1. Average
+        outmat[inds,1] <- colmean(tmat, inds)
+        # 2. Standard Deviation
+        outmat[inds,2] <- colsd(tmat, inds)
+        # 3. Max
+        outmat[inds,3] <- colmax(tmat, inds)
+        # 4. Min
+        outmat[inds,4] <- colmin(tmat, inds)
+        # 5. Percent of significant voxels
+        outmat[inds,5] <- colMeans(abs(tmat[,inds])>thresh)
+    }
+    for (ti in 1:n) {
+        vcat(verbose, "...tmat #%i with %i blocks", ti, blocks$n)
+        tmat <- tmats[[ti]]
+        outmat <- outmats[[ti]]
+        for (bi in 1:blocks$n) {
+            sblocks <- niftir.split.indices(blocks$starts[bi], blocks$ends[bi], 
+                                            by=nforks)
+            laply(1:sblocks$n, sfun, .inform=verbose, .parallel=parallel)
+            tmat <- free.memory(tmats[[ti]], tdir)
+        }
+    }
+    
+    if (to_save) {
+        vcat(verbose, "...saving")
+        for (ti in 1:n) {
+            outmat <- outmats[[ti]]
+            for (mi in 1:nmeasures) {
+                outfn <- file.path(outdir, paste(measures[mi], ".nii.gz", sep=""))
+                write.nifti(outmat[,mi], outhdr, outmask, outfile=outfn, odt="float")
+            }
+        }
+    }
+    
+    rm(tmp_tmats); gc(FALSE, TRUE)
+    
+    if (to_return) {
+        vcat(verbose, "...returning")
+        return(outmats)
+    }
+}
+

@@ -65,16 +65,13 @@ tryCatch({
   }
   
   # Running kendall wrapper
-  start.time <- Sys.time()
   wrap_kendall(func_files1, opts$brainmask1, 
                func_files2, opts$brainmask2, 
                out_file=output, overwrite=opts$overwrite, 
                verbose=opts$verbose, parallel=parallel, shared=parallel, 
                memlimit=opts$memlimit, extra_checks=opts$extrachecks, 
                ztransform=opts$ztransform)
-  end.time <- Sys.time()
-  vcat(opts$verbose, "Done! Total computation time: %.1f minutes\n", 
-       as.numeric(end.time-start.time, units="mins"))
+  
 }, warning = function(ex) {
   cat("\nA warning was detected: \n")
   cat(ex$message, "\n\n")

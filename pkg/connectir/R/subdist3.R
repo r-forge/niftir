@@ -1,3 +1,19 @@
+.subdist_distance <- function(seedMaps, dmats, colind, 
+                              transpose=FALSE, method="pearson")
+{
+    if (method == "pearson") {
+        scale_fast(seedMaps, to.copy=FALSE, byrows=transpose)
+        .Call("subdist_pearson_distance", seedMaps, dmats, as.double(colind), 
+              as.logical(transpose), PACKAGE="connectir")
+    } else if (method == "shrink.pearson") {
+        library(corpcor)
+        if (transpose) seedMaps <- t(seedMaps[,])
+        dmats[,colind] <- 1 - cor.shrink(seedMaps, verbose=FALSE)[,]
+    } else {
+        vstop("Unrecognized method %s", method)
+    }
+}
+
 compute_subdist_wrapper3 <- function(sub.funcs1, list.dists, 
                                     blocksize, superblocksize, 
                                     sub.funcs2=sub.funcs2, 
@@ -177,8 +193,7 @@ compute_subdist_worker3 <- function(sub.funcs1, firstSeed, lastSeed, sub.funcs2,
     for (i in 1:nseeds) {
         .Call("subdist_combine_and_scale_submaps", subs.cormaps, as.double(i), 
               as.double(voxs), seedCorMaps, PACKAGE="connectir")
-        .Call("subdist_pearson_distance", seedCorMaps, dmats, as.double(dists[i]), 
-              FALSE, PACKAGE="connectir")
+        .subdist_distance(seedCorMaps, dmats, dists[i], FALSE, method)
     }
     
     rm(subs.cormaps, seedCorMaps)
@@ -213,9 +228,7 @@ compute_subdist_worker3_regress <- function(sub.funcs1, firstSeed, lastSeed, sub
         .Call("subdist_combine_and_trans_submaps", subs.cormaps, as.double(i), 
               as.double(voxs), seedCorMaps, PACKAGE="connectir")
         qlm_residuals(seedCorMaps, design_mat, FALSE, r_seedCorMaps)
-        scale_fast(r_seedCorMaps, to.copy=FALSE, byrows=TRUE)
-        .Call("subdist_pearson_distance", r_seedCorMaps, dmats, as.double(dists[i]), 
-              TRUE, PACKAGE="connectir")
+        .subdist_distance(r_seedCorMaps, dmats, dists[i], TRUE, method)
     }
     
     rm(subs.cormaps, seedCorMaps)

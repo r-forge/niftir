@@ -242,6 +242,14 @@ check_func_data <- function(xs, dat.list, extra=FALSE, verbose=FALSE, parallel=F
                 vcat(verbose, "%s has 0 sd in nodes %s", fname, w)
                 return(3)
             }
+        } else {
+            # Check for NAs at least for the second row
+            nas <- is.na(dat.list[[i]][2,])
+            if (any(nas)) {
+                w <- paste(which(nas), collapse=", ")
+                vcat(verbose, "%s has NaNs in nodes %s", fname, w)
+                return(2)
+            }
         }
         
         return(0)

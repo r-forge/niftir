@@ -16,6 +16,7 @@ option_list <- list(
     make_option(c("-c", "--forks"), type="integer", default=1, help="Number of computer processors to use in parallel by forking the complete processing stream [default: %default]", metavar="number"),
     make_option(c("-t", "--threads"), type="integer", default=1, help="Number of computer processors to use in parallel by multi-threading matrix algebra operations [default: %default]", metavar="number"),
     make_option("--extrachecks", action="store_true", default=FALSE, help="Will do a more rigorous check of the input functionals before any calculations"),
+    make_option("--shrink", action="store_true", default=FALSE, help="Computes shrinkage estimates of 1 - correlation when calculating the distance between subject connectivity maps"),
     make_option("--overwrite", action="store_true", default=FALSE, help="Overwrite output that already exists (default is not to overwrite already existing output)"),
     make_option("--no-link-functionals", action="store_true", default=FALSE, help="Will not create soft links to each of the functional images with the subdist directory"),
     make_option(c("-q", "--quiet"), action="store_false", dest="verbose", help="Print little output"), 
@@ -121,6 +122,12 @@ tryCatch({
       verbosity <- 1
   } else {
       verbosity <- 0
+  }
+  
+  if (opts$shrink) {
+      method <- "shrink.pearson"
+  } else {
+      method <- "pearson"
   }
   
   # design matrix
@@ -272,13 +279,13 @@ tryCatch({
                                         funclist2, 
                                         design_mat=opts$regress, 
                                         verbose=verbosity, parallel=parallel_forks, 
-                                        ztransform=opts$ztransform, method="pearson")  
+                                        ztransform=opts$ztransform, method=method)  
   } else {
       checks <- compute_subdist_wrapper(funclist1, dists_list, 
                                         opts$blocksize, opts$superblocksize, 
                                         design_mat=opts$regress, 
                                         verbose=verbosity, parallel=parallel_forks, 
-                                        ztransform=opts$ztransform, method="pearson")
+                                        ztransform=opts$ztransform, method=method)
   }
   
   vcat(opts$verbose, "...saving zchecks")  
