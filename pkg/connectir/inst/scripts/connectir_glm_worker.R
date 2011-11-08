@@ -4,7 +4,7 @@ suppressPackageStartupMessages(library("optparse"))
 option_list <- list(
     make_option(c("-i", "--infuncs1"), type="character", default=NULL, dest="infuncs1", help="File containing paths of different functional images (nifti or text files) in one column. Each node/voxel in these images will act as a 'seed'. (required)", metavar="file"),
     make_option("--brainmask1", type="character", default=NULL, help="When computing each whole-brain connectivity map, this mask will restrict which parts of the whole-brain are to be considered", metavar="file", dest="brainmask1"), 
-    make_option(c("-e", "--evs"), type="character", default=NULL, dest="evs", help="File containing regressors (required)", metavar="file"), 
+    make_option(c("-r", "--regressors"), type="character", default=NULL, dest="evs", help="File containing regressors (required)", metavar="file"), 
     make_option(c("-c", "--contrasts"), type="character", default=NULL, dest="contrasts", help="File containing contrasts (required)", metavar="file"), 
     make_option("--infuncs2", type="character", default=NULL, dest="infuncs2", help="File containing paths of different functional images (nifti or text files) in one column. Each node/voxel in these images will act as a 'target', that is voxels from -i/--infuncs will be correlated with voxels in these images. The default is to have these images be the same as those specified in -i/--infuncs. (optional)", metavar="file"),
     make_option("--brainmask2", type="character", default=NULL, help="When computing each whole-brain connectivity map, this mask will restrict which parts of the whole-brain are to be considered only for --infuncs2", metavar="file", dest="brainmask2"), 
@@ -63,7 +63,7 @@ tryCatch({
   if (!file.exists(opts$infuncs1))
       stop("The file specified by -i/--infuncs does not exist")
   if (!file.exists(opts$evs))
-      vstop("The ev file '%s' does not exist", opts$evs)
+      vstop("The regressors file '%s' does not exist", opts$evs)
   if (!file.exists(opts$contrasts))
       vstop("The contrast file '%s' does not exist", opts$contrasts)
   if (!is.null(opts$infuncs2) && !file.exists(opts$infuncs2))
