@@ -273,15 +273,12 @@ vox_glm3 <- function(funclist1, evs, cons, blocksize,
     vcat(verbose, "...checks")
     if (!is.matrix(cons))
         stop("cons must be a matrix")
-    if (!is.shared(outmats[[1]]))
+    if (!is.null(outmats) && !is.shared(outmats[[1]]))
         stop("outmats must be shared")
-    if (is.filebacked(outmats[[1]]) && is.null(bp))
+    if (!is.null(outmats) && (is.filebacked(outmats[[1]]) && is.null(bp)))
         stop("backingpath (bp) must be given if outmats are file-backed")
-    if (length(outmats) != ncons)
-        stop("cons doesn't match with outmats")
     if (length(funclist1) != length(funclist2))
         stop("length mismatch between first and second set of functionals")
-    
     
     vcat(verbose, "...setup")
     nsubs <- length(funclist1)
@@ -296,15 +293,24 @@ vox_glm3 <- function(funclist1, evs, cons, blocksize,
     if (k < ncol(evs))
         stop("EV matrix is rank deficient")
     dd <- qlm_dd(evs)
-    
-    vcat(verbose, "...creating output matrices")
-    outmats <- lapply(1:ncons, function(i) {
-        bfile <- sprintf("tvals_%02i.bin", i)
-        dfile <- sprintf("tvals_%02i.desc", i)
-        big.matrix(nvoxs2, nvoxs1, type="double", 
-                   backingfile=bfile, descriptorfile=dfile, 
-                   backingpath=bp)
-    })
+
+    if (is.null(outmats)) {
+        vcat(verbose, "...creating output matrices")
+        outmats <- lapply(1:ncons, function(i) {
+            bfile <- sprintf("tvals_%02i.bin", i)
+            dfile <- sprintf("tvals_%02i.desc", i)
+            big.matrix(nvoxs2, nvoxs1, type="double", 
+                       backingfile=bfile, descriptorfile=dfile, 
+                       backingpath=bp)
+        })
+    } else {
+        if (length(outmats) != ncons)
+            stop("cons doesn't match with outmats")
+        if (nrow(outmats[[1]]) != nvoxs2)
+            stop("incorrect # of rows for outmats")
+        if (ncol(outmats[[1]]) != nvoxs1)
+            stop("incorrect # of cols for outmats")
+    }
     
     gfun <- function(bi, outmats) {
         vcat(verbose, "...block %i", bi)
