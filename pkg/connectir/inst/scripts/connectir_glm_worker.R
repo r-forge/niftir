@@ -52,8 +52,8 @@ tryCatch({
   # Check required
   vcat(opts$verbose, "Checking user inputs")
   outdir <- abspath(args[1])
-  if (file.exists(output) && !opts$overwrite)
-      stop("Output '", output, "' already exists, you can use --overwrite")
+  if (file.exists(outdir) && !opts$overwrite)
+      stop("Output '", outdir, "' already exists, you can use --overwrite")
   if (is.null(opts$infuncs1))
       stop("You must specify the -i/--infuncs option")
   if (is.null(opts$evs))
