@@ -390,7 +390,7 @@ glm_summarize <- function(tmats, tdir, df, pthr=0.05,
 {
     vcat(verbose, "Summarizing GLM Results")
     measures <- c("mean_tstat", "sd_tstat", "max_tstat", "min_tstat", 
-                  sprintf("percent_signif_%f", pthr))
+                  sprintf("percent_signif_%f_tstat", pthr))
     nmeasures <- length(measures)
     thresh <- qt(pthr/2, df, lower.tail=F)
     
@@ -477,7 +477,7 @@ glm_summarize <- function(tmats, tdir, df, pthr=0.05,
         for (ti in 1:n) {
             outmat <- outmats[[ti]]
             for (mi in 1:nmeasures) {
-                outfn <- file.path(outdir, paste(measures[mi], ".nii.gz", sep=""))
+                outfn <- file.path(outdir, sprintf("%s_%02i.nii.gz", measures[mi], ti))
                 write.nifti(outmat[,mi], outhdr, outmask, outfile=outfn, odt="float")
             }
         }
