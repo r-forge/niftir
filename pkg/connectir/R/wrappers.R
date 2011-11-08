@@ -318,7 +318,7 @@ wrap_glm <- function(func_files1, mask_file1, ev_file, contrast_file,
     if (df < 1)
         stop("non-positive degrees of freedom")
     if (summarize) {
-        vcat("...summarizing results")
+        vcat(verbose, "...summarizing results")
         start.time <- Sys.time()
         sdir <- file.path(outdir, "summary")
         glm_summarize(tmats=outmats, tdir=outdir, df=df,
