@@ -1,5 +1,7 @@
 base_analyze_subdist <- function(FUN, Xs, y, memlimit=2, bpath=NULL, 
-                                verbose=T, parallel=F, ...) 
+                                 verbose=T, parallel=F, 
+                                 recursive.unlist = TRUE, 
+                                 ...) 
 {
     vcat(verbose, "...checks/setup")
     if (!is.big.matrix(Xs))
@@ -49,12 +51,56 @@ base_analyze_subdist <- function(FUN, Xs, y, memlimit=2, bpath=NULL,
         first <- blocks$starts[bi]; last <- blocks$ends[bi]
         res <- llply(first:last, afun, 
                      .progress=progress, .inform=verbose, .parallel=parallel)
-        results[[bi]] <- unlist(res)
+        results[[bi]] <- res
         Xs <- free.memory(Xs, bpath)
         gc(FALSE, TRUE)
     }
     
-    return(unlist(results))
+    return(unlist(results, recursive=recursive.unlist))
+}
+
+glmnet_subdist_cross <- function(Xs, y, memlimit=2, bpath=NULL, 
+                                 family=NULL, standardize=TRUE, cross=10, 
+                                 verbose=T, parallel=F, ...) 
+{
+    vcat(verbose, "SVM on Subject Distances")
+    library(glmnet)
+    
+    if (is.null(family)) {
+        if (is.factor(y)) {
+            family <- ifelse(length(levels(y))==2, "binomial", "multinomial")
+        } else {
+            family <- "gaussian"
+        }
+    }
+    
+    if (family %in% c("binomial", "multinomial"))
+        type.measure <- "class"
+    else
+        type.measure <- "deviance"
+    
+    # TODO: test this function
+    FUN <- function(dmat, y, cross, kernel, ...) {
+        fit <- cv.glmnet(dmat, y, family=family, standardize=standardize, 
+                         nfolds=cross, type.measure=type.measure, ...)
+        ret <- c(cvm.min=min(fit$cvm), cvm.mean=mean(fit$cvm), 
+                 nzero.min=fit$nzero[fit$lambda==fit$lambda.min], 
+                 nzero.mean=mean(fit$nzero))
+        #ret <- switch(result, 
+        #    1 = fit$cvm[fit$lambda==fit$lambda.min], 
+        #    2 = mean(fit$cvm), 
+        #    3 = fit$nzero[fit$lambda==fit$lambda.min], 
+        #    4 = mean(fit$nzero),
+        #    vstop("unrecognized result %i for glmnet", result)
+        #)
+        ret
+    }
+    
+    tmp <- base_analyze_subdist(FUN, Xs, y, memlimit, bpath, verbose, parallel, 
+                                recursive.unlist = FALSE, 
+                                cross=cross, kernel=kernel, ...)
+    
+    return(tmp)
 }
 
 svm_subdist_cross <- function(Xs, y, memlimit=2, bpath=NULL, 

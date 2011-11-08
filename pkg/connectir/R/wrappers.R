@@ -333,6 +333,51 @@ wrap_glm <- function(func_files1, mask_file1, ev_file, contrast_file,
     invisible(outmats)
 }
 
+wrap_glmnet_subdist_cross <- function(sdist_file, mask_file, label_file, 
+                                    out_prefix=NULL, to_return=FALSE, overwrite=FALSE, 
+                                    family=NULL, standardize=TRUE, cross=10, 
+                                    memlimit=1, verbose=TRUE, parallel=FALSE)
+{
+    if (!file.exists(sdist_file))
+        vstop("Subject Distances '%s' does not exist", sdist_file)
+    if (!file.exists(mask_file))
+        vstop("Mask file '%s' does not exist", mask_file)
+    if (!file.exists(label_file))
+        vstop("Label file '%s' does not exist", label_file)
+    if (is.null(out_file) && !to_return)
+        vstop("Must specify either out_file or to_return")
+    
+    if (!is.null(out_prefix)) {
+        out_files <- c("error_min", "error_mean", "nzero_min", "nzero_mean")
+        out_files <- sprintf("%s_%s.nii.gz", out_prefix, out_files)
+        for (out_file in out_files) {
+            if (!is.null(out_file) && file.exists(out_file) && !overwrite)
+                vstop("Output file '%s' already exists (must specify overwrite)", out_file)
+        }
+    }
+    
+    bpath <- dirname(sdist_file)
+    Xs <- attach.big.matrix(sdist_file)
+    y <- read.table(label_file)[,1]
+    
+    mask <- read.mask(mask_file)
+    hdr <- read.nifti.header(mask_file)
+    
+    res <- glmnet_subdist_cross(Xs, y, family=family, standardize=standardize, 
+                                cross=cross, memlimit=memlimit, verbose=verbose, 
+                                parallel=parallel, bpath=bpath)
+    res <- sapply(res, function(x) x)
+    
+    if (!is.null(out_prefix)) {
+        vcat(verbose, "...saving")
+        for (i in 1:length(out_files))
+            write.nifti(res[,i], hdr, mask, odt="float", outfile=out_files[i])
+    }
+    
+    if (to_return)
+        return(res)
+}
+
 wrap_svm_subdist_cross <- function(sdist_file, mask_file, label_file, 
                                     out_file=NULL, to_return=FALSE, overwrite=FALSE, 
                                     kernel="linear", type=NULL, cross=10, 
@@ -362,8 +407,10 @@ wrap_svm_subdist_cross <- function(sdist_file, mask_file, label_file,
         res <- svm_subdist_cross(Xs, y, kernel=kernel, cross=cross, memlimit=memlimit, verbose=verbose, parallel=parallel, bpath=bpath, type=type)
     }
     
-    if (!is.null(out_file))
+    if (!is.null(out_file)) {
+        vcat(verbose, "...saving")
         write.nifti(res, hdr, mask, odt="float", outfile=out_file)
+    }
     
     if (to_return)
         return(res)
@@ -396,8 +443,10 @@ wrap_kmeans_subdist_cross <- function(sdist_file, mask_file, label_file,
                                  algorithm=algorithm, memlimit=memlimit, 
                                  verbose=verbose, parallel=parallel, bpath=bpath)
     
-    if (!is.null(out_file))
+    if (!is.null(out_file)) {
+        vcat(verbose, "...saving")
         write.nifti(res, hdr, mask, odt="float", outfile=out_file)
+    }
     
     if (to_return)
         return(res)

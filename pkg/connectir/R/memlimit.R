@@ -244,7 +244,7 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
         stop("block size is less than 1")
     if (opts$superblocksize < 1)
         stop("super block size is less than 1")
-
+    
     # calculate amount of memory that will be used
     v <- opts$superblocksize
     p <- opts$blocksize
