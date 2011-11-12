@@ -318,7 +318,7 @@ wrap_glm <- function(func_files1, mask_file1, ev_file, contrast_file,
     if (df < 1)
         stop("non-positive degrees of freedom")
     if (summarize) {
-        vcat(verbose, "...summarizing results")
+        vcat(verbose,  "...summarizing results")
         start.time <- Sys.time()
         sdir <- file.path(outdir, "summary")
         glm_summarize(tmats=outmats, tdir=outdir, df=df,
@@ -344,7 +344,7 @@ wrap_glmnet_subdist_cross <- function(sdist_file, mask_file, label_file,
         vstop("Mask file '%s' does not exist", mask_file)
     if (!file.exists(label_file))
         vstop("Label file '%s' does not exist", label_file)
-    if (is.null(out_file) && !to_return)
+    if (is.null(out_prefix) && !to_return)
         vstop("Must specify either out_file or to_return")
     
     if (!is.null(out_prefix)) {
