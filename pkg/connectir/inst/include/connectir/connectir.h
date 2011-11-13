@@ -52,6 +52,7 @@ RcppExport SEXP big_colmean(SEXP SX, SEXP SX_firstCol, SEXP SX_lastCol);
 RcppExport SEXP big_qlm_rank(SEXP Xr);
 RcppExport SEXP big_qlm_dd(SEXP Xr);
 RcppExport SEXP big_qlm_fit(SEXP yr, SEXP Xr, SEXP coefr, SEXP residr, SEXP mser, SEXP nr, SEXP kr, SEXP mr);
+RcppExport SEXP big_qlm_rsquared(SEXP yr, SEXP coefr, SEXP residr, SEXP mser, SEXP nr, SEXP kr, SEXP rsquaredr, SEXP toAdjust);
 RcppExport SEXP big_qlm_residuals(SEXP yr, SEXP Xr, SEXP residr);
 RcppExport SEXP big_qlm_contrasts(SEXP fit_coefr, SEXP fit_mser, SEXP conr, SEXP ddr, SEXP coefr, SEXP ser, SEXP tvalr, SEXP mr);
 

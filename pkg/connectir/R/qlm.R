@@ -13,6 +13,12 @@ formula_to_mat <- function(formula, data) {
     return(X)
 }
 
+formula_to_bmat <- function(formula, data) {
+    mf <- model.frame(formula=formula, data=data)
+    X <- model.matrix(attr(mf, "terms"), data=mf)
+    return(as.big.matrix(X))
+}
+
 # Check if design matrix is rank deficient
 setGeneric('qlm_rank', 
     function(X)
@@ -59,9 +65,9 @@ setMethod('qlm_fit',
         
         if (is.null(outputs)) {
             outputs <- list(
-                coefficients = big.matrix(ncol(X), ncol(y), type="double", ...), 
-                residuals = big.matrix(nrow(y), ncol(y), type="double", ...), 
-                mse = big.matrix(ncol(y), 1, type="double", ...)
+                coefficients = big.matrix(k, m, type="double", ...), 
+                residuals = big.matrix(nrow(y), m, type="double", ...), 
+                mse = big.matrix(m, 1, type="double", ...)
             )
         } else {
             if (!all(c("coefficients", "residuals", "mse") %in% outputs))
@@ -82,6 +88,29 @@ setMethod('qlm_fit',
         class(outputs) <- "qfit"
         
         return(outputs)
+    }
+)
+
+# R^2 (after qlm_fit)
+setGeneric('qlm_rsquared', 
+    function(y, inputs, ...)
+        standardGeneric('qlm_rsquared')
+)
+
+setMethod('qlm_rsquared',
+    signature(y='big.matrix', inputs='qfit'),
+    function(y, inputs, adjust=TRUE, output=NULL, ...) {
+        if (is.null(output)) {
+            output <- big.matrix(inputs$m, 1, type="double", ...)
+        } else if (nrow(output) != inputs$n && ncol(output) != inputs$m) {
+            stop("size mismatch for output matrix")
+        }
+        .Call("big_qlm_rsquared", y, inputs$coef, inputs$res, inputs$mse, 
+                as.double(inputs$n), as.double(inputs$k), 
+                output, as.integer(adjust), 
+                PACKAGE = "connectir")
+        
+        return(output)
     }
 )
 

@@ -33,6 +33,31 @@ test_that("qlm fit works?", {
     expect_that(mse, is_equivalent_to(comp$mse[,]))
 })
 
+test_that("qlm rsquared works?", {
+    # f <- ref.fit$fitted.values[,1]
+    # mss <- sum((f - mean(f))^2)
+    # r <- ref.fit$residuals[,1]
+    # rss <- sum(r^2)
+    # r2 <- mss/(mss+rss)
+    # adj.r2 <- 1 - (1 - r2) * ((nrow(dat$X) - 1)/(nrow(dat$X) - ncol(dat$X)))
+    
+    dat <- create_data()
+    
+    ref.fit <- lm(dat$y ~ dat$X[,-1])
+    comp.fit <- qlm_fit(as.big.matrix(dat$y), as.big.matrix(dat$X))
+    
+    tmp <- summary(ref.fit)
+    ref1 <- as.vector(sapply(tmp, function(xx) xx$r.squared))
+    ref2 <- as.vector(sapply(tmp, function(xx) xx$adj.r.squared))
+    
+    comp1 <- qlm_rsquared(as.big.matrix(dat$y), comp.fit, adjust=FALSE)
+    comp2 <- qlm_rsquared(as.big.matrix(dat$y), comp.fit)
+    
+    expect_that(as.vector(ref1), equals(as.vector(comp1[,])))
+    expect_that(as.vector(ref2), equals(as.vector(comp2[,])))
+})
+
+
 test_that("qlm residuals works?", {
     dat <- create_data(k=2)
     

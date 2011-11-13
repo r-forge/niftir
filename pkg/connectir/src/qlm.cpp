@@ -61,6 +61,48 @@ SEXP big_qlm_fit(SEXP yr, SEXP Xr, SEXP coefr, SEXP residr, SEXP mser, SEXP nr, 
     return R_NilValue;
 }
 
+SEXP big_qlm_rsquared(SEXP yr, SEXP coefr, SEXP residr, SEXP mser, SEXP nr, SEXP kr, 
+                      SEXP rsquaredr, SEXP to_adjustr) 
+{
+    try {
+        BM_TO_ARMA_INIT()
+        BM_TO_ARMA_MULTIPLE(yr, y)
+        BM_TO_ARMA_MULTIPLE(coefr, coef)
+        BM_TO_ARMA_MULTIPLE(residr, resid)
+        BM_TO_ARMA_MULTIPLE(mser, mse)
+        BM_TO_ARMA_MULTIPLE(rsquaredr, rsquared)
+        
+        double n = DOUBLE_DATA(nr)[0];
+        double k = DOUBLE_DATA(kr)[0];
+        int to_adjust = INTEGER_DATA(to_adjustr)[0];
+        
+        // fitted data & mean sum squares
+        arma::mat fitted = y - resid;
+        
+        arma::rowvec mfit = arma::mean(fitted, 0);
+        
+        for(size_t i = 0; i < fitted.n_cols; ++i)
+            fitted.col(i) = fitted.col(i) - mfit(i);
+        
+        arma::rowvec mss = arma::sum(arma::pow( fitted, 2), 0);
+        
+        // residual sum squares
+        arma::rowvec rss = arma::trans( mse * (n-k) );
+        
+        // r2
+        rsquared = mss/(mss+rss);
+        
+        // adjusted r2
+        if (to_adjust == 1)
+            rsquared = 1 - (1 - rsquared) * ((n-1)/(n-k));
+    } catch(std::exception &ex) {
+        forward_exception_to_r(ex);
+    } catch(...) {
+        ::Rf_error("c++ exception (unknown reason)");
+    }    
+    return R_NilValue;
+}
+
 // Solve for y ~ X (also pass outputs here)
 SEXP big_qlm_residuals(SEXP yr, SEXP Xr, SEXP residr) { 
     try {
