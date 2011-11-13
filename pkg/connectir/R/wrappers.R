@@ -140,8 +140,6 @@ wrap_reho <- function(func_file, mask_file, out_file=NULL,
     }
 }
 
-wrap_functionals <- .wrap_functionals
-
 .wrap_functionals <- function(func_files1, mask_file1, 
                               func_files2=NULL, mask_file2=NULL, 
                               verbose=TRUE, parallel=FALSE, shared=parallel, 
@@ -187,6 +185,8 @@ wrap_functionals <- .wrap_functionals
     
     return(ret)
 }
+
+wrap_functionals <- .wrap_functionals
 
 wrap_kendall <- function(func_files1, mask_file1, 
                             func_files2=NULL, mask_file2=NULL, 
