@@ -9,7 +9,6 @@ option_list <- list(
     make_option(c("-t", "--threads"), type="integer", default=1, help="Number of computer processors to use in parallel by multi-threading matrix algebra operations [default: %default]", metavar="number"),
     make_option("--cross", type="integer", default=10, help="Number of folds for cross-validation (default: %default)", metavar="option"),  
     make_option("--family", type="character", default=NULL, help="Type of classification: 'gaussian', 'binomial', 'poisson', 'multinomial', 'cox' (default is to auto-select between binomial, multinomial, and gaussian)", metavar="option"), 
-    make_option("--kernel", type="character", default="linear", help="Kernel used to create the support vectors: 'linear', 'polynomial', 'radial', 'sigmoid' (default: %default)", metavar="option"),    
     make_option("--memlimit", type="double", default=1, dest="memlimit", help="Maximum amount of RAM to use. It is preferable to keep this number as small as possible for speed reasons (this rule of thumb just applies to this script and connectir_kmeans_cross).  [default: %default]", metavar="RAM"),
     make_option("--overwrite", action="store_true", default=FALSE, help="Overwrite output if it already exists (default is not to overwrite already existing output)"),
     make_option(c("-v", "--verbose"), action="store_true", default=TRUE, help="Print extra output [default]"),

@@ -140,7 +140,9 @@ wrap_reho <- function(func_file, mask_file, out_file=NULL,
     }
 }
 
-.wrap_functionals <- function(func_files1, mask_file1, 
+.wrap_functionals <- function(...) wrap_functionals(...)
+
+wrap_functionals <- function(func_files1, mask_file1, 
                               func_files2=NULL, mask_file2=NULL, 
                               verbose=TRUE, parallel=FALSE, shared=parallel, 
                               extra_checks=FALSE, 
@@ -262,7 +264,7 @@ wrap_glm <- function(func_files1, mask_file1, ev_file, contrast_file,
     ncons <- nrow(cons)
     
     # Read in functionals
-    ret <- .wrap_functionals(func_files1, mask_file1, 
+    ret <- wrap_functionals(func_files1, mask_file1, 
                              func_files2, mask_file2, 
                              verbose, parallel, shared, 
                              extra_checks, 
@@ -367,6 +369,7 @@ wrap_glmnet_subdist_cross <- function(sdist_file, mask_file, label_file,
                                 cross=cross, memlimit=memlimit, verbose=verbose, 
                                 parallel=parallel, bpath=bpath)
     res <- sapply(res, function(x) x)
+    save(res, file="tmp.rda")
     
     if (!is.null(out_prefix)) {
         vcat(verbose, "...saving")
