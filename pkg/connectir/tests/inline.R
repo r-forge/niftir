@@ -19,3 +19,19 @@ plugin_bigmemory <- function() {
 }
 registerPlugin("bigmemory", plugin_bigmemory)
 
+plugin_connectir <- function() {
+  l <- getPlugin("bigmemory")
+  
+  l$includes <- paste(l$includes, '
+#include "connectir/connectir.h"
+')
+  
+  l$LinkingTo <- c("connectir", l$LinkingTo)
+  
+  l$Depends <- c("connectir", l$Depends)  
+  
+  return(l)
+}
+registerPlugin("connectir", connectir)
+
+
