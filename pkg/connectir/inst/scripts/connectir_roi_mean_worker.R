@@ -72,7 +72,7 @@ tryCatch({
   
   input <- abspath(opts$input)
   roi <- abspath(opts$roi)
-  if (!is.null(mask))
+  if (!is.null(opts$mask))
       mask <- abspath(opts$mask)
   outfile <- abspath(opts$outfile)
   outtype <- opts$outtype
