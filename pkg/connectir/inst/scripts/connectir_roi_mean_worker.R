@@ -74,6 +74,8 @@ tryCatch({
   roi <- abspath(opts$roi)
   if (!is.null(opts$mask))
       mask <- abspath(opts$mask)
+  else
+      mask <- NULL
   outfile <- abspath(opts$outfile)
   outtype <- opts$outtype
   overwrite <- opts$overwrite
