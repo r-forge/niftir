@@ -294,7 +294,7 @@ vox_glm <- function(funclist, evs, cons, blocksize, outmats, bp=NULL,
 }
 
 vox_glm3 <- function(funclist1, evs, cons, blocksize, 
-                      funclist2=funclist2, 
+                      funclist2=funclist1, 
                       outmats=NULL, bp=NULL, 
                       verbose=TRUE, parallel=FALSE, shared=parallel, 
                       ztransform=FALSE)

@@ -392,7 +392,7 @@ check_func_data <- function(xs, dat.list, extra=FALSE, verbose=FALSE, parallel=F
         stop("can't specify only infiles2 or only mask2")
     } else if (!is.null(infiles2) && !is.null(mask2)) {
         vcat(verbose, "Loading and masking functional data (Part 2)")
-        ftype2 <- ifelse(ndims$n1==2, "nifti2d", "nifti4d")
+        ftype2 <- ifelse(ndims$n2==2, "nifti2d", "nifti4d")
         reader2 <- gen_big_reader(ftype2, type="double", shared=shared)
         funclist2 <- load_and_mask_func_data2(infiles2, reader2, mask=mask2, 
                                               verbose=verbose,  
