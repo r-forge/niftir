@@ -1,7 +1,19 @@
+#new_dmat <- function(sdist, col, bp=NULL, asdist=FALSE) {
+#    scol <- sub.big.matrix(sdist, firstCol=col, lastCol=col, backingpath=bp)
+#    dcol <- matrix(0, nrow(scol), ncol(scol))
+#    dcopy(X=scol, Y=dcol)
+#    dim(dcol) <- rep(sqrt(nrow(scol)), 2)
+#    if (asdist)
+#        return(as.dist(dcol))
+#    else
+#        return(dcol)
+#}
+
 vox_base_cross <- function(FUN, funclist1, y, blocksize, 
                               funclist2=funclist1, 
                               verbose=TRUE, parallel=FALSE, shared=parallel, 
-                              ztransform=FALSE, recursive.unlist = TRUE, 
+                              ztransform=FALSE, design_mat=NULL, 
+                              recursive.unlist = TRUE, 
                               ...)
 {
     vcat(verbose, "...checks")
@@ -11,6 +23,7 @@ vox_base_cross <- function(FUN, funclist1, y, blocksize,
         stop("length mismatch between first set of functionals and labels")
     
     vcat(verbose, "...setup")
+    to.regress <- ifelse(is.null(design_mat), FALSE, TRUE)
     nsubs <- length(funclist1)
     nvoxs1 <- ncol(funclist1[[1]])
     nvoxs2 <- ncol(funclist2[[1]])
@@ -39,6 +52,13 @@ vox_base_cross <- function(FUN, funclist1, y, blocksize,
             seedCorMaps <- big.matrix(nsubs, nvoxs2, type="double", shared=FALSE)
             .Call("subdist_combine_and_trans_submaps", subs.cormaps, as.double(si), 
                   as.double(voxs2), seedCorMaps, PACKAGE="connectir")
+            if (to.regress) {
+                r_seedCorMaps <- big.matrix(nsubs, nvoxs2, type="double", shared=FALSE)
+                qlm_residuals(seedCorMaps, design_mat, FALSE, r_seedCorMaps)
+                rm(seedCorMaps)
+                seedCorMaps <- r_seedCorMaps
+            }
+                        
             #X <- matrix(NA, nsubs, nvoxs2)
             #dcopy(X=seedCorMaps, Y=X)
             X <- seedCorMaps[,]
@@ -85,6 +105,44 @@ vox_svm_cross <- function(funclist1, y, blocksize,
     tmp <- vox_base_cross(FUN, funclist1, y, blocksize, funclist2, verbose, 
                             parallel, shared, ztransform, recursive.unlist=TRUE,  
                             cross=cross, kernel=kernel, ...)
+    
+    return(tmp)
+}
+
+vox_glmnet_cross <- function(funclist1, y, blocksize, 
+                             funclist2=funclist1, 
+                             cross=10, family=NULL, standardize=T, 
+                             verbose=T, parallel=F, shared=parallel, 
+                             ztransform=TRUE, 
+                             ...)
+{
+    vcat(verbose, "GLMnet on Subject Distances")
+    library(glmnet)
+    
+    if (is.null(family)) {
+        if (is.factor(y)) {
+            family <- ifelse(length(levels(y))==2, "binomial", "multinomial")
+        } else {
+            family <- "gaussian"
+        }
+    }
+    
+    if (family %in% c("binomial", "multinomial"))
+        type.measure <- "class"
+    else
+        type.measure <- "deviance"
+    
+    # TODO: test this function
+    FUN <- function(X, y, cross, family, standardize, type.measure, ...) {
+        fit <- cv.glmnet(X, y, family=family, standardize=standardize, 
+                         nfolds=cross, type.measure=type.measure, alpha=0.5, ...)
+        min(fit$cvm)
+    }
+    
+    tmp <- vox_base_cross(FUN, funclist1, y, blocksize, funclist2, verbose, 
+                            parallel, shared, ztransform, recursive.unlist=TRUE,  
+                            cross=cross, family=family, standardize=standardize, 
+                            type.measure=type.measure, ...)
     
     return(tmp)
 }

@@ -80,9 +80,9 @@ glmnet_subdist_cross <- function(Xs, y, memlimit=2, bpath=NULL,
         type.measure <- "deviance"
     
     # TODO: test this function
-    FUN <- function(dmat, y, cross, kernel, ...) {
+    FUN <- function(dmat, y, cross, family, standardize, ...) {
         fit <- cv.glmnet(dmat, y, family=family, standardize=standardize, 
-                         nfolds=cross, type.measure=type.measure, ...)
+                         nfolds=cross, type.measure=type.measure, alpha=0.5, ...)
         ret <- c(cvm.min=min(fit$cvm), cvm.mean=mean(fit$cvm), 
                  nzero.min=fit$nzero[fit$lambda==fit$lambda.min], 
                  nzero.mean=mean(fit$nzero))
@@ -98,7 +98,8 @@ glmnet_subdist_cross <- function(Xs, y, memlimit=2, bpath=NULL,
     
     tmp <- base_analyze_subdist(FUN, Xs, y, memlimit, bpath, verbose, parallel, 
                                 recursive.unlist = FALSE, 
-                                cross=cross, kernel=kernel, ...)
+                                cross=cross, standardize=standardize, family=family, 
+                                ...)
     
     return(tmp)
 }
