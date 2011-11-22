@@ -80,12 +80,12 @@ glmnet_subdist_cross <- function(Xs, y, memlimit=2, bpath=NULL,
         type.measure <- "deviance"
     
     # TODO: test this function
-    FUN <- function(dmat, y, cross, family, standardize, ...) {
+    FUN <- function(dmat, y, cross, family, standardize, type.measure, ...) {
         fit <- cv.glmnet(dmat, y, family=family, standardize=standardize, 
                          nfolds=cross, type.measure=type.measure, alpha=0.5, ...)
-        ret <- c(cvm.min=min(fit$cvm), cvm.mean=mean(fit$cvm), 
-                 nzero.min=fit$nzero[fit$lambda==fit$lambda.min], 
-                 nzero.mean=mean(fit$nzero))
+        #ret <- c(cvm.min=min(fit$cvm), cvm.mean=mean(fit$cvm), 
+        #         nzero.min=fit$nzero[fit$lambda==fit$lambda.min], 
+        #         nzero.mean=mean(fit$nzero))
         #ret <- switch(result, 
         #    1 = fit$cvm[fit$lambda==fit$lambda.min], 
         #    2 = mean(fit$cvm), 
@@ -93,13 +93,13 @@ glmnet_subdist_cross <- function(Xs, y, memlimit=2, bpath=NULL,
         #    4 = mean(fit$nzero),
         #    vstop("unrecognized result %i for glmnet", result)
         #)
-        ret
+        min(fit$cvm)
     }
     
     tmp <- base_analyze_subdist(FUN, Xs, y, memlimit, bpath, verbose, parallel, 
-                                recursive.unlist = FALSE, 
+                                recursive.unlist = TRUE, 
                                 cross=cross, standardize=standardize, family=family, 
-                                ...)
+                                type.measure=type.measure, ...)
     
     return(tmp)
 }
