@@ -81,7 +81,8 @@ kendall <- function(subs.bigmats, blocksize, ztransform=FALSE, parallel=FALSE,
     return(ws)
 }
 
-kendall3 <- function(subs.func1, blocksize, subs.func2=subs.func1, ztransform=FALSE, 
+kendall3 <- function(subs.func1, blocksize, subs.func2=subs.func1, 
+                     design_mat=NULL, ztransform=FALSE, 
                      parallel=FALSE, verbose=TRUE) 
 {
     nsubs <- length(subs.func1)
@@ -92,20 +93,42 @@ kendall3 <- function(subs.func1, blocksize, subs.func2=subs.func1, ztransform=FA
     blocks <- niftir.split.indices(1, nseeds, by=blocksize)
     nvoxs <- ncol(subs.func2[[1]])
     voxs <- as.double(1:nvoxs)
+    if (!is.null(design_mat)) {
+        if (!is.big.matrix(design_mat))
+            stop("design_mat must be a big matrix")
+        if (nrow(design_mat) != nsubs)
+            stop("design mat has row mismatch (wrong # of subjects)")
+        if (ncol(design_mat) != nvoxs)
+            stop("design_mat has column mismatch (wrong # of voxels)")
+    }
     inform <- verbose
     progress <- ifelse(verbose, "text", "none")
-    
-    kfun <- function(i) {
-        incols <- seeds[c(blocks$starts[i],blocks$ends[i])]
-        cormats <- vbca_batch3(subs.func1, incols, subs.func2, ztransform=ztransform, 
-                               type="double", shared=FALSE)
-        seeds <- as.double(incols[1]:incols[2])
-        seedMaps <- big.matrix(nvoxs, nsubs, type="double", shared=FALSE)       
-        coeffs <- .Call("voxelwise_kendall3", cormats, seedMaps, seeds, voxs)
-        rm(cormats, seedMaps); gc(FALSE, TRUE)
-        return(coeffs)
+
+    if (is.null(design_mat)) {
+        kfun <- function(i) {
+            incols <- seeds[c(blocks$starts[i],blocks$ends[i])]
+            cormats <- vbca_batch3(subs.func1, incols, subs.func2, ztransform=ztransform, 
+                                   type="double", shared=FALSE)
+            seeds <- as.double(incols[1]:incols[2])
+            seedMaps <- big.matrix(nvoxs, nsubs, type="double", shared=FALSE)       
+            coeffs <- .Call("voxelwise_kendall3", cormats, seedMaps, seeds, voxs)
+            rm(cormats, seedMaps); gc(FALSE, TRUE)
+            return(coeffs)
+        }
+    } else {
+        kfun <- function(i) {
+            incols <- seeds[c(blocks$starts[i],blocks$ends[i])]
+            cormats <- vbca_batch3(subs.func1, incols, subs.func2, ztransform=ztransform, 
+                                   type="double", shared=FALSE)
+            seeds <- as.double(incols[1]:incols[2])
+            seedMaps <- big.matrix(nvoxs, nsubs, type="double", shared=FALSE)       
+            coeffs <- .Call("voxelwise_kendall3_regress", cormats, seedMaps, 
+                            design_mat, seeds, voxs)
+            rm(cormats, seedMaps); gc(FALSE, TRUE)
+            return(coeffs)
+        }
     }
-    
+        
     ws <- llply(1:blocks$n, kfun, .progress=progress, .parallel=parallel, .inform=inform)
     ws <- unlist(ws)
     

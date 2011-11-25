@@ -7,6 +7,7 @@ option_list <- list(
     make_option("--ztransform", action="store_true", default=FALSE, dest="ztransform", help="Fischer Z-Transform the correlations before calculating the similarity of connectivity maps across participants"),
     make_option("--brainmask1", type="character", default=NULL, help="When computing each whole-brain connectivity map, this mask will restrict which parts of the whole-brain are to be considered", metavar="file", dest="brainmask1"),
     make_option("--brainmask2", type="character", default=NULL, help="When computing each whole-brain connectivity map, this mask will restrict which parts of the whole-brain are to be considered only for --infuncs2", metavar="file", dest="brainmask2"), 
+    make_option("--regress", type="character", default=NULL, help="A design matrix (space delimeted file where first row is a header) containing variables to regress out of each voxel's whole-brain connectivity maps before comparing distances between subjects", metavar="file"), 
     make_option("--memlimit", type="double", default=4, dest="memlimit", help="If blocksize is set to auto (--blocksize=0), then will set the blocksize to use a maximum of RAM specified by this option  [default: %default]", metavar="number"),
     make_option(c("-c", "--forks"), type="integer", default=1, help="Number of computer processors to use in parallel by forking the complete processing stream [default: %default]", metavar="number"),
     make_option(c("-t", "--threads"), type="integer", default=1, help="Number of computer processors to use in parallel by multi-threading matrix algebra operations [default: %default]", metavar="number"),
@@ -56,6 +57,8 @@ tryCatch({
       stop("The file specified by -i/--infuncs does not exist")
   if (!is.null(opts$infuncs2) && !file.exists(opts$infuncs2))
       stop("The file specified by --infuncs2 does not exist")
+  if (!is.null(opts$regress) && !file.exists(opts$regress))
+      stop("The file specified by --regress does not exist")
   
   func_files1 <- as.character(read.table(opts$infuncs1)[,1])
   if (!is.null(opts$infuncs2)) {
@@ -63,10 +66,11 @@ tryCatch({
   } else {
       func_files2 <- NULL
   }
-  
+    
   # Running kendall wrapper
   wrap_kendall(func_files1, opts$brainmask1, 
                func_files2, opts$brainmask2, 
+               design_mat=opts$regress, 
                out_file=output, overwrite=opts$overwrite, 
                verbose=opts$verbose, parallel=parallel, shared=parallel, 
                memlimit=opts$memlimit, extra_checks=opts$extrachecks, 

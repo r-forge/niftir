@@ -190,6 +190,7 @@ wrap_functionals <- function(...) .wrap_functionals(...)
 
 wrap_kendall <- function(func_files1, mask_file1, 
                             func_files2=NULL, mask_file2=NULL, 
+                            design_mat=NULL, 
                             to_return=FALSE, out_file=NULL, overwrite=FALSE, 
                             verbose=TRUE, parallel=FALSE, shared=parallel, 
                             memlimit=4, extra_checks=FALSE, ...)
@@ -210,10 +211,22 @@ wrap_kendall <- function(func_files1, mask_file1,
                              extra_checks, 
                              .get_kendall_limit, memlimit)
     
+    if (!is.null(design_mat)) {
+        vcat(verbose, "reading in design matrix")
+        tmp_fname <- design_mat
+        tmp <- as.matrix(read.table(design_mat, header=TRUE))
+        design_mat <- big.matrix(nrow(tmp), ncol(tmp), type="double", shared=TRUE)
+        design_mat[,] <- tmp[,]; rm(tmp)
+        k <- qlm_rank(design_mat)
+        if (k < ncol(design_mat))
+            vstop("design matrix (--regress %s) is rank deficient", tmp_fname)
+        rm(tmp_fname)
+    }
+    
     vcat(verbose, "\nKendalling")
     verbosity <- ifelse(verbose, 2, 0)
     start.time <- Sys.time()
-    vec <- kendall3(ret$funcs1, ret$blocksize, ret$funcs2, 
+    vec <- kendall3(ret$funcs1, ret$blocksize, ret$funcs2, design_mat, 
                    verbose=verbose, parallel=parallel, ...)
     end.time <- Sys.time()
     vcat(verbose, "Kendalling is done! It took: %.2f minutes\n", 

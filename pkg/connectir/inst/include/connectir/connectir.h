@@ -71,6 +71,8 @@ RcppExport SEXP voxelwise_kendall(SEXP Slist_CorMaps, SEXP SSeedMaps,
                                   SEXP Sseeds, SEXP Svoxs);
 RcppExport SEXP voxelwise_kendall3(SEXP Slist_CorMaps, SEXP SSeedMaps, 
                                    SEXP Sseeds, SEXP Svoxs);
+RcppExport SEXP voxelwise_kendall3_regress(SEXP Slist_CorMaps, SEXP SSeedMaps, 
+                                           SEXP SX, SEXP Sseeds, SEXP Svoxs);
 RcppExport SEXP gcor_worker(SEXP ScorMaps, SEXP Sthresh, SEXP SthreshType, 
                             SEXP Sseeds, SEXP Svoxs);
 

@@ -32,6 +32,18 @@ simple_kendall3 <- function(bigmats, bigmats2=NULL) {
     return(coeffs)
 }
 
+simple_kendall3_regress <- function(bigmats, design_mat, bigmats2=NULL) {
+    nsubs <- length(bigmats)
+    nvoxs <- ncol(bigmats[[1]])
+    cormats <- vbca_batch3(bigmats, c(1,nvoxs), bigmats2)
+    coeffs <- sapply(1:nvoxs, function(i) {
+        xmat <- sapply(cormats, function(x) x[i,])
+        fit <- lm(t(xmat) ~ design_mat)
+        kendall_ref(t(fit$residuals))
+    })
+    return(coeffs)
+}
+
 # test
 test_that("kendall works", {
     xm <- matrix(rnorm(200*100), 200, 100)
@@ -98,3 +110,14 @@ test_that("kendall3 voxelwise works #2", {
     expect_that(ref, equals(comp))
 })
 
+test_that("kendall3 voxelwise with regression works #1", {
+    xs <- create_many_big_matrices(nsubs=10, xdim=200, ydim=100)
+    design_mat <- matrix(rnorm(10*2), 10, 2)
+    design_mat <- cbind(rep(1, 10), design_mat)
+    
+    ref <- simple_kendall3_regress(xs, design_mat)
+    comp <- kendall3(xs, blocksize=10, 
+                    design_mat=as.big.matrix(design_mat, type="double"))
+    
+    expect_that(ref, equals(comp))
+})

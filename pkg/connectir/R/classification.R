@@ -66,7 +66,7 @@ vox_base_cross <- function(FUN, funclist1, y, blocksize,
             # some classification?
             res <- FUN(X, y, ...)
             
-            rm(seedCorMaps, cmaps); gc(FALSE, TRUE)
+            rm(seedCorMaps); gc(FALSE, TRUE)
             
             return(res)
         }
