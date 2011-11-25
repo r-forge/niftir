@@ -90,20 +90,30 @@ vox_svm_cross <- function(funclist1, y, blocksize,
                           cross=10, kernel="linear", 
                           verbose=T, parallel=F, shared=parallel, 
                           ztransform=TRUE, 
+                          ret.fit=FALSE, 
                           ...) 
 {
     vcat(verbose, "SVM on Subject Distances")
     library(e1071)
         
     # TODO: test this function
-    FUN <- function(X, y, cross, kernel, ...) {
-        fit <- svm(X, y, cross=cross, kernel=kernel, fitted=FALSE, ...)
-        res <- c(fit$tot.accuracy, fit$tot.MSE[[1]])
-        res[!is.null(res)]
+    if (ret.fit) {
+        FUN <- function(X, y, cross, kernel, ...) {
+            fit <- svm(X, y, cross=cross, kernel=kernel, fitted=FALSE, ...)
+            fit
+        }
+        ru <- FALSE
+    } else {
+        FUN <- function(X, y, cross, kernel, ...) {
+            fit <- svm(X, y, cross=cross, kernel=kernel, fitted=FALSE, ...)
+            res <- c(fit$tot.accuracy, fit$tot.MSE[[1]])
+            res[!is.null(res)]
+        }
+        ru <- TRUE
     }
     
     tmp <- vox_base_cross(FUN, funclist1, y, blocksize, funclist2, verbose, 
-                            parallel, shared, ztransform, recursive.unlist=TRUE,  
+                            parallel, shared, ztransform, recursive.unlist=ru,  
                             cross=cross, kernel=kernel, ...)
     
     return(tmp)
@@ -111,9 +121,10 @@ vox_svm_cross <- function(funclist1, y, blocksize,
 
 vox_glmnet_cross <- function(funclist1, y, blocksize, 
                              funclist2=funclist1, 
-                             cross=10, family=NULL, standardize=T, 
+                             cross=10, family=NULL, standardize=T, alpha=0.5, 
                              verbose=T, parallel=F, shared=parallel, 
                              ztransform=TRUE, 
+                             ret.fit=FALSE, 
                              ...)
 {
     vcat(verbose, "GLMnet on Subject Distances")
@@ -133,16 +144,26 @@ vox_glmnet_cross <- function(funclist1, y, blocksize,
         type.measure <- "deviance"
     
     # TODO: test this function
-    FUN <- function(X, y, cross, family, standardize, type.measure, ...) {
-        fit <- cv.glmnet(X, y, family=family, standardize=standardize, 
-                         nfolds=cross, type.measure=type.measure, alpha=0.5, ...)
-        min(fit$cvm)
+    if (ret.fit) {
+        FUN <- function(X, y, cross, family, standardize, type.measure, alpha, ...) {
+            fit <- cv.glmnet(X, y, family=family, standardize=standardize, 
+                             nfolds=cross, type.measure=type.measure, alpha=alpha, ...)
+            fit
+        }
+        ru <- FALSE
+    } else {
+        FUN <- function(X, y, cross, family, standardize, type.measure, alpha, ...) {
+            fit <- cv.glmnet(X, y, family=family, standardize=standardize, 
+                             nfolds=cross, type.measure=type.measure, alpha=alpha, ...)
+            min(fit$cvm)
+        }
+        ru <- TRUE
     }
     
     tmp <- vox_base_cross(FUN, funclist1, y, blocksize, funclist2, verbose, 
                             parallel, shared, ztransform, recursive.unlist=TRUE,  
                             cross=cross, family=family, standardize=standardize, 
-                            type.measure=type.measure, ...)
+                            type.measure=type.measure, alpha=alpha, ...)
     
     return(tmp)
 }
