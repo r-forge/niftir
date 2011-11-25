@@ -99,8 +99,6 @@ kendall3 <- function(subs.func1, blocksize, subs.func2=subs.func1,
             stop("design_mat must be a big matrix")
         if (nrow(design_mat) != nsubs)
             stop("design mat has row mismatch (wrong # of subjects)")
-        if (ncol(design_mat) != nvoxs)
-            stop("design_mat has column mismatch (wrong # of voxels)")
     }
     inform <- verbose
     progress <- ifelse(verbose, "text", "none")
