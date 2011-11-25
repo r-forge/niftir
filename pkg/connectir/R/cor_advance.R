@@ -86,6 +86,7 @@ kendall3 <- function(subs.func1, blocksize, subs.func2=subs.func1,
                      parallel=FALSE, verbose=TRUE) 
 {
     nsubs <- length(subs.func1)
+    if (is.null(subs.func2)) subs.func2 <- subs.func1
     if (nsubs != length(subs.func2))
         stop("length mismatch in 2 set of functionals")
     nseeds <- ncol(subs.func1[[1]])

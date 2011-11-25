@@ -300,6 +300,7 @@ vox_glm3 <- function(funclist1, evs, cons, blocksize,
                       ztransform=FALSE)
 {
     vcat(verbose, "...checks")
+    if (is.null(subs.func2)) subs.func2 <- subs.func1
     if (!is.matrix(cons))
         stop("cons must be a matrix")
     if (!is.null(outmats) && !is.shared(outmats[[1]]))
