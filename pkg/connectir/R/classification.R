@@ -161,7 +161,7 @@ vox_glmnet_cross <- function(funclist1, y, blocksize,
     }
     
     tmp <- vox_base_cross(FUN, funclist1, y, blocksize, funclist2, verbose, 
-                            parallel, shared, ztransform, recursive.unlist=TRUE,  
+                            parallel, shared, ztransform, recursive.unlist=ru,  
                             cross=cross, family=family, standardize=standardize, 
                             type.measure=type.measure, alpha=alpha, ...)
     
