@@ -17,6 +17,8 @@ read.big.matlab <- function(file, ...) {
 # assume that rows are time-points & columns are nodes/voxels
 read.big.nifti2d <- function(file, ...) {
     img <- read.nifti.image(file)
+    if (length(dim(img)) == 1)
+        dim(img) <- c(length(img), 1)
     bigmat <- as.big.matrix(img, ...)
     return(bigmat)
 }
