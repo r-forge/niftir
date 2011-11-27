@@ -317,6 +317,8 @@ check_func_data <- function(xs, dat.list, extra=FALSE, verbose=FALSE, parallel=F
             return(hdr$dim[4])
         } else if (n == 2) {
             return(hdr$dim[1])
+        } else if (n == 1) {
+            return(hdr$dim[1])
         } else {
             vstop("Input functional file '%s' must be 2 or 4 dimensions but is %i dimensional", x, n)
         }
