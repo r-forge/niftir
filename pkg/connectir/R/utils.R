@@ -54,6 +54,123 @@ set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE) {
     invisible(TRUE)
 }
 
+# dims and mask useful is pass vector that represents 3D dataset
+cluster.table <- function(x, vox.thr=0, dims=NULL, mask=NULL, nei=1, nei.dist=3, pad=0) {
+    if (is.null(mask))
+        mask <- rep(T, length(x))
+    if (is.null(dims)) {
+        if (length(dim(x)) != 3)
+            stop("If dims isn't provided, then x must be a 3D array")
+        dims <- dim(x)
+    }
+    
+    nx <- dims[1]; ny <- dims[2]; nz <- dims[3]
+    if (pad > 0) {
+        mask.pad <- array(F, c(nx+pad*2, ny+pad*2, nz+pad*2))
+        mask.pad[(pad+1):(pad+nx), (pad+1):(pad+ny), (pad+1):(pad+nz)] <- T
+        nx <- dim(mask.pad)[1]; ny <- dim(mask.pad)[2]; nz <- dim(mask.pad)[3]
+        mask.pad <- as.vector(mask.pad)
+        tmp <- rep(F, length(mask.pad))
+        tmp[mask.pad] <- mask
+        mask <- tmp
+        rm(tmp)
+    }
+    
+    xfull <- vector("numeric", nx*ny*nz)
+    mfull <- vector("logical", nx*ny*nz)
+    
+    # coords <- expand.grid(list(x=1:nx, y=1:ny, z=1:nz))
+    
+    # Get neighbours to check for clusters
+    # default is 27 (face, edge, corner touching)
+    nmat <- expand.grid(list(i=-nei:nei, j=-nei:nei, k=-nei:nei))
+    voxdists <- rowSums(abs(nmat))
+    nmat <- nmat[voxdists<=nei.dist,]
+    offsets <- nmat$k*nx*ny + nmat$j*nx + nmat$i
+    rm(nmat)
+    
+    # threshold
+    tmp.mask <- x > vox.thr
+    nvoxs <- sum(tmp.mask)
+    mfull[mask] <- tmp.mask
+    xfull[mask][tmp.mask] <- x[tmp.mask]
+    rm(tmp.mask)
+    
+    # Create a list of indices
+    mm <- rep(T, nvoxs)
+    mat2arr_inds <- which(mfull)
+    arr2mat_inds <- mfull*1
+    arr2mat_inds[mfull] <- 1:nvoxs
+    maxi <- length(mfull) + 1
+    
+    cfull <- mfull*0
+    m <- mfull
+    sizes <- c()
+    masses <- c()
+    n <- nvoxs
+    nc <- 0
+    while (n > 0) {
+        i <- mat2arr_inds[mm][1]
+        
+        clust.n <- 1
+        clust.mass <- xfull[i]
+        n <- n - 1
+        m[i] <- F
+        mm[mm][1] <- F
+        nc <- nc + 1
+        cfull[i] <- nc
+        
+        inds <- offsets + i
+        inds <- inds[inds > 0 & inds < maxi]
+        tmp_inds <- inds[m[inds]]
+        
+        if (length(tmp_inds) > 0) {
+            m[tmp_inds] <- F
+            mm[arr2mat_inds[tmp_inds]] <- F
+
+            while(length(tmp_inds) > 0) {
+                i <- tmp_inds[1]
+                inds <- offsets + i
+                inds <- inds[inds > 0 & inds < maxi]
+                inds <- inds[m[inds]]
+                if (length(inds) > 0) {
+                    m[inds] <- F
+                    mm[arr2mat_inds[inds]] <- F
+                }
+                tmp_inds <- c(tmp_inds[-1], inds)
+                
+                clust.n <- clust.n + 1
+                clust.mass <- clust.mass + xfull[i]
+                n <- n - 1
+                cfull[i] <- nc
+            }
+        }
+        
+        masses <- c(clust.mass, masses)
+        sizes <- c(clust.n, sizes)
+    }
+    
+    if (pad > 0)
+        cfull <- cfull[mask.pad]
+    dim(cfull) <- dims
+    
+    # RETURNS:
+    # max.size: maximum cluster size
+    # max.mass: maximum cluster mass
+    # size: different cluster sizes
+    # mass: different cluster masses
+    # clust: 3D array like x but with clusters numbered
+    #        (cluster # here related to index of size and mass)
+    list(
+        nclust=nc, 
+        max.size=max(sizes), 
+        max.mass=max(masses), 
+        size=sizes,
+        mass=masses,
+        clust=cfull
+    )
+}
+
 big_rowsum <- function(bigmat, firstCol=1, lastCol=ncol(bigmat)) {
     as.vector(.Call("big_rowsum", bigmat, as.double(firstCol), as.double(lastCol), 
               PACKAGE="connectir"))
