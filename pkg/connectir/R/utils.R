@@ -55,7 +55,7 @@ set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE) {
 }
 
 # dims and mask useful is pass vector that represents 3D dataset
-cluster.table <- function(x, vox.thr=0, dims=NULL, mask=NULL, nei=1, nei.dist=3, pad=0) {
+cluster.table <- function(x, vox.thr=0, dims=NULL, mask=NULL, nei=1, nei.dist=3, pad=1) {
     if (is.null(mask))
         mask <- rep(T, length(x))
     if (is.null(dims)) {
