@@ -265,7 +265,7 @@ check_func_data <- function(xs, dat.list, extra=FALSE, verbose=FALSE, parallel=F
 ###
 
 .check_mask_paths <- function(mask_file1=NULL, mask_file2=NULL) {
-    if (!is.null(mask_file1) && !is.character(mask_file1) || !file.exists(mask_file1))
+    if (!is.null(mask_file1) && (!is.character(mask_file1) || !file.exists(mask_file1)))
         stop("Could not find mask file ", mask_file1)
     if (!is.null(mask_file2) && (!is.character(mask_file2) || !file.exists(mask_file2)))
         stop("Could not find mask file ", mask_file2)
