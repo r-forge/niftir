@@ -439,13 +439,91 @@ mdmr <- function(G, formula, model,
     
     structure(
         list(
+            nfactors=modelinfo$nfactors, 
             modelinfo=modelinfo,
             pvals=Pmat,
             fstats=Fperms,
+            fpath=fperms.path, 
             perms=p
         ),
         class="mdmr"
     )
+}
+
+# obj list: nfactors, fpath, fstats, Pmat
+clust_mdmr <- function(obj, maskfile, vox.thresh=0.05, clust.thresh=0.05, 
+                        clust.type=c("mass", "size"), verbose=TRUE, parallel=FALSE)
+{
+    vcat(verbose, "Multiple comparisons correction with cluster %s", clust.type)
+    if (!(clust.type %in% c("mass", "size")))
+        vstop("unrecognized clust.type %s", clust.type)
+    progress <- ifelse(verbose, "text", "none")
+    nfactors <- obj$nfactors
+    fpath <- obj$fpath
+    mask <- read.mask(maskfile)
+    hdr <- read.nifti.header(maskfile)
+    
+    get_col <- function(x, i, bp=NULL) {
+        col <- matrix(0, nrow(x), 1)
+        subx <- sub.big.matrix(x, firstCol=i, lastCol=i, backingpath=bp)
+        dcopy(X=subx, Y=col)
+        as.vector(col)
+    }
+    
+    save_col <- function(x, y, i, bp=NULL) {
+        x <- matrix(x, length(x), 1)
+        suby <- sub.big.matrix(y, firstCol=i, lastCol=i, backingpath=bp)
+        deepcopy(x=x, y=suby)
+    }
+    
+    Cmat <- big.matrix(nvoxs, nfactors, type="double", shared=TRUE)
+    
+    for (fi in 1:nfactors) {
+        # Get inputs
+        pvals <- obj$Pmat[,fi]
+        fs.mat <- obj$fstats[[fi]]
+        nperms <- nrow(fs.mat)
+        nvoxs <- ncol(fs.mat)
+        
+        # Get p-values for each permutation
+        ps.mat <- big.matrix(nperms, nvoxs, type="double", shared=parallel)
+        tmp <- llply(1:nvoxs, function(i) {
+            x <- get_col(fs.mat, i, fpath)
+            rx <- nperms - rank(x, ties.method="max")
+            ps <- rx/nperms
+            save_col(ps, ps.mat, i)
+            return(NULL)
+        }, .progress=progress, .parallel=parallel)
+        rm(tmp)
+        
+        # Get cluster sizes/masses
+        ref <- cluster.table(1-pvals, 0.95, hdr$dim, mask)
+        comps <- laply(1:nperms, function(i) {
+            ct <- cluster.table(1-ps.mat[i,], 0.95, hdr$dim, mask)
+            c(size=ct$max.size, mass=ct$max.mass)
+        }, .progress="text", .parallel=parallel)
+        
+        # P-values for cluster size/mass
+        if (clust.type == "size") {
+            clust.pvals <- sapply(ref$size, function(x) sum(comps[,1]>=x))/nperms
+        } else {
+            clust.pvals <- sapply(ref$mass, function(x) sum(comps[,2]>=x))/nperms
+        }
+        
+        # Clusters
+        clust <- ref$clust[mask]
+        w.clusts <- which(rev(clust.pvals<0.05))
+        clust.new <- clust*0
+        for (i in 1:length(w.clusts)) clusts.new[clust==w.clusts[i]] <- i
+        Cmat[,fi] <- clusts.new
+        
+        # Clear f permutations from memory
+        if (is.filebacked(fs.mat)) {
+            obj$fstats[[fi]] <- free.memory(fs.mat, fpath)
+        }
+    }
+    
+    return(Cmat)
 }
 
 save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE) {
@@ -528,5 +606,19 @@ save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE) {
     }
     rm(CorrPmat)
     gc(FALSE)
+    
+    if (!is.null(obj$clust)) {
+        vcat(verbose, "...saving cluster corrected p-values (1-p), etc")
+        for (i in 1:nfactors) {
+            fac <- factornames[i]
+            # cluster
+            fn <- mpath(sprintf("clust_%s.nii.gz", fac))
+            write.nifti(obj$clust[,i], header, mask, odt="int", outfile=fn)
+            # cluster p-values
+            fn <- mpath(sprintf("clust_pvals_%s.nii.gz", fac))
+            tmp <- (1-Pmat[,i]) * ((obj$clust[,i]>0)*1)
+            write.nifti(tmp, header, mask, odt="float", outfile=fn)
+        }
+    }
 }
 
