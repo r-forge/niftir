@@ -479,6 +479,7 @@ clust_mdmr <- function(obj, maskfile, vox.thresh=0.05, clust.thresh=0.05,
     Cmat <- big.matrix(nvoxs, nfactors, type="double", shared=TRUE)
     
     for (fi in 1:nfactors) {
+        vcat(verbose, "\tFactor #%i",fi )
         # Get inputs
         pvals <- obj$Pmat[,fi]
         fs.mat <- obj$fstats[[fi]]
@@ -486,6 +487,7 @@ clust_mdmr <- function(obj, maskfile, vox.thresh=0.05, clust.thresh=0.05,
         nvoxs <- ncol(fs.mat)
         
         # Get p-values for each permutation
+        vcat(verbose, "\t...getting p-values")
         ps.mat <- big.matrix(nperms, nvoxs, type="double", shared=parallel)
         tmp <- llply(1:nvoxs, function(i) {
             x <- get_col(fs.mat, i, fpath)
@@ -497,6 +499,7 @@ clust_mdmr <- function(obj, maskfile, vox.thresh=0.05, clust.thresh=0.05,
         rm(tmp)
         
         # Get cluster sizes/masses
+        vcat(verbose, "\t...getting cluster sizes")
         ref <- cluster.table(1-pvals, 0.95, hdr$dim, mask)
         comps <- laply(1:nperms, function(i) {
             ct <- cluster.table(1-ps.mat[i,], 0.95, hdr$dim, mask)
@@ -504,6 +507,7 @@ clust_mdmr <- function(obj, maskfile, vox.thresh=0.05, clust.thresh=0.05,
         }, .progress="text", .parallel=parallel)
         
         # P-values for cluster size/mass
+        vcat(verbose, "\t...getting cluster p-values and clusters")
         if (clust.type == "size") {
             clust.pvals <- sapply(ref$size, function(x) sum(comps[,1]>=x))/nperms
         } else {
