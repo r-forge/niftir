@@ -310,7 +310,14 @@ wrap_glm <- function(func_files1, mask_file1, ev_file, contrast_file,
     ## copy contrasts
     file.copy(contrast_file, file.path(outdir, "model_contrasts.txt"))
     ## copy mask
-    file.copy(mask_file1, file.path(outdir, "mask.nii.gz"))
+    if (!is.null(mask_file1)) {
+        file.copy(mask_file1, file.path(outdir, "mask.nii.gz"))
+    } else {
+        hdr <- read.nifti.header(func_files1[1])
+        hdr$dim <- hdr$dim[-length(hdr$dim)]; hdr$dim <- hdr$pixdim[-length(hdr$pixdim)]
+        mask <- as.nifti(array(1, hdr$dim), hdr)
+        write.nifti(mask, odt="int", outfile=file.path(outdir, "mask.nii.gz"))
+    }
     if (!is.null(mask_file2))
         file.copy(mask_file1, file.path(outdir, "mask2.nii.gz"))
     ## soft-link functionals
