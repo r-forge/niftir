@@ -500,9 +500,9 @@ clust_mdmr <- function(obj, maskfile, vox.thresh=0.05, clust.thresh=0.05,
         
         # Get cluster sizes/masses
         vcat(verbose, "\t...getting cluster sizes")
-        ref <- cluster.table(1-pvals, 0.95, hdr$dim, mask)
+        ref <- cluster.table(1-pvals, 1-vox.thresh, hdr$dim, mask)
         comps <- laply(1:nperms, function(i) {
-            ct <- cluster.table(1-ps.mat[i,], 0.95, hdr$dim, mask)
+            ct <- cluster.table(1-ps.mat[i,], 1-vox.thresh, hdr$dim, mask)
             c(size=ct$max.size, mass=ct$max.mass)
         }, .progress="text", .parallel=parallel)
         
@@ -516,7 +516,7 @@ clust_mdmr <- function(obj, maskfile, vox.thresh=0.05, clust.thresh=0.05,
         
         # Clusters
         clust <- ref$clust[mask]
-        w.clusts <- which(rev(clust.pvals<0.05))
+        w.clusts <- which(rev(clust.pvals<clust.thresh))
         clust.new <- clust*0
         for (i in 1:length(w.clusts)) clust.new[clust==w.clusts[i]] <- i
         Cmat[,fi] <- clust.new
