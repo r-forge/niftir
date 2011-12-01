@@ -322,8 +322,8 @@ wrap_glm <- function(func_files1, mask_file1, ev_file, contrast_file,
     #    mask <- as.nifti(array(1, hdr$dim), hdr)
     #    write.nifti(mask, odt="int", outfile=file.path(outdir, "mask.nii.gz"))
     #}
-    #if (!is.null(mask_file2))
-        file.copy(mask_file1, file.path(outdir, "mask2.nii.gz"))
+    if (!is.null(mask_file2))
+        file.copy(mask_file2, file.path(outdir, "mask2.nii.gz"))
     ## soft-link functionals
     dir.create(file.path(outdir, "infuncs"))
     for (i in 1:length(func_files1)) {
