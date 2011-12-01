@@ -514,8 +514,8 @@ clust_mdmr <- function(obj, maskfile, vox.thresh=0.05, clust.thresh=0.05,
         clust <- ref$clust[mask]
         w.clusts <- which(rev(clust.pvals<0.05))
         clust.new <- clust*0
-        for (i in 1:length(w.clusts)) clusts.new[clust==w.clusts[i]] <- i
-        Cmat[,fi] <- clusts.new
+        for (i in 1:length(w.clusts)) clust.new[clust==w.clusts[i]] <- i
+        Cmat[,fi] <- clust.new
         
         # Clear f permutations from memory
         if (is.filebacked(fs.mat)) {
