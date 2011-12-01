@@ -152,7 +152,11 @@ wrap_reho <- function(func_file, mask_file, out_file=NULL,
         func_files2 <- func_files1
     .check_mask_paths(mask_file1, mask_file2)
     .check_func_paths(func_files1, func_files2)
-    hdr <- read.nifti.header(mask_file1)
+    
+    if (!is.null(mask_file1))
+        hdr <- read.nifti.header(mask_file1)
+    else
+        hdr <- read.nifti.header(func_files1[[1]])
     
     vcat(verbose, "...reading mask")
     mask1 <- .get_mask(func_files1, mask_file1)
