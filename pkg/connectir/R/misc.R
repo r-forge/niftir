@@ -1,6 +1,6 @@
 roi_mean <- function(infunc, rois) {
     uniqs <- sort(unique(rois))
-    uniqs <- uniqs[uniques!=0]
+    uniqs <- uniqs[uniqs!=0]
     n <- length(uniqs)
     sapply(uniqs, function(x) rowMeans(infunc[,rois==x,drop=FALSE]))
 }
