@@ -1,5 +1,5 @@
 .subdist_distance <- function(seedMaps, dmats, colind, 
-                              transpose=FALSE, method="pearson")
+                              transpose=FALSE, method="pearson", ...)
 {
     if (method == "pearson") {
         scale_fast(seedMaps, to.copy=FALSE, byrows=transpose)
@@ -8,7 +8,12 @@
     } else if (method == "shrink.pearson") {
         library(corpcor)
         if (transpose) seedMaps <- t(seedMaps[,])
-        dmats[,colind] <- 1 - cor.shrink(seedMaps, verbose=FALSE)[,]
+        dmats[,colind] <- 1 - cor.shrink(seedMaps, verbose=FALSE, ...)[,]
+    } else if (method == "icov") {
+        library(glasso)
+        if (transpose) seedMaps <- t(seedMaps[,])
+        seedMaps <- scale(seedMaps[,], scale=FALSE)
+        dmats[,colind] <- 1 - icov(seedMaps, ...)
     } else {
         vstop("Unrecognized method %s", method)
     }
@@ -191,7 +196,7 @@ compute_subdist_worker3 <- function(sub.funcs1, firstSeed, lastSeed, sub.funcs2,
     
     seedCorMaps <- big.matrix(nvoxs, nsubs, type=type, shared=shared, ...)
     for (i in 1:nseeds) {
-        .Call("subdist_combine_and_scale_submaps", subs.cormaps, as.double(i), 
+        .Call("subdist_combine_submaps", subs.cormaps, as.double(i), 
               as.double(voxs), seedCorMaps, PACKAGE="connectir")
         .subdist_distance(seedCorMaps, dmats, dists[i], FALSE, method)
     }

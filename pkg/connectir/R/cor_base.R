@@ -20,6 +20,32 @@ vbca_batch <- function(subs.bigmats, cols, ztransform=FALSE, ...) {
     lapply(1:nsubjects, function(i) vbca(subs.bigmats[[i]], cols, ztransform, ...))
 }
 
+# Inverse Covariance / glasso functions
+
+icov <- function(x, y=NULL, lamda=100, d=1) {
+    oc <- cov(x, y)
+    r <- norm_glasso(oc, lamda, d)
+    return(r)
+}
+
+# oc = covariance matrix (or time-series if cov=TRUE)
+norm_glasso <- function(oc, lamda=100, d=1) {
+    library(glasso)
+
+	n <- ncol(oc)
+    
+    # sparse inverse covariance matrix
+    ic <- -1*glasso(oc/mean(diag(oc)), lamda/1000)$wi
+    
+    # use diaganoal to get normalized coefficients
+    tmp <- sqrt(abs(diag(ic))) %*% matrix(1,1,n)
+    r <- ic / tmp / t(tmp)
+    
+    # set diagonal
+    diag(r) <- d
+    
+    return(r) 
+}
 
 ## NEW CODE USING ARMADILLO
 
@@ -27,6 +53,7 @@ big_cor <- function(x, y=NULL, z=NULL, byrows=FALSE,
                     x_firstCol=1, x_lastCol=ncol(x), 
                     y_firstCol=NULL, y_lastCol=NULL, 
                     z_firstCol=1, z_lastCol=NULL, 
+                    glasso = FALSE, lamda=100, 
                     ...) 
 {
     # Setup 'y'
@@ -77,6 +104,10 @@ big_cor <- function(x, y=NULL, z=NULL, byrows=FALSE,
             as.double(y_firstCol), as.double(y_lastCol), 
             as.double(z_firstCol), as.double(z_lastCol), 
             PACKAGE = "connectir")
+    
+    # Inverse Covariance
+    if (glasso)
+        z[,] <- norm_glasso(z[,], lamda=lamda)
     
     invisible(z)
 }

@@ -374,7 +374,7 @@ compute_subdist_worker2 <- function(sub.funcs, firstSeed, lastSeed,
     
     seedCorMaps <- big.matrix(nvoxs-1, nsubs, type=type, shared=shared, ...)
     for (i in 1:nseeds) {
-        .Call("subdist_combine_and_scale_submaps", subs.cormaps, as.double(i), 
+        .Call("subdist_combine_submaps", subs.cormaps, as.double(i), 
               as.double(voxs[-seeds[i]]), seedCorMaps, PACKAGE="connectir")
         .subdist_distance(seedCorMaps, dmats, dists[i], FALSE, method)
     }

@@ -6,8 +6,8 @@ context("correlations with big_cor")
 
 # TODO: make non x %*% x tests!
 
-create_data <- function(nr=100, nc=5, transpose=FALSE) {
-    xm <- scale(matrix(rnorm(nr*nc), nr, nc))
+create_data <- function(nr=100, nc=5, transpose=FALSE, scale=TRUE) {
+    xm <- scale(matrix(rnorm(nr*nc), nr, nc), scale=scale)
     if (transpose)
         xm <- t(xm)
     xbm <- as.big.matrix(xm)
@@ -18,6 +18,13 @@ test_that("self correlation works", {
     dat <- create_data()
     ref <- cor(dat$m)
     comp <- big_cor(dat$bm)
+    expect_that(ref, is_equivalent_to(as.matrix(comp)))
+})
+
+test_that("self inverse covariance works", {
+    dat <- create_data(scale=FALSE)
+    ref <- icov(dat$m)
+    comp <- big_cor(dat$bm, glasso=T)
     expect_that(ref, is_equivalent_to(as.matrix(comp)))
 })
 

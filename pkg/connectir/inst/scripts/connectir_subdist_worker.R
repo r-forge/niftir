@@ -16,7 +16,8 @@ option_list <- list(
     make_option(c("-c", "--forks"), type="integer", default=1, help="Number of computer processors to use in parallel by forking the complete processing stream [default: %default]", metavar="number"),
     make_option(c("-t", "--threads"), type="integer", default=1, help="Number of computer processors to use in parallel by multi-threading matrix algebra operations [default: %default]", metavar="number"),
     make_option("--extrachecks", action="store_true", default=FALSE, help="Will do a more rigorous check of the input functionals before any calculations"),
-    make_option("--shrink", action="store_true", default=FALSE, help="Computes shrinkage estimates of 1 - correlation when calculating the distance between subject connectivity maps"),
+    make_option("--sparseconn", action="store_true", default=FALSE, help="Computes  inverse covariance estimates when calculating connectivity maps"), 
+    make_option("--sparsedist", action="store_true", default=FALSE, help="Computes 1 - inverse covariance estimates when calculating the distance between subject connectivity maps"), 
     make_option("--overwrite", action="store_true", default=FALSE, help="Overwrite output that already exists (default is not to overwrite already existing output)"),
     make_option("--no-link-functionals", action="store_true", default=FALSE, help="Will not create soft links to each of the functional images with the subdist directory"),
     make_option(c("-q", "--quiet"), action="store_false", dest="verbose", help="Print little output"), 
@@ -124,10 +125,18 @@ tryCatch({
       verbosity <- 0
   }
   
-  if (opts$shrink) {
-      method <- "shrink.pearson"
+  if (opts$sparsedist) {
+      method <- "icov"
   } else {
       method <- "pearson"
+  }
+  
+  if (opts$sparseconn) {
+      glasso <- TRUE
+      if (!use.set2)
+        stop("can only use --sparseconn when set --infiles2 and/or --brainmask2")
+  } else {
+      glasso <- FALSE
   }
   
   # design matrix
@@ -219,7 +228,7 @@ tryCatch({
   ftype1 <- ifelse(opts$in2d1, "nifti2d", "nifti4d")
   reader1 <- gen_big_reader(ftype1, type="double", shared=parallel_forks)
   funclist1 <- load_and_mask_func_data2(infiles1, reader1, mask=mask1, 
-                                        verbose=opts$verbose,  
+                                        verbose=opts$verbose, scale=!glasso,  
                                         type="double", shared=parallel_forks)
   check1 <- check_func_data(infiles1[1], funclist1[1], extra=TRUE, 
                             verbose=opts$verbose, parallel=FALSE)
@@ -237,7 +246,7 @@ tryCatch({
       ftype2 <- ifelse(opts$in2d2, "nifti2d", "nifti4d")
       reader2 <- gen_big_reader(ftype2, type="double", shared=parallel_forks)
       funclist2 <- load_and_mask_func_data2(infiles2, reader2, mask=mask2, 
-                                            verbose=opts$verbose,  
+                                            verbose=opts$verbose, scale=!glasso,  
                                             type="double", shared=parallel_forks)
       check1 <- check_func_data(infiles2[1], funclist2[1], extra=opts$extrachecks, 
                                 verbose=opts$verbose, parallel=parallel_forks)
@@ -279,7 +288,8 @@ tryCatch({
                                         funclist2, 
                                         design_mat=opts$regress, 
                                         verbose=verbosity, parallel=parallel_forks, 
-                                        ztransform=opts$ztransform, method=method)  
+                                        ztransform=opts$ztransform, method=method, 
+                                        glasso=glasso)  
   } else {
       checks <- compute_subdist_wrapper(funclist1, dists_list, 
                                         opts$blocksize, opts$superblocksize, 

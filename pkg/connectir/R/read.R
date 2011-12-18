@@ -180,7 +180,8 @@ exclude_sub_masks <- function(inmasks, exclude.thresh=0.05, filter.mask=NULL,
 }
 
 # Load data
-load_and_mask_func_data2 <- function(xs, read_fun, mask=NULL, verbose=FALSE, ...)
+load_and_mask_func_data2 <- function(xs, read_fun, mask=NULL, verbose=FALSE, 
+                                     scale=TRUE, ...)
 {
     if (!is.list(xs) && !is.vector(xs))
         stop("input 'xs' must be a vector or list")
@@ -200,7 +201,7 @@ load_and_mask_func_data2 <- function(xs, read_fun, mask=NULL, verbose=FALSE, ...
             x <- z
             rm(z); gc(FALSE, TRUE)
         }
-        y <- scale(x, to.copy=TRUE, ...)
+        y <- scale(x, scale=scale, to.copy=TRUE, ...)
         rm(x); gc(FALSE, TRUE)
         return(y)
     }, .progress=progress, .parallel=FALSE)
@@ -369,7 +370,7 @@ check_func_data <- function(xs, dat.list, extra=FALSE, verbose=FALSE, parallel=F
 
 .read_funcs <- function(infiles1, mask1, infiles2=NULL, mask2=NULL, 
                         verbose=TRUE, parallel=FALSE, shared=parallel, 
-                        extra_checks=FALSE) 
+                        scale=TRUE, extra_checks=FALSE) 
 {
     vcat(verbose, "...getting dimensions of functional data")
     ndims <- .get_nifti_ndims(infiles1, infiles2, verbose)
@@ -379,7 +380,7 @@ check_func_data <- function(xs, dat.list, extra=FALSE, verbose=FALSE, parallel=F
     ftype1 <- ifelse(ndims$n1==2, "nifti2d", "nifti4d")
     reader1 <- gen_big_reader(ftype1, type="double", shared=shared)
     funclist1 <- load_and_mask_func_data2(infiles1, reader1, mask=mask1, 
-                                          verbose=verbose,  
+                                          verbose=verbose, scale=scale, 
                                           type="double", shared=shared)
     check1 <- check_func_data(infiles1[1], funclist1[1], extra=TRUE, 
                               verbose=verbose, parallel=FALSE)
@@ -400,8 +401,8 @@ check_func_data <- function(xs, dat.list, extra=FALSE, verbose=FALSE, parallel=F
         vcat(verbose, "Loading and masking functional data (Part 2)")
         ftype2 <- ifelse(ndims$n2==2, "nifti2d", "nifti4d")
         reader2 <- gen_big_reader(ftype2, type="double", shared=shared)
-        funclist2 <- load_and_mask_func_data2(infiles2, reader2, mask=mask2, 
-                                              verbose=verbose,  
+        funclist2 <- load_and_mask_func_data2(infiles2, reader2, mask=mask2,  
+                                              verbose=verbose, scale=scale, 
                                               type="double", shared=shared)
         check1 <- check_func_data(infiles2[1], funclist2[1], extra=TRUE, 
                                   verbose=verbose, parallel=FALSE)
