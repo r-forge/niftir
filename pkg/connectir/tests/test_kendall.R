@@ -39,7 +39,8 @@ simple_kendall3_regress <- function(bigmats, design_mat, bigmats2=NULL) {
     coeffs <- sapply(1:nvoxs, function(i) {
         xmat <- sapply(cormats, function(x) x[i,])
         fit <- lm(t(xmat) ~ design_mat)
-        kendall_ref(t(fit$residuals))
+        r_xmat <- t(fit$residuals) + (rowMeans(xmat) %*% matrix(1, 1, nsubs))
+        kendall_ref(r_xmat)
     })
     return(coeffs)
 }
@@ -115,6 +116,7 @@ test_that("kendall3 voxelwise with regression works #1", {
     design_mat <- matrix(rnorm(10*2), 10, 2)
     design_mat <- cbind(rep(1, 10), design_mat)
     
+    ref0 <- simple_kendall3(xs)
     ref <- simple_kendall3_regress(xs, design_mat)
     comp <- kendall3(xs, blocksize=10, 
                     design_mat=as.big.matrix(design_mat, type="double"))

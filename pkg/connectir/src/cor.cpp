@@ -306,6 +306,8 @@ SEXP voxelwise_kendall3_regress(SEXP Slist_CorMaps, SEXP SSeedMaps, SEXP SX, SEX
             Rf_error("number of rows in seedmap incorrect");
         
         arma::mat y(nsubs, nvoxs);
+        arma::mat vox_ones = arma::ones(1, nsubs);
+        arma::mat sy(nvoxs, 1);
         arma::mat X(1,1);
         const double* old_sx = sbm_to_arma_xd(SX, X);
         
@@ -317,6 +319,7 @@ SEXP voxelwise_kendall3_regress(SEXP Slist_CorMaps, SEXP SSeedMaps, SEXP SX, SEX
         // Loop through each seed voxel
         for (seedi = 0; seedi < nseeds; ++seedi) {
             seed = static_cast<index_type>(seeds[seedi] - 1);
+            sy.zeros();
             // Combine seed maps across subjects for given voxel
             for (subi = 0; subi < nsubs; ++subi)
             {
@@ -325,6 +328,7 @@ SEXP voxelwise_kendall3_regress(SEXP Slist_CorMaps, SEXP SSeedMaps, SEXP SX, SEX
                 UNPROTECT(1);
                 for (voxi = 0; voxi < nvoxs; ++voxi) {
                     y(subi,voxi) = SubMaps(seedi,voxi);
+                    sy(voxi,0) += SubMaps(seedi,voxi);
                 }
             }
             
@@ -333,6 +337,10 @@ SEXP voxelwise_kendall3_regress(SEXP Slist_CorMaps, SEXP SSeedMaps, SEXP SX, SEX
 
             // residuals
             SeedMaps = arma::trans(y - X*coef);
+            
+            // add back column means
+            sy = sy/nsubs;
+            SeedMaps = SeedMaps + (sy * vox_ones);
             
             // Get kendall's w
             ks(seedi) = kendall_worker_d(SSeedMaps);
