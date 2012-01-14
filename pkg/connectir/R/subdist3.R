@@ -13,7 +13,7 @@
         library(glasso)
         if (transpose) seedMaps <- t(seedMaps[,])
         seedMaps <- scale(seedMaps[,], scale=FALSE)
-        dmats[,colind] <- 1 - icov(seedMaps, ...)
+        dmats[,colind] <- as.vector(1 - icov(seedMaps, ...))
     } else {
         vstop("Unrecognized method %s", method)
     }
