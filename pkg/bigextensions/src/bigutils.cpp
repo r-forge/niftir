@@ -173,6 +173,97 @@ void BigTransScale(BigMatrix *pMat, SEXP rowIndices, SEXP colIndices) {
     return;
 }
 
+template<typename CType, typename BMAccessorType>
+void BigCenter(BigMatrix *pMat, SEXP rowIndices, SEXP colIndices) {
+    BMAccessorType m( *pMat );
+    
+    double *pRows = NUMERIC_DATA(rowIndices);
+    double *pCols = NUMERIC_DATA(colIndices);
+    index_type numRows = GET_LENGTH(rowIndices);
+    index_type numCols = GET_LENGTH(colIndices);
+    
+    index_type i=0;
+    index_type j=0;
+    index_type jj=0;
+    CType *pColumn;
+    
+    LDOUBLE x = 0;
+    LDOUBLE delta = 0;
+    LDOUBLE mean = 0;
+    LDOUBLE scaled_x;
+    
+    for (i = 0; i < numCols; ++i) {
+        pColumn = m[static_cast<index_type>(pCols[i])-1];
+        
+        // First pass to get mean
+        mean = delta = 0;
+        for (j = 0; j < numRows; ++j) {
+            // todo: add checking for NaN...but shouldn't really have any!
+            // maybe can also pass the exact list of voxs to loop through!
+            // if (!ISNAN(pColumn[curj]))
+            // NA_REAL
+            x = static_cast<LDOUBLE>(pColumn[static_cast<index_type>(pRows[j])-1]);
+            delta = x - mean;
+            mean = mean + delta/static_cast<LDOUBLE>(j+1);
+        }
+        
+        //printf("mean: %f; stdev: %f\n", mean, stdev);
+        
+        // Second pass to center
+        for (j = 0; j < numRows; ++j) {
+            jj = static_cast<index_type>(pRows[j]-1);
+            scaled_x = static_cast<LDOUBLE>(pColumn[jj])-mean;
+            pColumn[jj] = static_cast<CType>(scaled_x);
+        }
+    }
+    
+    return;
+}
+
+template<typename CType, typename BMAccessorType>
+void BigTransCenter(BigMatrix *pMat, SEXP rowIndices, SEXP colIndices) {
+    BMAccessorType m( *pMat );
+    
+    double *pRows = NUMERIC_DATA(rowIndices);
+    double *pCols = NUMERIC_DATA(colIndices);
+    index_type numRows = GET_LENGTH(rowIndices);
+    index_type numCols = GET_LENGTH(colIndices);
+    
+    index_type i=0;
+    index_type j=0;
+    index_type ci=0;
+    index_type ri=0;
+    CType *pColumn;
+    
+    LDOUBLE x = 0;
+    LDOUBLE delta = 0;
+    LDOUBLE mean = 0;
+    LDOUBLE scaled_x;
+    
+    for (j = 0; j < numRows; ++j) {
+        ri = static_cast<index_type>(pRows[j])-1;
+        
+        // First pass to get mean and sd
+        delta = mean = 0;
+        for (i = 0; i < numCols; ++i) {
+            ci = static_cast<index_type>(pCols[i])-1;            
+            x = static_cast<LDOUBLE>(m[ci][ri]);
+            delta = x - mean;
+            mean = mean + delta/static_cast<LDOUBLE>(i+1);
+        }
+        
+        // Second pass to center
+        for (i = 0; i < numCols; ++i) {
+            ci = static_cast<index_type>(pCols[i]-1);
+            scaled_x = static_cast<LDOUBLE>(m[ci][ri])-mean;
+            m[ci][ri] = static_cast<CType>(scaled_x);
+        }
+        
+    }
+    
+    return;
+}
+
 extern "C" {
     
     SEXP BigTransposeMain(SEXP origAddr, SEXP newAddr) {
@@ -472,6 +563,99 @@ extern "C" {
                     break;
                 case 8:
                     BigTransScale<double, MatrixAccessor<double> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+            }
+        }
+        
+        return R_NilValue;
+    }
+	
+    SEXP BigCenterMain(SEXP addr, SEXP rowIndices, SEXP colIndices) {
+
+        BigMatrix *pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(addr));
+        if (pMat->separated_columns()) {
+            switch (pMat->matrix_type()) {
+                case 1:
+                    BigCenter<char, SepMatrixAccessor<char> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+                case 2:
+                    BigCenter<short, SepMatrixAccessor<short> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+                case 4:
+                    BigCenter<int, SepMatrixAccessor<int> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+                case 8:
+                    BigCenter<double, SepMatrixAccessor<double> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+            }
+        }
+        else {
+            switch (pMat->matrix_type()) {
+                case 1:
+                    BigCenter<char, MatrixAccessor<char> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+                case 2:
+                    BigCenter<short, MatrixAccessor<short> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+                case 4:
+                    BigCenter<int, MatrixAccessor<int> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+                case 8:
+                    BigCenter<double, MatrixAccessor<double> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+            }
+        }
+        
+        return R_NilValue;
+    }
+    
+    SEXP BigTransCenterMain(SEXP addr, SEXP rowIndices, SEXP colIndices) {
+        BigMatrix *pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(addr));
+        if (pMat->separated_columns()) {
+            switch (pMat->matrix_type()) {
+                case 1:
+                    BigTransCenter<char, SepMatrixAccessor<char> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+                case 2:
+                    BigTransCenter<short, SepMatrixAccessor<short> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+                case 4:
+                    BigTransCenter<int, SepMatrixAccessor<int> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+                case 8:
+                    BigTransCenter<double, SepMatrixAccessor<double> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+            }
+        }
+        else {
+            switch (pMat->matrix_type()) {
+                case 1:
+                    BigTransCenter<char, MatrixAccessor<char> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+                case 2:
+                    BigTransCenter<short, MatrixAccessor<short> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+                case 4:
+                    BigTransCenter<int, MatrixAccessor<int> >( 
+                    pMat, rowIndices, colIndices);
+                    break;
+                case 8:
+                    BigTransCenter<double, MatrixAccessor<double> >( 
                     pMat, rowIndices, colIndices);
                     break;
             }

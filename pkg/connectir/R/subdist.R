@@ -410,7 +410,7 @@ compute_subdist_worker2_regress <- function(sub.funcs, firstSeed, lastSeed,
     for (i in 1:nseeds) {
         .Call("subdist_combine_and_trans_submaps", subs.cormaps, as.double(i), 
               as.double(voxs[-seeds[i]]), seedCorMaps, PACKAGE="connectir")
-        qlm_residuals(seedCorMaps, design_mat, FALSE, r_seedCorMaps)
+        qlm_residuals(seedCorMaps, design_mat, FALSE, r_seedCorMaps, TRUE)
         .subdist_distance(r_seedCorMaps, dmats, dists[i], TRUE, method)
     }
     

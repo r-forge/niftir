@@ -35,7 +35,8 @@ setMethod("scale",
         scale.default(x, center, scale)
 )
 
-scale_fast <- function(x, to.copy, byrows=FALSE, cols=1:ncol(x), rows=1:nrow(x), ...) {
+scale_fast <- function(x, to.copy, byrows=FALSE, cols=1:ncol(x), rows=1:nrow(x), ...) 
+{
     if (!is.big.matrix(x))
         stop("input must be a big matrix")
     
@@ -50,6 +51,27 @@ scale_fast <- function(x, to.copy, byrows=FALSE, cols=1:ncol(x), rows=1:nrow(x),
                 PACKAGE="bigextensions")
     else
         .Call("BigScaleMain", y@address, as.double(rows), as.double(cols), 
+                PACKAGE="bigextensions")
+    
+    return(y)
+}
+
+center_fast <- function(x, to.copy, byrows=FALSE, cols=1:ncol(x), rows=1:nrow(x), ...)
+{
+    if (!is.big.matrix(x))
+        stop("input must be a big matrix")
+    
+    # Copy
+    if (to.copy)
+        y <- deepcopy(x, ...)
+    else
+        y <- x
+    
+    if (byrows)
+        .Call("BigTransCenterMain", y@address, as.double(rows), as.double(cols), 
+                PACKAGE="bigextensions")
+    else
+        .Call("BigCenterMain", y@address, as.double(rows), as.double(cols), 
                 PACKAGE="bigextensions")
     
     return(y)

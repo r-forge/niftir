@@ -11,13 +11,22 @@
         dmats[,colind] <- 1 - cor.shrink(seedMaps, verbose=FALSE, ...)[,]
     } else if (method == "icov") {
         library(glasso)
-        if (transpose) seedMaps <- t(seedMaps[,])
-        seedMaps <- scale(seedMaps[,], scale=FALSE)
-        dmats[,colind] <- as.vector(1 - icov(seedMaps, ...))
+		# since we are just centering
+		center_fast(seedMaps, to.copy=FALSE, byrows=transpose)
+		# big_cor will give covariance & not correlation matrix
+		oc <- big_cor(seedMaps, byrows=transpose)
+		if (transpose)
+			r <- norm_glasso(t(oc[,]), ...)
+		else
+			r <- norm_glasso(oc[,], ...)
+        dmats[,colind] <- as.vector(1 - r)
+		rm(oc, r); gc(F,T)
     } else {
         vstop("Unrecognized method %s", method)
     }
 }
+
+test_sdist <- .subdist_distance(...)
 
 compute_subdist_wrapper3 <- function(sub.funcs1, list.dists, 
                                     blocksize, superblocksize, 
@@ -232,7 +241,7 @@ compute_subdist_worker3_regress <- function(sub.funcs1, firstSeed, lastSeed, sub
     for (i in 1:nseeds) {
         .Call("subdist_combine_and_trans_submaps", subs.cormaps, as.double(i), 
               as.double(voxs), seedCorMaps, PACKAGE="connectir")
-        qlm_residuals(seedCorMaps, design_mat, FALSE, r_seedCorMaps)
+        qlm_residuals(seedCorMaps, design_mat, FALSE, r_seedCorMaps, TRUE)
         .subdist_distance(r_seedCorMaps, dmats, dists[i], TRUE, method)
     }
     

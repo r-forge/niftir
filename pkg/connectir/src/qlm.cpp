@@ -104,18 +104,27 @@ SEXP big_qlm_rsquared(SEXP yr, SEXP coefr, SEXP residr, SEXP mser, SEXP nr, SEXP
 }
 
 // Solve for y ~ X (also pass outputs here)
-SEXP big_qlm_residuals(SEXP yr, SEXP Xr, SEXP residr) { 
+SEXP big_qlm_residuals(SEXP yr, SEXP Xr, SEXP residr, SEXP add_meanr) { 
     try {
         BM_TO_ARMA_INIT()
         BM_TO_ARMA_MULTIPLE(yr, y)
         BM_TO_ARMA_MULTIPLE(Xr, X)
         BM_TO_ARMA_MULTIPLE(residr, resid)
+			
+		int add_mean = INTEGER_DATA(add_meanr)[0];
         
         // fit model y ~ X
         arma::mat coef = arma::solve(X, y);
         
         // residuals
         resid = y - X*coef;
+		
+		// add back mean
+		if (add_mean) {
+			arma::rowvec m = mean(X);
+	        for(size_t i = 0; i < X.n_cols; ++i)
+				resid.col(i) = resid.col(i) + m(i);
+		}
         
         return R_NilValue;
     } catch(std::exception &ex) {

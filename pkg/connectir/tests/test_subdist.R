@@ -1,6 +1,7 @@
 library(connectir)
 library(testthat)
 library(stringr)
+library(glasso)
 
 context("Subject Distances")
 
@@ -78,6 +79,38 @@ test_that("pearson distance works", {
           PACKAGE="connectir")
     
     expect_that(as.vector(dmatA), is_equivalent_to(dmatB[,]))
+})
+
+test_that("sparse inverse covariance distance works", {
+    nvoxs <- 100; nsubs <- 10
+    seedCorMaps <- as.big.matrix(matrix(rnorm(nvoxs*nsubs), nvoxs, nsubs))
+	
+    # Ref
+	tmp <- scale(seedCorMaps[,], center=TRUE, scale=FALSE)
+    dmatA <- 1 - icov(tmp)
+    
+    # Comp
+	center_fast(seedCorMaps, to.copy=FALSE, byrows=FALSE)
+	oc <- big_cor(seedCorMaps, byrows=FALSE)
+	dmatB <- 1 - norm_glasso(oc[,])
+	
+    expect_that(dmatA, equals(dmatB))
+})
+
+test_that("sparse inverse covariance distance works with transposed matrix", {
+    nvoxs <- 100; nsubs <- 10
+    seedCorMaps <- as.big.matrix(matrix(rnorm(nvoxs*nsubs), nsubs, nvoxs))
+	
+    # Ref
+	tmp <- scale(t(seedCorMaps[,]), center=TRUE, scale=FALSE)
+    dmatA <- 1 - icov(tmp)
+    
+    # Comp
+	center_fast(seedCorMaps, to.copy=FALSE, byrows=TRUE)
+	oc <- big_cor(seedCorMaps, byrows=TRUE)
+	dmatB <- 1 - norm_glasso(t(oc[,]))
+	
+    expect_that(dmatA, equals(dmatB))
 })
 
 test_that("subdist worker works", {

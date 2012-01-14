@@ -69,6 +69,19 @@ test_that("qlm residuals works?", {
     expect_that(ref, is_equivalent_to(comp))
 })
 
+test_that("qlm residuals works when adding back column means?", {
+    dat <- create_data(k=2)
+    
+    fit <- lm(dat$y ~ dat$X - 1)
+    residuals <- qlm_residuals(as.big.matrix(dat$y), as.big.matrix(dat$X), 
+								add.mean=TRUE)
+    
+    ref <- as.matrix(fit$residuals)
+	for (i in 1:ncol(ref)) ref[,i] <- ref[,i] + mean(dat$X[,i])
+    comp <- as.matrix(residuals)
+    expect_that(ref, is_equivalent_to(comp))
+})
+
 test_that("qlm contrasts works?", {
     dat <- create_data(k=2)
     

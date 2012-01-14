@@ -116,13 +116,13 @@ setMethod('qlm_rsquared',
 
 # Residuals
 setGeneric('qlm_residuals', 
-    function(y, X, check.rank=FALSE, residuals=NULL, ...)
+    function(y, X, check.rank=FALSE, residuals=NULL, add.mean=FALSE, ...)
         standardGeneric('qlm_residuals')
 )
 
 setMethod('qlm_residuals',
     signature(y='big.matrix', X='big.matrix'),
-    function(y, X, check.rank=FALSE, residuals=NULL, ...) {
+    function(y, X, check.rank=FALSE, residuals=NULL, add.mean=FALSE, ...) {
         n = nrow(X); k = ncol(X); m = ncol(y)
         
         if (check.rank) {
@@ -137,7 +137,8 @@ setMethod('qlm_residuals',
             stop("size mismatch for output residuals")
         }
         
-        .Call("big_qlm_residuals", y, X, residuals, PACKAGE = "connectir")
+        .Call("big_qlm_residuals", y, X, residuals, as.integer(add.mean), 
+				PACKAGE = "connectir")
         
         return(residuals)
     }
