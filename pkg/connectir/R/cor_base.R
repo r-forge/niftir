@@ -22,6 +22,15 @@ vbca_batch <- function(subs.bigmats, cols, ztransform=FALSE, ...) {
 
 # Inverse Covariance / glasso functions
 
+pcor <- function(x, y=NULL, d=1) {
+	oc <- cov(x, y)
+	ic <- -1*solve(oc)
+	tmp <- sqrt(diag(ic)) %*% matrix(1,1,n)
+	r <- ic / tmp / t(tmp)
+	diag(r) <- d
+	return(r)
+}
+
 icov <- function(x, y=NULL, lamda=100, d=1) {
     oc <- cov(x, y)
     r <- norm_glasso(oc, lamda, d)

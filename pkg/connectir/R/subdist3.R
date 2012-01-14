@@ -194,7 +194,7 @@ compute_subdist_worker3 <- function(sub.funcs1, firstSeed, lastSeed, sub.funcs2,
     
     # check first subject for any inf or NAs and save those
     
-    seedCorMaps <- big.matrix(nvoxs, nsubs, type=type, shared=shared, ...)
+    seedCorMaps <- big.matrix(nvoxs, nsubs, type=type, shared=shared)
     for (i in 1:nseeds) {
         .Call("subdist_combine_submaps", subs.cormaps, as.double(i), 
               as.double(voxs), seedCorMaps, PACKAGE="connectir")
@@ -227,8 +227,8 @@ compute_subdist_worker3_regress <- function(sub.funcs1, firstSeed, lastSeed, sub
                                 ztransform=ztransform, 
                                 type=type, shared=shared, ...)
     
-    seedCorMaps <- big.matrix(nsubs, nvoxs, type=type, shared=shared, ...)
-    r_seedCorMaps <- big.matrix(nsubs, nvoxs, type=type, shared=shared, ...)
+    seedCorMaps <- big.matrix(nsubs, nvoxs, type=type, shared=shared)
+    r_seedCorMaps <- big.matrix(nsubs, nvoxs, type=type, shared=shared)
     for (i in 1:nseeds) {
         .Call("subdist_combine_and_trans_submaps", subs.cormaps, as.double(i), 
               as.double(voxs), seedCorMaps, PACKAGE="connectir")

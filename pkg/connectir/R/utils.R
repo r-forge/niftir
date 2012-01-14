@@ -165,8 +165,10 @@ cluster.table <- function(x, vox.thr=0, dims=NULL, mask=NULL, nei=1, nei.dist=3,
         nclust=nc, 
         max.size=max(sizes), 
         max.mass=max(masses), 
+        max.rel=max(masses/sizes), 
         size=sizes,
         mass=masses,
+        rel=masses/sizes, 
         clust=cfull
     )
 }

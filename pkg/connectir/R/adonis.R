@@ -478,6 +478,7 @@ clust_mdmr <- function(obj, maskfile, vox.thresh=0.05, clust.thresh=0.05,
     
     Cmat <- big.matrix(nvoxs, nfactors, type="double", shared=TRUE)
     
+    refs <- c()
     for (fi in 1:nfactors) {
         vcat(verbose, "\tFactor #%i",fi )
         # Get inputs
@@ -503,7 +504,7 @@ clust_mdmr <- function(obj, maskfile, vox.thresh=0.05, clust.thresh=0.05,
         ref <- cluster.table(1-pvals, 1-vox.thresh, hdr$dim, mask)
         comps <- laply(1:nperms, function(i) {
             ct <- cluster.table(1-ps.mat[i,], 1-vox.thresh, hdr$dim, mask)
-            c(size=ct$max.size, mass=ct$max.mass)
+            c(size=ct$max.size, mass=ct$max.mass, rel=ct$max.rel)
         }, .progress="text", .parallel=parallel)
         
         # P-values for cluster size/mass
@@ -513,6 +514,8 @@ clust_mdmr <- function(obj, maskfile, vox.thresh=0.05, clust.thresh=0.05,
         } else {
             clust.pvals <- sapply(ref$mass, function(x) sum(comps[,2]>=x))/nperms
         }
+        ref$clust.pvals <- clust.pvals
+        refs[[fi]] <- ref
         
         # Clusters
         clust <- ref$clust[mask]
@@ -527,7 +530,7 @@ clust_mdmr <- function(obj, maskfile, vox.thresh=0.05, clust.thresh=0.05,
         }
     }
     
-    return(Cmat)
+    return(list(mat=Cmat, ref=refs))
 }
 
 save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE) {
