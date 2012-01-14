@@ -26,7 +26,7 @@
     }
 }
 
-test_sdist <- .subdist_distance <- function(...)
+test_sdist <- .subdist_distance function(...)
 
 compute_subdist_wrapper3 <- function(sub.funcs1, list.dists, 
                                     blocksize, superblocksize, 
