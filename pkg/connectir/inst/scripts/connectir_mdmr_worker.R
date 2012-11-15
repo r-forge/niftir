@@ -19,7 +19,8 @@ option_list <- list(
     make_option("--overwrite", action="store_true", default=FALSE, help="Overwrite output if it already exists (default is not to overwrite already existing output)"),
     make_option(c("-d", "--debug"), action="store_true", default=FALSE, help="Like verbose but will also print more helpful error messages when --forks is >1"), 
     make_option(c("-v", "--verbose"), action="store_true", default=TRUE, help="Print extra output [default]"),
-    make_option(c("-q", "--quiet"), action="store_false", dest="verbose", help="Print little output")
+    make_option(c("-q", "--quiet"), action="store_false", dest="verbose", help="Print little output"), 
+    make_option("--voxs", type="character", default=NULL, help="A range of voxels to examine (this is mainly for testing purposes) and can be '1:10'.")
 )
     
 # Make class/usage
@@ -103,9 +104,15 @@ tryCatch({
   vcat(opts$verbose, "...data dimensions")
   tmp <- attach.big.matrix(opts$subdist)
   nsubs <- sqrt(nrow(tmp))
-  nvoxs <- ncol(tmp)
+  if (is.null(opts$voxs)) {
+      nvoxs <- ncol(tmp)
+      voxs <- NULL
+  } else {
+      voxs <- eval(parse(text=opts$voxs))
+      nvoxs <- length(voxs)
+  }
   rm(tmp); gc(FALSE, TRUE)
-
+  
   # formula
   vcat(opts$verbose, "...formula")
   formula <- as.formula(sprintf(". ~ %s", opts$formula))
@@ -194,14 +201,16 @@ tryCatch({
                        superblocksize=opts$superblocksize, blocksize=opts$blocksize, 
                        strata=opts$strata, factors2perm=opts$factors2perm, 
                        verbose=verbosity, parallel=parallel_forks, 
-                       G.path=xdist.path, fperms.path=fperms.path)
+                       G.path=xdist.path, fperms.path=fperms.path, 
+                       voxs=voxs)
   } else {
       res.mdmr <- mdmr.sge(opts$subdist, formula, model, nperms=opts$permutations, 
                        superblocksize=opts$superblocksize, blocksize=opts$blocksize, 
                        strata=opts$strata, factors2perm=opts$factors2perm, 
                        verbose=verbosity, parallel=parallel_forks, 
                        fperms.path=fperms.path, 
-                       threads=opts$threads, njobs=opts$jobs)
+                       threads=opts$threads, njobs=opts$jobs, 
+                       voxs=voxs)
   }
   rm(xdist)
   invisible(gc(FALSE, TRUE))
