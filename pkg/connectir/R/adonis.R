@@ -450,6 +450,224 @@ mdmr <- function(G, formula, model,
     )
 }
 
+# assume each column of x has been gower centered
+# NOTE: here G must be file-backed 
+mdmr.sge <- function(G.path, formula, model, 
+                 nperms=4999, factors2perm=NULL, superblocksize=NULL, 
+                 voxs=NULL, blocksize=nperms, 
+                 contr.unordered="contr.sum", contr.ordered="contr.poly", 
+                 max.iter=10, strata=NULL, 
+                 verbose=1, parallel=FALSE, 
+                 fperms.path=NULL, 
+                 type="double", shared=parallel, 
+                 threads=1, njobs=NULL)
+{
+    inform <- verbose==2
+    verbose <- as.logical(verbose)
+    progress <- ifelse(verbose, "text", "none")
+    vcat(verbose, "MDMR Time")
+    
+    if (!is.data.frame(model))
+        stop("input model must be a data frame")
+    if (!is.big.matrix(G) || !is.shared(G))
+        stop("input Gower's matrix must be type big matrix and shared")
+    if (!is.null(fperms.path) && !file.exists(fperms.path))
+        stop("output path for Pseudo-F permutations does not exist")
+    if (!is.null(G.path) && !file.exists(G.path))
+        stop("path for distance matrices must exist")
+    
+    G <- attach.big.matrix(G.path)
+    G.dir <- dirname(G.path)
+    if (is.null(voxs)) voxs <- 1:ncol(G)
+    if (is.null(superblocksize)) superblocksize <- length(voxs)
+    nvoxs <- length(voxs)
+    nsubs <- sqrt(nrow(G))  # don't want length(subs) here
+    superblocks <- niftir.split.indices(1, nvoxs, by=superblocksize)
+    blocks <- niftir.split.indices(1, nperms, by=blocksize)
+    forks <- getOption('cores')
+    if (is.null(njobs)) {
+        njobs <- 1
+        use.sge <- FALSE
+    } else {
+        use.sge <- TRUE
+    }
+    
+    # Prepare model matrix
+    modelinfo <- mdmr.prepare.model(formula, model, contr.unordered, contr.ordered, 
+                                    factors2perm, verbose)
+    vcat(verbose, "...will calculate p-values for the following factors: %s", 
+         paste(modelinfo$factor2perm.names, collapse=", "))
+    modelinfo$verbose <- FALSE
+    modelinfo$progress <- "none"
+    
+    # Permutation Business
+    p <- mdmr.prepare.permutations(modelinfo, nperms, strata, max.iter)
+    
+    # Create output matrices
+    Pmat <- mdmr.prepare.pmat(modelinfo, nvoxs, type=type, shared=TRUE)
+    if (!is.null(fperms.path)) {
+        save_fperms <- TRUE
+        Fperms <- mdmr.prepare.fperms(modelinfo, nperms, nvoxs, 
+                                      backingpath=fperms.path, 
+                                      type=type, shared=TRUE)
+        fperms.desc <- lapply(Fperms, describe)
+    } else {
+        save_fperms <- FALSE
+        Fperms <- NULL
+        fperms.desc <- NULL
+    }
+    
+    dfRes <- as.double(modelinfo$df.Res)
+    dfExp <- as.double(modelinfo$df.Exp)
+    
+    vcat(verbose, "Computing MDMR across %i large blocks", 
+         superblocks$n)
+    vcat(verbose, "...with %i smaller blocks within each larger one",
+         blocks$n)
+    
+    # tmp_G <- deepcopy(G...sub_nvoxs)
+    # tmp_F <- nperms, sub_nvoxs
+    
+    
+    
+    # G but should just pass G.path and G.dir
+    
+    pvals.list <- sge.parLapply(1:superblocks$n, function(si) {
+        vcat(verbose, "large block %i", si)
+        start.time <- Sys.time()
+        
+        set_parallel_procs(forks, threads, verbose)  
+        
+        firstVox <- superblocks$starts[si]
+        lastVox <- superblocks$ends[si]
+        sub_nvoxs <- lastVox - firstVox + 1
+        
+        tmp_Pmat <- mdmr.prepare.pmat(modelinfo, sub_nvoxs, init=1, 
+                                      type=type, shared=shared)
+        
+        vcat(verbose, "...copying distance matrices into memory")
+        G <- attach.big.matrix(G.path)
+        tmpG <- deepcopy(x=G, cols=firstVox:lastVox, type=type, shared=shared)
+        G <- free.memory(G, G.dir)
+        
+        vcat(verbose, "...preparing pseudo-F permutation matrices")
+        list_tmpFperms <- llply(1:blocks$n, function(bi) {
+            firstPerm <- as.double(blocks$starts[bi])
+            lastPerm <- as.double(blocks$ends[bi])
+            sub_nperms <- lastPerm - firstPerm + 1
+            tmpFperms <- mdmr.prepare.fperms(modelinfo, sub_nperms, sub_nvoxs, 
+                                             type=type, shared=shared)
+            return(tmpFperms)
+        }, .progress=progress, .inform=inform, .parallel=FALSE)
+        
+        afun <- function(bi) {
+            firstPerm <- as.double(blocks$starts[bi])
+            lastPerm <- as.double(blocks$ends[bi])
+            
+            tmpFperms <- list_tmpFperms[[bi]]
+            H2mats <- mdmr.prepare.permH2s(modelinfo, p, firstPerm, lastPerm, 
+                                           type=type, shared=FALSE)
+            IHmat <- mdmr.prepare.permIH(modelinfo, p, firstPerm, lastPerm, 
+                                         type=type, shared=FALSE)
+            
+            .Call("mdmr_worker", tmpG, tmpFperms, 
+                  tmp_Pmat, H2mats, IHmat, dfRes, dfExp, 
+                  PACKAGE="connectir")
+            
+            rm(H2mats, IHmat, tmpFperms)
+            invisible(gc(FALSE, TRUE))
+            
+            return(TRUE)
+        }
+        
+        vcat(verbose, "...almost MDMR time")
+        rets <- llply(1:blocks$n, afun, 
+                      .progress=progress, .inform=inform, .parallel=parallel)
+        
+        invisible(gc(FALSE, TRUE))
+        
+        if (save_fperms) {
+            n <- length(fperms.desc)
+            fpnames <- modelinfo$factor2perm.names
+            
+            l_ply(1:n, function(fi) {
+                vcat(verbose, "...saving permuted pseudo-F statistics for '%s'", 
+                     fpnames[fi])
+                aF <- attach.big.matrix(fperms.desc[[fi]], backingpath=fperms.path)
+                
+                # first row
+                tF <- list_tmpFperms[[1]][[fi]]
+                sF <- sub.big.matrix(aF, firstRow=1, lastRow=1, 
+                                    firstCol=firstVox, lastCol=lastVox, 
+                                    backingpath=fperms.path)
+                deepcopy(x=tF, rows=1, y=sF)
+                
+                # all other rows
+                l_ply(1:blocks$n, function(bi) {
+                    firstPerm <- blocks$starts[bi] + 1
+                    lastPerm <- blocks$ends[bi] + 1
+                    tF <- list_tmpFperms[[bi]][[fi]]
+                    sF <- sub.big.matrix(aF, firstRow=firstPerm, lastRow=lastPerm, 
+                                        firstCol=firstVox, lastCol=lastVox, 
+                                        backingpath=fperms.path)
+                    deepcopy(x=tF, rows=2:nrow(tF), y=sF)
+                }, .progress=progress)
+                
+                # clear memory a bit
+                flush(aF)
+                aF <- free.memory(aF, fperms.path)
+            })
+        }
+        
+        rm(tmpG, list_tmpFperms)
+        invisible(gc(FALSE, TRUE))
+        
+        # how long?
+        end.time <- Sys.time()
+        time.total <- as.numeric(end.time-start.time, units="mins")
+        time.left <- time.total*(superblocks$n-si)
+        vcat(verbose, "...took %.1f minutes (%.1f minutes left)\n", 
+             time.total, time.left)
+        
+        list(pmat=tmp_Pmat, firstVox=firstVox, lastVox=lastVox)
+    }, debug=inform, trace=inform, 
+    packages=c("connectir"), function.savelist=ls(), 
+    cluster=use.sge, njobs=njobs)
+    
+    # combine pvalues for different voxels
+    vcat(verbose, "...combining P-values")
+    l_ply(pvals.list, function(l) {
+        sub_Pmat <- sub.big.matrix(Pmat, firstRow=l$firstVox, lastRow=l$lastVox)
+        deepcopy(x=l$pmat, y=sub_Pmat)
+    }, .progress=progress, .inform=inform, .parallel=parallel)
+    rm(pvals.list)
+    
+    # divide Pmat by # of perms + 1
+    .Call("mdmr_nmat_to_pmat", Pmat, as.double(nperms+1), PACKAGE="connectir")
+    
+    # reload Fperms
+    if (save_fperms) {
+        Fperms <- lapply(fperms.desc, function(desc) {
+            attach.big.matrix(desc, backingpath=fperms.path)
+        })        
+    }
+    
+    # free stuff
+    rm(G); invisible(gc(FALSE, TRUE))
+    
+    structure(
+        list(
+            nfactors=modelinfo$nfactors, 
+            modelinfo=modelinfo,
+            pvals=Pmat,
+            fstats=Fperms,
+            fpath=fperms.path, 
+            perms=p
+        ),
+        class="mdmr"
+    )
+}
+
 # obj list: nfactors, fpath, fstats, Pmat
 clust_mdmr <- function(obj, maskfile, vox.thresh=0.05, clust.thresh=0.05, 
                         clust.type=c("mass", "size"), verbose=TRUE, parallel=FALSE)

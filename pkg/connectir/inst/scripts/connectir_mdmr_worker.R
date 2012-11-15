@@ -10,9 +10,10 @@ option_list <- list(
     make_option("--strata", type="character", default=NULL, help="Only compute permutations within groups, you can specify the name of a column in your '--model' that indicates these groups (optional)", metavar="name"),
     make_option(c("-p", "--permutations"), type="integer", default=4999, help="Number of permutations to conduct for each voxel [default: %default]", metavar="number"),
     make_option("--factors2perm", type="character", default=NULL, help="Which factors (e.g., A and B) to permute from the formula specified [default: all of them]", metavar="'A,B'"),
-    make_option(c("-c", "--forks"), type="integer", default=2, help="Number of computer processors to use in parallel by forking the complete processing stream [default: %default]", metavar="number"),
+    make_option(c("-c", "--forks"), type="integer", default=1, help="Number of computer processors to use in parallel by forking the complete processing stream [default: %default]", metavar="number"),
     make_option(c("-t", "--threads"), type="integer", default=1, help="Number of computer processors to use in parallel by multi-threading matrix algebra operations [default: %default]", metavar="number"),
-    make_option("--blocksize", type="integer", default=0, dest="blocksize", help="How many sets of voxels should used in each iteration of computing the pseudo F-statistics (0 = auto) [default: %default]", metavar="number"),
+    make_option(c("-j", "--jobs"), type="integer", default=NULL, help="Number of SGE jobs to submit (if not set, won't use SGE)", metavar="number"), 
+    make_option("--blocksize", type="integer", default=0, dest="blocksize", help="How many sets of voxels should used in eaciteration of computing the pseudo F-statistics (0 = auto) [default: %default]", metavar="number"),
     make_option("--memlimit", type="double", default=6, dest="memlimit", help="If blocksize is set to auto (--blocksize=0), then will set the blocksize to use a maximum of RAM specified by this option  [default: %default]", metavar="number"),
     make_option("--save-perms", action="store_true", default=FALSE, dest="saveperms", help="Save all the permuted psuedo-F stats? [default: %default]"),
     make_option("--overwrite", action="store_true", default=FALSE, help="Overwrite output if it already exists (default is not to overwrite already existing output)"),
@@ -187,11 +188,21 @@ tryCatch({
       fperms.path <- NULL
   }
   
-  res.mdmr <- mdmr(xdist, formula, model, nperms=opts$permutations, 
-                   superblocksize=opts$superblocksize, blocksize=opts$blocksize, 
-                   strata=opts$strata, factors2perm=opts$factors2perm, 
-                   verbose=verbosity, parallel=parallel_forks, 
-                   G.path=xdist.path, fperms.path=fperms.path)
+  # Eventually remove calling of different functions for SGE vs not
+  if (is.null(opts$njobs)) {
+      res.mdmr <- mdmr(xdist, formula, model, nperms=opts$permutations, 
+                       superblocksize=opts$superblocksize, blocksize=opts$blocksize, 
+                       strata=opts$strata, factors2perm=opts$factors2perm, 
+                       verbose=verbosity, parallel=parallel_forks, 
+                       G.path=xdist.path, fperms.path=fperms.path)
+  } else {
+      res.mdmr <- mdmr.sge(opts$subdist, formula, model, nperms=opts$permutations, 
+                       superblocksize=opts$superblocksize, blocksize=opts$blocksize, 
+                       strata=opts$strata, factors2perm=opts$factors2perm, 
+                       verbose=verbosity, parallel=parallel_forks, 
+                       fperms.path=fperms.path, 
+                       threads=opts$threads, njobs=opts$jobs)
+  }
   rm(xdist)
   invisible(gc(FALSE, TRUE))
   
