@@ -639,7 +639,7 @@ mdmr.sge <- function(G.path, formula, model,
     l_ply(pvals.list, function(l) {
         sub_Pmat <- sub.big.matrix(Pmat, firstRow=l$firstVox, lastRow=l$lastVox)
         deepcopy(x=l$pmat, y=sub_Pmat)
-    }, .progress=progress, .inform=inform, .parallel=parallel)
+    }, .progress=progress)
     rm(pvals.list)
     
     # divide Pmat by # of perms + 1
