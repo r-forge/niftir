@@ -504,7 +504,6 @@ mdmr.sge <- function(G.path, formula, model,
     p <- mdmr.prepare.permutations(modelinfo, nperms, strata, max.iter)
     
     # Create output matrices
-    Pmat <- mdmr.prepare.pmat(modelinfo, nvoxs, type=type, shared=TRUE)
     if (!is.null(fperms.path)) {
         save_fperms <- TRUE
         Fperms <- mdmr.prepare.fperms(modelinfo, nperms, nvoxs, 
@@ -637,6 +636,7 @@ mdmr.sge <- function(G.path, formula, model,
     
     # combine pvalues for different voxels
     vcat(verbose, "...combining P-values")
+    Pmat <- mdmr.prepare.pmat(modelinfo, nvoxs, type=type, shared=TRUE)
     for (l in pvals.list) {
         sub_Pmat <- sub.big.matrix(Pmat, firstRow=l$firstVox, lastRow=l$lastVox)
         deepcopy(x=l$pmat, y=sub_Pmat)

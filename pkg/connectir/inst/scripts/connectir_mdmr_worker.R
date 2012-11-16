@@ -221,7 +221,10 @@ tryCatch({
   vcat(opts$verbose, "MDMR is done! It took: %.2f minutes\n", 
        as.numeric(end.time-start.time, units="mins"))
        
-  save(res.mdmr, res.mdmr$pvals, file="ztest.rda")
+   options(error=recover)
+   save(res.mdmr, file="ztest1.rda")
+   save(res.mdmr$pvals, file="ztest2.rda")
+  
   
   ###
   # Save MDMR Results
