@@ -198,7 +198,7 @@ tryCatch({
   }
   
   # Eventually remove calling of different functions for SGE vs not
-  if (is.null(opts$njobs)) {
+  if (is.null(opts$jobs)) {
       res.mdmr <- mdmr(xdist, formula, model, nperms=opts$permutations, 
                        superblocksize=opts$superblocksize, blocksize=opts$blocksize, 
                        strata=opts$strata, factors2perm=opts$factors2perm, 
