@@ -636,10 +636,9 @@ mdmr.sge <- function(G.path, formula, model,
     
     # combine pvalues for different voxels
     vcat(verbose, "...combining P-values")
-    Pmat <- mdmr.prepare.pmat(modelinfo, nvoxs, type=type, shared=TRUE)
+    Pmat <- matrix(nvoxs, modelinfo$nfactors2perm)
     for (l in pvals.list) {
-        sub_Pmat <- sub.big.matrix(Pmat, firstRow=l$firstVox, lastRow=l$lastVox)
-        deepcopy(x=l$pmat, y=sub_Pmat)
+        Pmat[l$firstRow:l$lastRow,] <- l$pmat
     }
     #rm(pvals.list)
     
