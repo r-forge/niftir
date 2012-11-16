@@ -637,9 +637,9 @@ mdmr.sge <- function(G.path, formula, model,
     # combine pvalues for different voxels
     vcat(verbose, "...combining P-values")
     Pmat <- matrix(nvoxs, modelinfo$nfactors2perm)
-    for (l in pvals.list) {
-        Pmat[l$firstVox:l$lastVox,] <- l$pmat
-    }
+    #for (l in pvals.list) {
+    #    Pmat[l$firstVox:l$lastVox,] <- l$pmat
+    #}
     #rm(pvals.list)
     
     # divide Pmat by # of perms + 1
