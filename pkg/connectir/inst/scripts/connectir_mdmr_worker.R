@@ -223,7 +223,7 @@ tryCatch({
        as.numeric(end.time-start.time, units="mins"))
 
   save.image(file="env.rda")
-  q()
+  #q()
 
    #options(error=recover)
    #save(res.mdmr, file="ztest1.rda")
