@@ -21,7 +21,7 @@ option_list <- list(
     make_option(c("-v", "--verbose"), action="store_true", default=TRUE, help="Print extra output [default]"),
     make_option(c("-q", "--quiet"), action="store_false", dest="verbose", help="Print little output"), 
     make_option("--voxs", type="character", default=NULL, help="A range of voxels to examine (this is mainly for testing purposes) and can be '1:10'."), 
-    make_option("--ignore-proc-error", type="store_true", default=FALSE, help="Ignores the error generated if you specify the # of forks/threads to be greater than the actual number of estimated processes.")
+    make_option("--ignore-proc-error", action="store_true", default=FALSE, help="Ignores the error generated if you specify the # of forks/threads to be greater than the actual number of estimated processes.")
 )
     
 # Make class/usage
