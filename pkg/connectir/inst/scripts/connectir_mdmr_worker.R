@@ -220,7 +220,8 @@ tryCatch({
   end.time <- Sys.time()
   vcat(opts$verbose, "MDMR is done! It took: %.2f minutes\n", 
        as.numeric(end.time-start.time, units="mins"))
-  
+       
+  save(res.mdmr, res.mdmr$pvals, file="ztest.rda")
   
   ###
   # Save MDMR Results

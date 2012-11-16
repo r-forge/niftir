@@ -639,7 +639,7 @@ mdmr.sge <- function(G.path, formula, model,
     vcat(verbose, "...combining P-values")
     l_ply(pvals.list, function(l) {
         sub_Pmat <- sub.big.matrix(Pmat, firstRow=l$firstVox, lastRow=l$lastVox)
-        sub_Pmat[,] <- l$pmat
+        deepcopy(x=l$pmat, y=sub_Pmat)
     }, .progress=progress)
     rm(pvals.list)
     
