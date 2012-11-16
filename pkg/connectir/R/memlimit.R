@@ -217,8 +217,8 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
             if (length(v) == 0 || v == 0) {
                 stop("Sh*%, you don't have enough RAM (2)")
             } else {
-                if (!is.null(opts$jobs) && v < opts$jobs) {
-                    opts$superblocksize <- opts$jobs
+                if (!is.null(opts$jobs) && v < round(nvoxs/opts$jobs)) {
+                    opts$superblocksize <- round(nvoxs/opts$jobs)
                 } else {
                     opts$superblocksize <- v
                 }
