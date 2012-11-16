@@ -197,7 +197,7 @@ tryCatch({
       fperms.path <- NULL
   }
   
-  save(ls(), file="current_environment.rda")
+  save.image(file="env.rda")
   q()
   
   # Eventually remove calling of different functions for SGE vs not
