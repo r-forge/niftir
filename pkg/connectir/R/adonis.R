@@ -649,6 +649,7 @@ mdmr.sge <- function(G.path, formula, model,
     
     # reload Fperms
     if (save_fperms) {
+        rm(Fperms); invisible(gc(FALSE, TRUE))
         Fperms <- lapply(fperms.desc, function(desc) {
             attach.big.matrix(desc, backingpath=fperms.path)
         })

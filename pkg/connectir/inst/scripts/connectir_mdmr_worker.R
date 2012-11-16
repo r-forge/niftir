@@ -197,6 +197,9 @@ tryCatch({
       fperms.path <- NULL
   }
   
+  save(ls(), file="current_environment.rda")
+  q()
+  
   # Eventually remove calling of different functions for SGE vs not
   if (is.null(opts$jobs)) {
       res.mdmr <- mdmr(xdist, formula, model, nperms=opts$permutations, 
@@ -223,6 +226,7 @@ tryCatch({
        
    options(error=recover)
    save(res.mdmr, file="ztest1.rda")
+   res.mdmr$pvals
    save(res.mdmr$pvals, file="ztest2.rda")
   
   
