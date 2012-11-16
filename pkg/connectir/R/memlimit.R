@@ -187,7 +187,7 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
         
         get_superblocksize <- function(v) {
             if (!is.null(opts$jobs) && v > round(nvoxs/opts$jobs)) {
-                v <- round(nvoxs/opts$jobs)
+                v <- ceiling(nvoxs/opts$jobs)
             }
             return(v)
         }

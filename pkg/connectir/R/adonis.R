@@ -650,7 +650,7 @@ mdmr.sge <- function(G.path, formula, model,
     if (save_fperms) {
         Fperms <- lapply(fperms.desc, function(desc) {
             attach.big.matrix(desc, backingpath=fperms.path)
-        })        
+        })
     }
     
     # free stuff
@@ -659,7 +659,7 @@ mdmr.sge <- function(G.path, formula, model,
     structure(
         list(
             nfactors=modelinfo$nfactors, 
-            modelinfo=modelinfo,
+            modelinfo=modelinfo, 
             pvals=Pmat,
             fstats=Fperms,
             fpath=fperms.path, 
