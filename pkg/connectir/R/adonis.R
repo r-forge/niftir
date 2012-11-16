@@ -461,7 +461,7 @@ mdmr.sge <- function(G.path, formula, model,
                  fperms.path=NULL, 
                  type="double", shared=parallel, 
                  threads=1, njobs=NULL)
-{
+{    
     inform <- verbose==2
     verbose <- as.logical(verbose)
     progress <- ifelse(verbose, "text", "none")
@@ -485,6 +485,7 @@ mdmr.sge <- function(G.path, formula, model,
     superblocks <- niftir.split.indices(1, nvoxs, by=superblocksize)
     blocks <- niftir.split.indices(1, nperms, by=blocksize)
     forks <- getOption('cores')
+    sge.options(sge.user.options = sprintf("-S /bin/bash -pe mpi %i", threads*forks))
     if (is.null(njobs)) {
         njobs <- 1
         use.sge <- FALSE
