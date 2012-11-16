@@ -469,8 +469,6 @@ mdmr.sge <- function(G.path, formula, model,
     
     if (!is.data.frame(model))
         stop("input model must be a data frame")
-    if (!is.big.matrix(G) || !is.shared(G))
-        stop("input Gower's matrix must be type big matrix and shared")
     if (!is.null(fperms.path) && !file.exists(fperms.path))
         stop("output path for Pseudo-F permutations does not exist")
     if (!is.null(G.path) && !file.exists(G.path))
