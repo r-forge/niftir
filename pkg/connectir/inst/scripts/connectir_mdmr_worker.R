@@ -197,8 +197,8 @@ tryCatch({
       fperms.path <- NULL
   }
   
-  save.image(file="env.rda")
-  q()
+  #save.image(file="env.rda")
+  #q()
   
   # Eventually remove calling of different functions for SGE vs not
   if (is.null(opts$jobs)) {
