@@ -185,10 +185,17 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
                  mem_limit, min_mem_needed)
         }
         
+        get_superblocksize <- function(v) {
+            if (!is.null(opts$jobs) && v < round(nvoxs/opts$jobs)) {
+                v <- round(nvoxs/opts$jobs)
+            }
+            return(v)
+        }
+        
         # can use max of both?
         m <- f(nvoxs, nperms)
         if (m > 0) {
-            opts$superblocksize <- nvoxs
+            opts$superblocksize <- get_superblocksize(nvoxs)
             opts$blocksize <- nperms
         } else {
             vcat(opts$verbose, paste("...if you wanted to hold everything in memory",
@@ -217,11 +224,7 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
             if (length(v) == 0 || v == 0) {
                 stop("Sh*%, you don't have enough RAM (2)")
             } else {
-                if (!is.null(opts$jobs) && v < round(nvoxs/opts$jobs)) {
-                    opts$superblocksize <- round(nvoxs/opts$jobs)
-                } else {
-                    opts$superblocksize <- v
-                }
+                opts$superblocksize <- get_superblocksize(v)
             }
             
             # regular blocks (# of permutations to chunk)
