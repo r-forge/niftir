@@ -20,7 +20,8 @@ option_list <- list(
     make_option(c("-d", "--debug"), action="store_true", default=FALSE, help="Like verbose but will also print more helpful error messages when --forks is >1"), 
     make_option(c("-v", "--verbose"), action="store_true", default=TRUE, help="Print extra output [default]"),
     make_option(c("-q", "--quiet"), action="store_false", dest="verbose", help="Print little output"), 
-    make_option("--voxs", type="character", default=NULL, help="A range of voxels to examine (this is mainly for testing purposes) and can be '1:10'.")
+    make_option("--voxs", type="character", default=NULL, help="A range of voxels to examine (this is mainly for testing purposes) and can be '1:10'."), 
+    make_option("--ignore-proc-error", type="store_true", default=FALSE, help="Ignores the error generated if you specify the # of forks/threads to be greater than the actual number of estimated processes.")
 )
     
 # Make class/usage
@@ -45,7 +46,8 @@ tryCatch({
   suppressWarnings(suppressPackageStartupMessages(library("connectir")))
 
   # parallel processing setup
-  set_parallel_procs(opts$forks, opts$threads, opts$verbose)  
+  if (is.null(opts$jobs))
+      set_parallel_procs(opts$forks, opts$threads, opts$verbose)  
   # use foreach parallelization and shared memory?
   parallel_forks <- ifelse(opts$forks == 1, FALSE, TRUE)
   
@@ -209,7 +211,7 @@ tryCatch({
                        strata=opts$strata, factors2perm=opts$factors2perm, 
                        verbose=verbosity, parallel=parallel_forks, 
                        fperms.path=fperms.path, 
-                       threads=opts$threads, njobs=opts$jobs, 
+                       forks=opts$forks, threads=opts$threads, njobs=opts$jobs, 
                        voxs=voxs)
   }
   rm(xdist)

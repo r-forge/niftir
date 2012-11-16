@@ -460,7 +460,7 @@ mdmr.sge <- function(G.path, formula, model,
                  verbose=1, parallel=FALSE, 
                  fperms.path=NULL, 
                  type="double", shared=parallel, 
-                 threads=1, njobs=NULL)
+                 forks=1, threads=1, njobs=NULL)
 {    
     inform <- verbose==2
     verbose <- as.logical(verbose)
@@ -484,7 +484,6 @@ mdmr.sge <- function(G.path, formula, model,
     nsubs <- sqrt(nrow(G))  # don't want length(subs) here
     superblocks <- niftir.split.indices(1, nvoxs, by=superblocksize)
     blocks <- niftir.split.indices(1, nperms, by=blocksize)
-    forks <- getOption('cores')
     sge.options(sge.user.options = sprintf("-S /bin/bash -pe mpi %i", threads*forks))
     if (is.null(njobs)) {
         njobs <- 1

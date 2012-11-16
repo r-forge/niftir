@@ -14,14 +14,19 @@ vsystem <- function(verbose, cmd, ...) {
         stop("command failed")
 }
 
-set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE) {
+set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE, force=FALSE) {
     vcat(verbose, "Setting %i parallel forks", nforks)
     suppressPackageStartupMessages(library("doMC"))
     registerDoMC()
     nprocs <- getDoParWorkers()
     if (nforks > nprocs) {
-        vstop("# of forks %i is greater than the actual # of processors (%i)", 
-              nforks, nprocs)
+        msg <- sprintf("# of forks %i is greater than the actual # of processors (%i)", 
+                          nforks, nprocs)
+        if (force) {
+            warning(msg, immediate.=TRUE)
+        } else {
+            vstop(msg)
+        }
     }
     options(cores=nforks)
     
@@ -29,8 +34,13 @@ set_parallel_procs <- function(nforks=1, nthreads=1, verbose=FALSE) {
          nthreads)
     #nprocs <- omp_get_max_threads()
     if (nthreads > nprocs) {
-        vstop("# of threads %i is greater than the actual # of processors (%i)", 
-              nthreads, nprocs)
+        msg <- sprintf("# of threads %i is greater than the actual # of processors (%i)", 
+                          nthreads, nprocs)
+        if (force) {
+          warning(msg, immediate.=TRUE)
+        } else {
+          vstop(msg)
+        }
     }
     
     if (existsFunction("setMKLthreads", where=topenv(.GlobalEnv))) {
