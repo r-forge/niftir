@@ -233,7 +233,7 @@ tryCatch({
   ###
   # Save MDMR Results
   ###
-  save_mdmr(res.mdmr, opts$indir, opts$outdir, formula, opts$verbose)
+  save_mdmr(res.mdmr, voxs, opts$indir, opts$outdir, formula, opts$verbose)
   rm(res.mdmr)
   invisible(gc(FALSE, TRUE))
 

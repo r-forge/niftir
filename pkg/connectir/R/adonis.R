@@ -752,7 +752,7 @@ clust_mdmr <- function(obj, maskfile, vox.thresh=0.05, clust.thresh=0.05,
     return(list(mat=Cmat, ref=refs))
 }
 
-save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE) {
+save_mdmr <- function(obj, voxs, sdir, mdir, formula, verbose=TRUE) {
     vcat(verbose, "Saving MDMR Results")
     
     mdmr.output <- mdir
@@ -799,7 +799,9 @@ save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE) {
     Pmat <- obj$pvals
     for (i in 1:nfactors) {
         fn <- mpath(sprintf("pvals_%s.nii.gz", factornames[i]))
-        write.nifti(1 - Pmat[,i], header, mask, outfile=fn, odt="float")
+        p <- mask*1
+        p[voxs] <- 1 - Pmat[,i]
+        write.nifti(p, header, mask, outfile=fn, odt="float")
     }
     
     vcat(verbose, "...saving FDR corrected p-values (1-p)")
@@ -808,7 +810,9 @@ save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE) {
         fn <- mpath(sprintf("fdr_pvals_%s.nii.gz", factornames[i]))
         tmp <- p.adjust(Pmat[,i], "BH")
         CorrPmat[,i] <- tmp
-        write.nifti(1 - tmp, header, mask, outfile=fn, odt="float")
+        p <- mask*1
+        p[voxs] <- 1 - tmp
+        write.nifti(p, header, mask, outfile=fn, odt="float")
         rm(tmp)
         gc(FALSE)
     }
@@ -817,7 +821,9 @@ save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE) {
     for (i in 1:nfactors) {
         fn <- mpath(sprintf("zstats_%s.nii.gz", factornames[i]))
         tmp <- qt(Pmat[,i], Inf, lower.tail=FALSE)
-        write.nifti(tmp, header, mask, outfile=fn, odt="float")
+        p <- mask*1
+        p[voxs] <- tmp
+        write.nifti(p, header, mask, outfile=fn, odt="float")
         rm(tmp)
         gc(FALSE)
     }
@@ -826,7 +832,9 @@ save_mdmr <- function(obj, sdir, mdir, formula, verbose=TRUE) {
     for (i in 1:nfactors) {
         fn <- mpath(sprintf("fdr_zstats_%s.nii.gz", factornames[i]))
         tmp <- qt(CorrPmat[,i], Inf, lower.tail=FALSE)
-        write.nifti(tmp, header, mask, outfile=fn, odt="float")
+        p <- mask*1
+        p[voxs] <- tmp
+        write.nifti(p, header, mask, outfile=fn, odt="float")
         rm(tmp)
         gc(FALSE)
     }
