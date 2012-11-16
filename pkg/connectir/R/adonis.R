@@ -638,7 +638,7 @@ mdmr.sge <- function(G.path, formula, model,
     vcat(verbose, "...combining P-values")
     Pmat <- matrix(nvoxs, modelinfo$nfactors2perm)
     for (l in pvals.list) {
-        Pmat[l$firstRow:l$lastRow,] <- l$pmat
+        Pmat[l$firstVox:l$lastVox,] <- l$pmat
     }
     #rm(pvals.list)
     
