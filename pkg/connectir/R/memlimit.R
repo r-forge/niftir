@@ -217,7 +217,11 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
             if (length(v) == 0 || v == 0) {
                 stop("Sh*%, you don't have enough RAM (2)")
             } else {
-                opts$superblocksize <- v
+                if (!is.null(opts$jobs) && v < opts$jobs) {
+                    opts$superblocksize <- opts$jobs
+                } else {
+                    opts$superblocksize <- v
+                }
             }
             
             # regular blocks (# of permutations to chunk)
