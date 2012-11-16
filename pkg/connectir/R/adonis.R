@@ -766,6 +766,7 @@ save_mdmr <- function(obj, voxs, sdir, mdir, formula, verbose=TRUE) {
     vcat(verbose, "...reading in brain mask")
     seedfn <- file.path(sdir, "mask.nii.gz")
     mask <- read.mask(seedfn)
+    total_nvoxs <- sum(mask)
     header <- read.nifti.header(seedfn)
     
     # Model Stuff
@@ -799,7 +800,7 @@ save_mdmr <- function(obj, voxs, sdir, mdir, formula, verbose=TRUE) {
     Pmat <- obj$pvals
     for (i in 1:nfactors) {
         fn <- mpath(sprintf("pvals_%s.nii.gz", factornames[i]))
-        p <- mask*1
+        p <- vector("numeric", total_nvoxs)
         p[voxs] <- 1 - Pmat[,i]
         write.nifti(p, header, mask, outfile=fn, odt="float")
     }
@@ -810,7 +811,7 @@ save_mdmr <- function(obj, voxs, sdir, mdir, formula, verbose=TRUE) {
         fn <- mpath(sprintf("fdr_pvals_%s.nii.gz", factornames[i]))
         tmp <- p.adjust(Pmat[,i], "BH")
         CorrPmat[,i] <- tmp
-        p <- mask*1
+        p <- vector("numeric", total_nvoxs)
         p[voxs] <- 1 - tmp
         write.nifti(p, header, mask, outfile=fn, odt="float")
         rm(tmp)
@@ -821,7 +822,7 @@ save_mdmr <- function(obj, voxs, sdir, mdir, formula, verbose=TRUE) {
     for (i in 1:nfactors) {
         fn <- mpath(sprintf("zstats_%s.nii.gz", factornames[i]))
         tmp <- qt(Pmat[,i], Inf, lower.tail=FALSE)
-        p <- mask*1
+        p <- vector("numeric", total_nvoxs)
         p[voxs] <- tmp
         write.nifti(p, header, mask, outfile=fn, odt="float")
         rm(tmp)
@@ -832,7 +833,7 @@ save_mdmr <- function(obj, voxs, sdir, mdir, formula, verbose=TRUE) {
     for (i in 1:nfactors) {
         fn <- mpath(sprintf("fdr_zstats_%s.nii.gz", factornames[i]))
         tmp <- qt(CorrPmat[,i], Inf, lower.tail=FALSE)
-        p <- mask*1
+        p <- vector("numeric", total_nvoxs)
         p[voxs] <- tmp
         write.nifti(p, header, mask, outfile=fn, odt="float")
         rm(tmp)
