@@ -47,7 +47,7 @@ tryCatch({
 
   # parallel processing setup
   if (is.null(opts$jobs))
-      set_parallel_procs(opts$forks, opts$threads, opts$verbose)  
+      set_parallel_procs(opts$forks, opts$threads, opts$verbose, opts$ignore_proc_error)
   # use foreach parallelization and shared memory?
   parallel_forks <- ifelse(opts$forks == 1, FALSE, TRUE)
   
@@ -212,7 +212,7 @@ tryCatch({
                        verbose=verbosity, parallel=parallel_forks, 
                        fperms.path=fperms.path, 
                        forks=opts$forks, threads=opts$threads, njobs=opts$jobs, 
-                       voxs=voxs)
+                       voxs=voxs, ignore.proc.error=opts$ignore_proc_error)
   }
   rm(xdist)
   invisible(gc(FALSE, TRUE))

@@ -460,7 +460,7 @@ mdmr.sge <- function(G.path, formula, model,
                  verbose=1, parallel=FALSE, 
                  fperms.path=NULL, 
                  type="double", shared=parallel, 
-                 forks=1, threads=1, njobs=NULL)
+                 forks=1, threads=1, njobs=NULL, ignore.proc.error=FALSE)
 {
     library(Rsge)
     
@@ -536,7 +536,7 @@ mdmr.sge <- function(G.path, formula, model,
         vcat(verbose, "large block %i", si)
         start.time <- Sys.time()
         
-        set_parallel_procs(forks, threads, verbose)  
+        set_parallel_procs(forks, threads, verbose, ignore.proc.error)  
         
         firstVox <- superblocks$starts[si]
         lastVox <- superblocks$ends[si]
