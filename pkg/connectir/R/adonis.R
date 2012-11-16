@@ -636,16 +636,16 @@ mdmr.sge <- function(G.path, formula, model,
     
     # combine pvalues for different voxels
     vcat(verbose, "...combining P-values")
-    Pmat <- matrix(nvoxs, modelinfo$nfactors2perm)
+    #Pmat <- matrix(0, nvoxs, modelinfo$nfactors2perm)
     #browser()
-    #Pmat <- mdmr.prepare.pmat(modelinfo, nvoxs, type=type, shared=TRUE)
-    #for (l in pvals.list) {
-    #    Pmat[l$firstVox:l$lastVox,] <- l$pmat
-    #}
+    Pmat <- mdmr.prepare.pmat(modelinfo, nvoxs, type=type, shared=TRUE)
+    for (l in pvals.list) {
+        Pmat[l$firstVox:l$lastVox,] <- l$pmat
+    }
     #rm(pvals.list)
     
     # divide Pmat by # of perms + 1
-    #.Call("mdmr_nmat_to_pmat", Pmat, as.double(nperms+1), PACKAGE="connectir")
+    .Call("mdmr_nmat_to_pmat", Pmat, as.double(nperms+1), PACKAGE="connectir")
     
     # reload Fperms
     if (save_fperms) {
@@ -661,7 +661,7 @@ mdmr.sge <- function(G.path, formula, model,
         list(
             nfactors=modelinfo$nfactors, 
             modelinfo=modelinfo, 
-            pvals=Pmat,
+            pvals=Pmat[,],
             fstats=Fperms,
             fpath=fperms.path, 
             perms=p,
