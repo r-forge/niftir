@@ -637,11 +637,11 @@ mdmr.sge <- function(G.path, formula, model,
     
     # combine pvalues for different voxels
     vcat(verbose, "...combining P-values")
-    l_ply(pvals.list, function(l) {
+    for (l in pvals.list) {
         sub_Pmat <- sub.big.matrix(Pmat, firstRow=l$firstVox, lastRow=l$lastVox)
         deepcopy(x=l$pmat, y=sub_Pmat)
-    }, .progress=progress)
-    rm(pvals.list)
+    }
+    #rm(pvals.list)
     
     # divide Pmat by # of perms + 1
     .Call("mdmr_nmat_to_pmat", Pmat, as.double(nperms+1), PACKAGE="connectir")
@@ -663,7 +663,8 @@ mdmr.sge <- function(G.path, formula, model,
             pvals=Pmat,
             fstats=Fperms,
             fpath=fperms.path, 
-            perms=p
+            perms=p,
+            test=pvals.list
         ),
         class="mdmr"
     )
