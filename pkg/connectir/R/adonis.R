@@ -629,7 +629,8 @@ mdmr.sge <- function(G.path, formula, model,
         vcat(verbose, "...took %.1f minutes (%.1f minutes left)\n", 
              time.total, time.left)
         
-        list(pmat=tmp_Pmat, firstVox=firstVox, lastVox=lastVox)
+        # there is probably a smarter way to do this, then just copying it
+        list(pmat=tmp_Pmat[,], firstVox=firstVox, lastVox=lastVox)
     }, debug=inform, trace=inform, 
     packages=c("connectir"), function.savelist=ls(), 
     cluster=use.sge, njobs=njobs)
