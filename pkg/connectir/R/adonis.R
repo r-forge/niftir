@@ -461,7 +461,9 @@ mdmr.sge <- function(G.path, formula, model,
                  fperms.path=NULL, 
                  type="double", shared=parallel, 
                  forks=1, threads=1, njobs=NULL)
-{    
+{
+    library(Rsge)
+    
     inform <- verbose==2
     verbose <- as.logical(verbose)
     progress <- ifelse(verbose, "text", "none")
