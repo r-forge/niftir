@@ -484,7 +484,7 @@ mdmr.sge <- function(G.path, formula, model,
     nsubs <- sqrt(nrow(G))  # don't want length(subs) here
     superblocks <- niftir.split.indices(1, nvoxs, by=superblocksize)
     blocks <- niftir.split.indices(1, nperms, by=blocksize)
-    sge.options(sge.user.options = sprintf("-S /bin/bash -pe smp_mpi %i", threads*forks))
+    sge.options(sge.user.options = sprintf("-S /bin/bash -pe mpi_smp %i", threads*forks))
     if (is.null(njobs)) {
         njobs <- 1
         use.sge <- FALSE
