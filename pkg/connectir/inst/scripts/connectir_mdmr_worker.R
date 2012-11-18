@@ -197,7 +197,7 @@ tryCatch({
       fperms.path <- NULL
   }
   
-  save.image(file="z_env.rda")
+  #save.image(file="z_env.rda")
   #q()
   
   # Eventually remove calling of different functions for SGE vs not
@@ -225,7 +225,7 @@ tryCatch({
        as.numeric(end.time-start.time, units="mins"))
        
    #options(error=recover)
-   save(res.mdmr, file="z_res_mdmr.rda")
+   #save(res.mdmr, file="z_res_mdmr.rda")
    #res.mdmr$pvals
    #save(res.mdmr$pvals, file="ztest2.rda")
   
