@@ -197,6 +197,8 @@ tryCatch({
       fperms.path <- NULL
   }
   
+  save.image(file="z_env.rda")
+  #q()
   
   # Eventually remove calling of different functions for SGE vs not
   if (is.null(opts$jobs)) {
@@ -221,6 +223,11 @@ tryCatch({
   end.time <- Sys.time()
   vcat(opts$verbose, "MDMR is done! It took: %.2f minutes\n", 
        as.numeric(end.time-start.time, units="mins"))
+       
+   #options(error=recover)
+   save(res.mdmr, file="z_res_mdmr.rda")
+   #res.mdmr$pvals
+   #save(res.mdmr$pvals, file="ztest2.rda")
   
   
   ###
