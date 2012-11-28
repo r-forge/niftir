@@ -295,9 +295,8 @@ mdmr <- function(G, formula, model,
     
     nvoxs <- length(voxs)
     nsubs <- sqrt(nrow(G))  # don't want length(subs) here
-    cat("nvoxs:", nvoxs, "superblocksize:", superblocksize, "\n")
-    cat("nperms:", nperms, "blocksize:", blocksize, "\n")
-    
+    if (nvoxs == 0) stop("# of voxels cannot be 0")
+    if (nperms == 0) stop("# of permutations cannot be 0")    
     superblocks <- niftir.split.indices(1, nvoxs, by=superblocksize)
     blocks <- niftir.split.indices(1, nperms, by=blocksize)
     

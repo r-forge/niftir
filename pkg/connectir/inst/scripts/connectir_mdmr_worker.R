@@ -108,7 +108,7 @@ tryCatch({
   nsubs <- sqrt(nrow(tmp))
   if (is.null(opts$voxs)) {
       nvoxs <- ncol(tmp)
-      voxs <- NULL
+      voxs <- 1:nvoxs
   } else {
       voxs <- eval(parse(text=opts$voxs))
       nvoxs <- length(voxs)
