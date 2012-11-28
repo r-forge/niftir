@@ -295,6 +295,9 @@ mdmr <- function(G, formula, model,
     
     nvoxs <- length(voxs)
     nsubs <- sqrt(nrow(G))  # don't want length(subs) here
+    cat("nvoxs:", nvoxs, "superblocksize:", superblocksize, "\n")
+    cat("nperms:", nperms, "blocksize:", blocksize, "\n")
+    
     superblocks <- niftir.split.indices(1, nvoxs, by=superblocksize)
     blocks <- niftir.split.indices(1, nperms, by=blocksize)
     
