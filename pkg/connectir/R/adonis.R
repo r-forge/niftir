@@ -658,11 +658,16 @@ mdmr.sge <- function(G.path, formula, model,
     # free stuff
     rm(G); invisible(gc(FALSE, TRUE))
     
+    # convert Pmat to matrix
+    Pmat <- as.matrix(Pmat)
+    if (is.vector(Pmat))
+        Pmat <- matrix(Pmat, length(Pmat), 1)
+    
     structure(
         list(
             nfactors=modelinfo$nfactors, 
             modelinfo=modelinfo, 
-            pvals=Pmat[,],
+            pvals=as.matrix(Pmat),
             fstats=Fperms,
             fpath=fperms.path, 
             perms=p
