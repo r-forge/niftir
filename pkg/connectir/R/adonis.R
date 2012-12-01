@@ -684,6 +684,7 @@ clust_mdmr <- function(obj, maskfile, vox.thresh=0.05, clust.thresh=0.05,
     if (!(clust.type %in% c("mass", "size")))
         vstop("unrecognized clust.type %s", clust.type)
     progress <- ifelse(verbose, "text", "none")
+    nvoxs <- nrow(obj$Pmat)
     nfactors <- obj$nfactors
     fpath <- obj$fpath
     mask <- read.mask(maskfile)
