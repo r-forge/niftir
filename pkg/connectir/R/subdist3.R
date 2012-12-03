@@ -28,7 +28,7 @@
 
 test_sdist <- function(...) .subdist_distance(...)
 
-  <- function(sub.funcs1, list.dists, 
+compute_subdist_wrapper3 <- function(sub.funcs1, list.dists, 
                                     blocksize, superblocksize, 
                                     sub.funcs2=sub.funcs2, 
                                     design_mat=NULL, 
