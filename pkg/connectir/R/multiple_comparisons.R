@@ -1,13 +1,20 @@
 #' Correct MDMR results for multiple comparisons
 #' based on maximum cluster size at each permutation
+#' 
+#' Will save the significant clusters, p-values masked by the significant 
+#' clusters, and Z-scores masked by the significant clusters
 #'
 #' @author Zarrar Shehzad
+#' @param opath path to output nifti images
+#' @param oname factor name to be included in output filenames
 #' @param maskfile path to nifti image
 #' @param fstatsfile path to descriptor file of big matrix
 #' @param ... see \code{\link{clust_mdmr.correct}}
 #' @return vector of non-zero voxels indicating significant clusters
 #' @seealso \code{\link{clust_mdmr.correct}}
-clust_mdmr.correct_wrapper <- function(maskfile, fstatsfile, ...) {
+clust_mdmr.correct_wrapper <- function(opath, oname, maskfile, 
+                                        fstatsfile, ...)
+{
     if (!file.exists(maskfile))
         vstop("Mask '%s' cannot be found", maskfile)
     if (!file.exists(fstatsfile))
@@ -19,8 +26,28 @@ clust_mdmr.correct_wrapper <- function(maskfile, fstatsfile, ...) {
     fstats <- attach.big.matrix(fstatsfile)
     fpath <- dirname(fstatsfile)
     
+    # P-Value
+    pvals <- apply(ftmp, 2, function(fs) {
+        sum(fs>=fs[1])/length(fs)
+    })
+    pvals <- 1 - pvals
+    
     # Cluster correct
     clust <- clust_mdmr.correct(mask, hdr, fstats, fpath, ...)
+    
+    # Save significant clusters
+    ofile <- file.path(opath, sprintf("clust_%s.nii.gz", oname))
+    write.nifti(clust, hdr, mask, odt="int", outfile=ofile)
+    
+    # Save p-values with only significant clusters
+    ofile <- file.path(opath, sprintf("clust_pvals_%s.nii.gz", oname))
+    clust_pvals <- pvals * (clust>0)
+    write.nifti(clust_pvals, hdr, mask, odt="float", outfile=ofile)
+    
+    # Save Z-scores for significant clusters
+    ofile <- file.path(opath, sprintf("clust_zstats_%s.nii.gz", oname))
+    clust_zstats <- qt(1-pvals, Inf) * (clust>0)
+    write.nifti(clust_zstats, hdr, mask, odt="float", outfile=file)
     
     return(clust)
 }
