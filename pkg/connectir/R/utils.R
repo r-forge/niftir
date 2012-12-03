@@ -164,6 +164,12 @@ cluster.table <- function(x, vox.thr=0, dims=NULL, mask=NULL, nei=1, nei.dist=3,
         cfull <- cfull[mask.pad]
     dim(cfull) <- dims
     
+    if (length(sizes) == 0) {
+        nc <- 0
+        sizes <- 0
+        masses <- 0
+    }
+    
     # RETURNS:
     # max.size: maximum cluster size
     # max.mass: maximum cluster mass
