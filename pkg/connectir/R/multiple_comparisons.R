@@ -27,7 +27,7 @@ clust_mdmr.correct_wrapper <- function(opath, oname, maskfile,
     fpath <- dirname(fstatsfile)
     
     # P-Value
-    pvals <- apply(ftmp, 2, function(fs) {
+    pvals <- apply(fstats, 2, function(fs) {
         sum(fs>=fs[1])/length(fs)
     })
     pvals <- 1 - pvals
