@@ -36,7 +36,7 @@ clust_mdmr.correct_wrapper <- function(mdmr.dir, factor, ...)
     pvals <- read.nifti.image(pvalsfile)[mask]
         
     # Cluster correct
-    clust <- clust_mdmr.correct(mask, hdr, fstats, fpath, ...)
+    clust <- clust_mdmr.correct(mask, hdr, fstats, mdmr.dir, ...)
     
     # Save significant clusters
     ofile <- file.path(mdmr.dir, sprintf("clust_%s.nii.gz", factor))
