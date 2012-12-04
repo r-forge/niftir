@@ -1,54 +1,56 @@
 #' Correct MDMR results for multiple comparisons
-#' based on maximum cluster size at each permutation
+#' based on maximum cluster size at each permutation.
+#' Assumes that you have proper mdmr output directory.
 #' 
 #' Will save the significant clusters, p-values masked by the significant 
-#' clusters, and Z-scores masked by the significant clusters
+#' clusters, and Z-scores masked by the significant clusters.
 #'
 #' @author Zarrar Shehzad
-#' @param opath path to output nifti images
-#' @param oname factor name to be included in output filenames
-#' @param maskfile path to nifti image
-#' @param fstatsfile path to descriptor file of big matrix
+#' @param mdmr.dir MDMR output directory
+#' @param factor name of factor or predictor variable
 #' @param ... see \code{\link{clust_mdmr.correct}}
 #' @return vector of non-zero voxels indicating significant clusters
 #' @seealso \code{\link{clust_mdmr.correct}}
-clust_mdmr.correct_wrapper <- function(opath, oname, maskfile, 
-                                        fstatsfile, ...)
+clust_mdmr.correct_wrapper <- function(mdmr.dir, factor, ...)
 {
+    # Set paths
+    sdist.dir <- dirname(mdmr.dir)
+    maskfile <- file.path(sdist.dir, "mask.nii.gz")
+    fstatsfile <- file.path(mdmr.dir, sprintf("fperms_%s.desc", factor))
+    pvalsfile <- file.path(mdmr.dir, sprintf("pvals_%s.nii.gz", factor))
+    
+    # Check paths
+    if (!file.exists(mdmr.dir))
+        vstop("MDMR directory '%s' cannot be found", mdmr.dir)
     if (!file.exists(maskfile))
         vstop("Mask '%s' cannot be found", maskfile)
     if (!file.exists(fstatsfile))
         vstop("F-statistics '%s' cannot be found", fstatsfile)
+    if (!file.exists(pvalsfile))
+        vstop("P-values '%s' cannot be found", pvalsfile)
     
-    # Read in mask, header, and fstats
+    # Read in mask, header, fstats, and p-values
     mask <- read.mask(maskfile)
     hdr <- read.nifti.header(maskfile)
     fstats <- attach.big.matrix(fstatsfile)
-    fpath <- dirname(fstatsfile)
-    
-    # P-Value
-    pvals <- sapply(1:ncol(fstats), function(i) {
-        fs <- bm.get_col(fstats, i, fpath)
-        sum(fs>=fs[1])/length(fs)
-    })
-    pvals <- 1 - pvals
-    
+    pvals <- read.nifti.image(pvalsfile)[mask]
+        
     # Cluster correct
     clust <- clust_mdmr.correct(mask, hdr, fstats, fpath, ...)
     
     # Save significant clusters
-    ofile <- file.path(opath, sprintf("clust_%s.nii.gz", oname))
+    ofile <- file.path(mdmr.dir, sprintf("clust_%s.nii.gz", factor))
     write.nifti(clust, hdr, mask, odt="int", outfile=ofile)
     
     # Save p-values with only significant clusters
-    ofile <- file.path(opath, sprintf("clust_pvals_%s.nii.gz", oname))
+    ofile <- file.path(mdmr.dir, sprintf("clust_pvals_%s.nii.gz", factor))
     clust_pvals <- pvals * (clust>0)
     write.nifti(clust_pvals, hdr, mask, odt="float", outfile=ofile)
     
     # Save Z-scores for significant clusters
-    ofile <- file.path(opath, sprintf("clust_zstats_%s.nii.gz", oname))
-    clust_zstats <- qt(1-pvals, Inf) * (clust>0)
-    write.nifti(clust_zstats, hdr, mask, odt="float", outfile=file)
+    ofile <- file.path(opath, sprintf("clust_zstats_%s.nii.gz", factor))
+    clust_zstats <- qt(pvals, Inf) * (clust>0)
+    write.nifti(clust_zstats, hdr, mask, odt="float", outfile=ofile)
     
     return(clust)
 }
