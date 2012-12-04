@@ -48,7 +48,7 @@ clust_mdmr.correct_wrapper <- function(mdmr.dir, factor, ...)
     write.nifti(clust_pvals, hdr, mask, odt="float", outfile=ofile)
     
     # Save Z-scores for significant clusters
-    ofile <- file.path(opath, sprintf("clust_zstats_%s.nii.gz", factor))
+    ofile <- file.path(mdmr.dir, sprintf("clust_zstats_%s.nii.gz", factor))
     clust_zstats <- qt(pvals, Inf) * (clust>0)
     write.nifti(clust_zstats, hdr, mask, odt="float", outfile=ofile)
     
