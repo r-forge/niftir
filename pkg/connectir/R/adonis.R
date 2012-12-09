@@ -32,6 +32,8 @@ mdmr.prepare.model <- function(formula, model,
     
     # Get right hand matrix
     rhs.frame <- model.frame(formula, model, drop.unused.levels = TRUE)
+    if (nrow(rhs.frame) != nrow(model))
+        vstop("One of your factors has an empty element")
     op.c <- options()$contrasts
     options(contrasts = c(contr.unordered, contr.ordered))
     rhs <- model.matrix(formula, rhs.frame)
