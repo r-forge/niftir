@@ -1,7 +1,6 @@
 library(connectir)
 library(testthat)
 library(stringr)
-source("mdmr_model.R")  # temporary
 
 context("MDMR - Model")
 
@@ -30,15 +29,15 @@ test_that("right-hand matrix is properly created", {
     dat <- create_init_data(n)
     
     # Reference - RHS creation
-    rhs.frame <- model.frame(formula, model, drop.unused.levels = TRUE)
+    rhs.frame <- model.frame(dat$formula, dat$model, drop.unused.levels = TRUE)
     op.c <- options()$contrasts
     options(contrasts = c("contr.sum", "contr.poly"))
-    ref.rhs <- model.matrix(formula, rhs.frame)
+    ref.rhs <- model.matrix(dat$formula, rhs.frame)
     options(contrasts = op.c)
     attr(ref.rhs, "factor.names") <- dat$factor.names
     
     # Comparison - RHS
-    comp.rhs <- mdmr_model.rhs(formula, model)
+    comp.rhs <- mdmr_model.rhs(dat$formula, dat$model)
     
     expect_that(ref.rhs, equals(comp.rhs))    
 })
@@ -181,8 +180,8 @@ test_that("confirm that generate hat matrices properly", {
     comp.H2s <- comp$H2s
     comp.IHs <- comp$IHs
     
-    expect_that(ref.H2s, equals(comp.H2s))
-    expect_that(ref.IHs, equals(comp.IHs))
+    expect_that(ref.H2s, is_equivalent_to(comp.H2s))
+    expect_that(ref.IHs, is_equivalent_to(comp.IHs))
 })
 
 test_that("Degrees of freedom are calculated right", {

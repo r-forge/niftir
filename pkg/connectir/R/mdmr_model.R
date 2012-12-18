@@ -101,7 +101,8 @@ mdmr_model.qr <- function(rhs, factors2perm=NULL)
     # Permuted factors
     cnames <- colnames(rhs)
     if (is.null(factors2perm)) {
-        factors2perm <- factor.names
+        factors2perm <- 1:length(cnames)
+        factors2perm <- factors2perm[cnames!="(Intercept)"]
     }
     if (is.character(factors2perm)) {
         factors2perm <- sapply(factors2perm, function(x) 
