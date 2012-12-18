@@ -90,8 +90,9 @@ RcppExport SEXP big_gower(SEXP SX, SEXP SY,
                           SEXP SY_firstCol, SEXP SY_lastCol);
 
 // adonis.cpp
-RcppExport SEXP mdmr_nmat_to_pmat(SEXP SNmat, SEXP Snperms);
-RcppExport SEXP mdmr_worker(SEXP SGmat, SEXP SFperms, SEXP SNmat, 
+RcppExport SEXP mdmr_fstats_to_pvals(SEXP SFmat);
+RcppExport SEXP mdmr_fstats_to_pvals2(SEXP SFperms, SEXP Snperms, SEXP SPmat);
+RcppExport SEXP mdmr_worker(SEXP SGmat, SEXP SFperms, 
                             SEXP SH2mats, SEXP SIHmat, 
                             SEXP SdfRes, SEXP SdfExp);
 

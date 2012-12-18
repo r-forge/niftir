@@ -1,99 +1,119 @@
 #include "connectir/connectir.h"
 
-SEXP mdmr_nmat_to_pmat(SEXP SNmat, SEXP Snperms)
+SEXP mdmr_fstats_to_pvals(SEXP SFmat)
 {
     try {
-        arma::mat Nmat(1,1);
-        const double* old_nptr = sbm_to_arma_xd(SNmat, Nmat);
-        double nperms = DOUBLE_DATA(Snperms)[0];
-        Nmat /= nperms;
-        free_arma(Nmat, old_nptr);
-        return SNmat;
+        arma::mat Fmat(1,1);
+        const double* old_fptr = sbm_to_arma_xd(SFmat, Fmat);
+        
+        double nvoxs = static_cast<double>(Fmat.n_cols);
+        double nperms = static_cast<double>(Fmat.n_rows);
+        
+        Rcpp::NumericVector pvals(nvoxs);
+        
+        // original F-stats
+        arma::rowvec realFs = Fmat.row(0);
+        
+        double i;
+        for (i = 0; i < nvoxs; ++i)
+        {
+            pvals[i] = arma::as_scalar(arma::sum(Fmat.col(i) >= realFs(i))/nperms);
+        }
+        
+        free_arma(Fmat, old_fptr);
+        
+        return Rcpp::wrap( pvals );;
     } catch(std::exception &ex) {
         forward_exception_to_r(ex);
     } catch(...) {
         ::Rf_error("c++ exception (unknown reason)");
     }
+    
     return R_NilValue;
 }
 
-SEXP mdmr_worker(SEXP SGmat, SEXP SFperms, SEXP SNmat, 
-                 SEXP SH2mats, SEXP SIHmat, 
+SEXP mdmr_worker(SEXP SGmat, SEXP SFperms, 
+                 SEXP SH2mats, SEXP SIHmats, 
                  SEXP SdfRes, SEXP SdfExp)
 {
     try {
-        //printf("1.\n");
+        // nterms
         Rcpp::List tmp(SH2mats);
         index_type nterms = static_cast<index_type>(tmp.size());
         
-        //printf("2.\n");
+        // Gs and nvoxs
         arma::mat Gmat(1,1);
         const double* old_gptr = sbm_to_arma_xd(SGmat, Gmat);
         index_type nvoxs = static_cast<index_type>(Gmat.n_cols);
-        
-        //printf("3.\n");
+
+        // Fperms
         SEXP SFmat;
         arma::mat Fmat(1,1); const double* old_fptr = Fmat.memptr();
         
-        //printf("4.\n");
-        arma::mat Nmat(1,1);
-        const double* old_nptr = sbm_to_arma_xd(SNmat, Nmat);
-        arma::rowvec realFs; double* Nvec;
-        
-        //printf("5.\n");
+        // H2s
         SEXP SH2mat;
         arma::mat H2mat(1,1); const double* old_h2ptr = H2mat.memptr();
         
-        //printf("6.\n");
-        arma::mat IHmat(1,1);
-        const double* old_ihptr = sbm_to_arma_xd(SIHmat, IHmat);
+        // IHs
+        SEXP SIHmat;
+        arma::mat IHmat(1,1); const double* old_ihptr = IHmat.memptr();
         
-        //printf("7.\n");
+        // dfs
         double dfRes = DOUBLE_DATA(SdfRes)[0];
         Rcpp::NumericVector RdfExp(SdfExp);
         arma::vec dfExp(RdfExp.begin(), RdfExp.size(), false);
         
         arma::mat ExplainedVariance;
-        arma::mat ErrorVariance = arma::trans(IHmat) * Gmat;
+        arma::mat ErrorVariance;
         index_type i, j;
         for (i=0; i < nterms; ++i)
         {
-            //printf("8.\n");
+            
+            /***
+            * Explained Variance
+            ***/
+            
+            // H2
             PROTECT(SH2mat = VECTOR_ELT(SH2mats, i));
             sbm_to_arma_xd(SH2mat, H2mat);
             UNPROTECT(1);
-
-            //printf("9.\n");
+            
+            // Explained Variance
+            ExplainedVariance = arma::trans(H2mat) * Gmat;
+            
+            
+            /***
+            * Error Variance
+            ***/
+            
+            // IH
+            PROTECT(SIHmat = VECTOR_ELT(SIHmats, i));
+            sbm_to_arma_xd(SIHmat, IHmat);
+            UNPROTECT(1);
+            
+            // Error Variance
+            arma::mat ErrorVariance = arma::trans(IHmat) * Gmat;
+            
+            /***
+            * Peusod-F Statistic
+            ***/
+            
+            // Fstats (output)
             PROTECT(SFmat = VECTOR_ELT(SFperms, i));
             sbm_to_arma_xd(SFmat, Fmat);
             UNPROTECT(1);
             
-            //printf("10.\n");
-            ExplainedVariance = arma::trans(H2mat) * Gmat;
-            
-            //printf("11.\n");
             // ExplainedVariance/ErrorVariance
             Fmat = (ExplainedVariance/ErrorVariance) * (dfRes/dfExp(i));
             
-            //printf("12.\n");
-            // # of observations greater than original
-            realFs = Fmat.row(0);
-            Nvec = const_cast<double *>(Nmat.colptr(i));
-            for (j = 0; j < nvoxs; ++j)
-            {
-                Nvec[j] += arma::as_scalar(arma::sum(Fmat.col(j) > realFs(j)));
-            }
         }
         
-        //printf("13.\n");
-        Nvec = NULL;
+        // Clear matrices
         free_arma(Gmat, old_gptr);
-        free_arma(Nmat, old_nptr);
         free_arma(H2mat, old_h2ptr);
         free_arma(IHmat, old_ihptr);
         free_arma(Fmat, old_fptr);
         
-        //printf("14.\n");
         return R_NilValue;
     } catch(std::exception &ex) {
         forward_exception_to_r(ex);
