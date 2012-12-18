@@ -117,7 +117,7 @@ tryCatch({
   
   # formula
   vcat(opts$verbose, "...formula")
-  formula <- as.formula(sprintf(". ~ %s", opts$formula))
+  formula <- as.formula(sprintf("~ %s", opts$formula))
   vars <- as.character(as.list(attr(terms(formula), "variables"))[-c(1:2)])
   
   # factors2perm
