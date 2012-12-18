@@ -200,23 +200,39 @@ tryCatch({
   #save.image(file="z_env.rda")
   #q()
   
-  # Eventually remove calling of different functions for SGE vs not
   if (is.null(opts$jobs)) {
-      res.mdmr <- mdmr(xdist, formula, model, nperms=opts$permutations, 
-                       superblocksize=opts$superblocksize, blocksize=opts$blocksize, 
-                       strata=opts$strata, factors2perm=opts$factors2perm, 
-                       verbose=verbosity, parallel=parallel_forks, 
-                       G.path=xdist.path, fperms.path=fperms.path, 
-                       voxs=voxs)
+      sge.info <- NULL
   } else {
-      res.mdmr <- mdmr.sge(opts$subdist, formula, model, nperms=opts$permutations, 
-                       superblocksize=opts$superblocksize, blocksize=opts$blocksize, 
-                       strata=opts$strata, factors2perm=opts$factors2perm, 
-                       verbose=verbosity, parallel=parallel_forks, 
-                       fperms.path=fperms.path, 
-                       forks=opts$forks, threads=opts$threads, njobs=opts$jobs, 
-                       voxs=voxs, ignore.proc.error=opts$ignoreprocerror)
+      sge.info <- list(njobs=opts$jobs, nforks=opts$forks, nthreads=opts$threads, 
+                       ignore.proc.error=opts$ignoreprocerror)
   }
+  
+  res.mdmr <- mdmr(xdist, formula, model, 
+                   nperms=opts$permutations, factors2perm=opts$factors2perm, 
+                   superblocksize=opts$superblocksize, voxs=voxs, 
+                   blocksize=opts$blocksize, 
+                   strata=opts$strata, 
+                   verbose=verbosity, parallel=parallel_forks, 
+                   G.path=xdist.path, fperms.path=fperms.path, save.fperms=TRUE, 
+                   sge.info=sge.info)
+  
+  # Eventually remove calling of different functions for SGE vs not
+  #if (is.null(opts$jobs)) {
+  #    res.mdmr <- mdmr(xdist, formula, model, nperms=opts$permutations, 
+  #                     superblocksize=opts$superblocksize, blocksize=opts$blocksize, 
+  #                     strata=opts$strata, factors2perm=opts$factors2perm, 
+  #                     verbose=verbosity, parallel=parallel_forks, 
+  #                     G.path=xdist.path, fperms.path=fperms.path, 
+  #                     voxs=voxs)
+  #} else {
+  #    res.mdmr <- mdmr.sge(opts$subdist, formula, model, nperms=opts$permutations, 
+  #                     superblocksize=opts$superblocksize, blocksize=opts$blocksize, 
+  #                     strata=opts$strata, factors2perm=opts$factors2perm, 
+  #                     verbose=verbosity, parallel=parallel_forks, 
+  #                     fperms.path=fperms.path, 
+  #                     forks=opts$forks, threads=opts$threads, njobs=opts$jobs, 
+  #                     voxs=voxs, ignore.proc.error=opts$ignoreprocerror)
+  #}
   rm(xdist)
   invisible(gc(FALSE, TRUE))
   
@@ -225,7 +241,7 @@ tryCatch({
        as.numeric(end.time-start.time, units="mins"))
        
    #options(error=recover)
-   #save(res.mdmr, file="z_res_mdmr.rda")
+   save(res.mdmr, file="z_res_mdmr.rda")
    #res.mdmr$pvals
    #save(res.mdmr$pvals, file="ztest2.rda")
   
@@ -233,7 +249,7 @@ tryCatch({
   ###
   # Save MDMR Results
   ###
-  save_mdmr(res.mdmr, voxs, opts$indir, opts$outdir, formula, opts$verbose)
+  save_mdmr(res.mdmr, voxs, opts$indir, opts$outdir, opts$verbose)
   rm(res.mdmr)
   invisible(gc(FALSE, TRUE))
 

@@ -73,7 +73,7 @@ test_that("MDMR worker computes the F-statistic appropriately", {
 test_that("can convert p-values to f-statistics", {
     nfactors <- 3
     nperms <- 100
-    nvoxs <- 10
+    nvoxs <- 100
     
     list.Fperms <- lapply(1:nfactors, function(fi) {
         mat <- matrix(rnorm(nperms*nvoxs), nperms, nvoxs)

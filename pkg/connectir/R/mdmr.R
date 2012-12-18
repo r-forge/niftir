@@ -288,37 +288,7 @@ mdmr <- function(G, formula, model,
     ), class="mdmr")
 }
 
-
-save_mdmr.modelinfo <- function(mdir, modelinfo)
-{
-    ofile <- file.path(mdir, "modelinfo.rda")
-    save(modelinfo, file=ofile)
-}
-
-save_mdmr.formula <- function(mdir, modelinfo)
-{
-    ofile <- file.path(mdir, "formula.txt")
-    cat(as.character(modelinfo$formula)[-c(1:2)], file=ofile)
-}
-
-save_mdmr.factors <- function(mdir, modelinfo)
-{
-    ofile <- file.path(mdir, "factor_names.txt")
-    
-    all.factornames <- names(attr(modelinfo$qrhs, "factors.names"))
-    perm.factornames <- names(attr(modelinfo$qrhs, "factors2perm"))
-    is <- !(all.factornames %in% perm.factornames)
-    cov.factornames <- all.factornames[is]
-    
-    totext <- sprintf("All Factors: %s\nPermuted Factors: %s\nCovariates: %s", 
-                paste(all.factornames, collapse=", "), 
-                paste(perm.factornames, collapse=", "), 
-                paste(cov.factornames, collapse=", "))
-    
-    cat(totext, file=ofile)
-}
-
-save_mdmr <- function(obj, voxs, sdir, mdir, formula, verbose=TRUE) {
+save_mdmr <- function(obj, voxs, sdir, mdir, verbose=TRUE) {
     vcat(verbose, "Saving MDMR Results")
     
     mdmr.output <- mdir
@@ -350,6 +320,35 @@ save_mdmr <- function(obj, voxs, sdir, mdir, formula, verbose=TRUE) {
     save_mdmr.pvals_and_zstats(sdir, mdir, obj$pvals, voxs, factor.names)
     
     return(NULL)
+}
+
+save_mdmr.modelinfo <- function(mdir, modelinfo)
+{
+    ofile <- file.path(mdir, "modelinfo.rda")
+    save(modelinfo, file=ofile)
+}
+
+save_mdmr.formula <- function(mdir, modelinfo)
+{
+    ofile <- file.path(mdir, "formula.txt")
+    cat(as.character(modelinfo$formula)[-c(1:2)], file=ofile)
+}
+
+save_mdmr.factors <- function(mdir, modelinfo)
+{
+    ofile <- file.path(mdir, "factor_names.txt")
+    
+    all.factornames <- names(attr(modelinfo$qrhs, "factors.names"))
+    perm.factornames <- names(attr(modelinfo$qrhs, "factors2perm"))
+    is <- !(all.factornames %in% perm.factornames)
+    cov.factornames <- all.factornames[is]
+    
+    totext <- sprintf("All Factors: %s\nPermuted Factors: %s\nCovariates: %s", 
+                paste(all.factornames, collapse=", "), 
+                paste(perm.factornames, collapse=", "), 
+                paste(cov.factornames, collapse=", "))
+    
+    cat(totext, file=ofile)
 }
 
 save_mdmr.model <- function(mdir, modelinfo)
