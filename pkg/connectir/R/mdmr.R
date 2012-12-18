@@ -74,7 +74,7 @@ mdmr <- function(G, formula, model,
             stop("sge.info must include njobs, nforks, nthreads, and ignore.proc.error")
         if (is.null(G.path))
             stop("must provide G.path for SGE MDMR job")
-        if (save.perms == T && is.null(fperms.path))
+        if (save.fperms == T && is.null(fperms.path))
             stop("must provide fperms.path if saving for SGE MDMR job")
         sge.info$run <- TRUE
     } else {
