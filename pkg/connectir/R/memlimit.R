@@ -138,9 +138,9 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
     len_dmat <- nsubs^2
     nforks <- getDoParWorkers()
     
-    tmp <- n2gb(nsubs*nperms)
+    tmp <- n2gb(nfactors*nsubs*nperms*2)
     mem_perms <- ifelse(nsubs < 2^31, tmp, tmp/2)
-    mem_pvals <- n2gb(nvoxs*nfactors)
+    mem_pvals <- n2gb(nvoxs*nfactors*2)
     vcat(opts$verbose, "...%.1f MB used for permutation indices", mem_perms*1024)
     vcat(opts$verbose, "...%.1f MB used for p-values", mem_pvals*1024)
     
@@ -153,14 +153,14 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
     mem_by_voxs <- mem_gmats + mem_fperms
     
     mem_h2s <- n2gb(nfactors*len_dmat)          # *nperms
-    mem_ih <- n2gb(len_dmat)                    # *nperms
+    mem_ih <- n2gb(nfactors*len_dmat)           # *nperms
     vcat(opts$verbose, "...minimum of %.1f MB used for permuted model matrices", 
          2*mem_h2s*1024)
     vcat(opts$verbose, "...minimum of %.1f MB used for permuted error matrices", 
          2*mem_ih*1024)
     mem_by_perms <- mem_h2s + mem_ih
     
-    mem_tmp <- n2gb(2*1*1)                       # *nvoxs*nperms
+    mem_tmp <- n2gb(4*1*1)                       # *nvoxs*nperms
     vcat(opts$verbose, "...minimum of %.1f MB used for temporary matrices", 
          2*mem_tmp*1024)
     

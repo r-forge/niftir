@@ -163,30 +163,40 @@ mdmr <- function(G, formula, model,
             lastPerm <- blocks$ends[bi]
             sub_nperms <- blocks$nperms[bi]
             include.orig <- ifelse(bi==1, TRUE, FALSE)
-           
+            
             # subset of partial Fmats
-            vcat(verbose, "...preparing subset of f-stats")
+            vcat(verbose, "...creating subset of partial f-stats")
             list.subset_Fperms <- lapply(1:nfactors, function(fi) {
-                sub.big.matrix(list.partial_Fperms[[fi]], 
-                                firstRow=firstPerm, lastRow=lastPerm)
+                big.matrix(sub_nperms, sub_nvoxs, type=type, shared=FALSE)
             })
-           
+            
             # subset of permutation indices
             vcat(verbose, "...preparing subset of permutation indices")
             list.subset_perms <- lapply(1:nfactors, function(fi) {
                 list.perms[[fi]][,firstPerm:lastPerm]
             })
-           
+            
             # calculate pseudo-F statistic
             # and return permutation indices
             mdmr.worker(modelinfo, tmp_Gs, list.subset_perms, 
                         list.subset_Fperms, 
                         type=type, shared=shared, 
                         verbose=verbose)
-           
-            # remove perm indices
-            rm(list.subset_perms); invisible(gc(F,T))
-           
+            
+            # copy subset of pertial Fmats
+            vcat(verbose, "...copying partial f-stats")
+            for (fi in 1:nfactors) {
+                orig_Fperms <- list.subset_Fperms[[fi]]
+                target_Fperms <- sub.big.matrix(list.partial_Fperms[[fi]], 
+                                                firstRow=firstPerm, 
+                                                lastRow=lastPerm)
+                deepcopy(x=orig_Fperms, y=target_Fperms)
+            }
+            
+            # remove subset Fmats and perm indices
+            vcat(verbose, "...removing subset f-stats and permutation indices")
+            rm(list.subset_Fperms, list.subset_perms); invisible(gc(F,T))
+                       
             return(NULL)
         }
         
@@ -300,7 +310,7 @@ save_mdmr <- function(obj, voxs, sdir, mdir, verbose=TRUE) {
     }
     
     vcat(verbose, "...saving model info")
-    save_mdmr.modelinfo(mdir)
+    save_mdmr.modelinfo(mdir, obj$modelinfo)
     
     vcat(verbose, "...saving formula")
     save_mdmr.formula(mdir, obj$modelinfo)
@@ -572,10 +582,9 @@ mdmr_old <- function(G, formula, model,
             include.orig <- ifelse(bi==1, TRUE, FALSE)
             
             # subset of partial Fmats
-            vcat(verbose, "...preparing subset of f-stats")
+            vcat(verbose, "...creating subset of partial f-stats")
             list.subset_Fperms <- lapply(1:nfactors, function(fi) {
-                sub.big.matrix(list.partial_Fperms[[fi]], 
-                                firstRow=firstPerm, lastRow=lastPerm)
+                big.matrix(sub_nperms, sub_nvoxs, type=type, shared=FALSE)
             })
             
             # subset of permutation indices
@@ -591,8 +600,19 @@ mdmr_old <- function(G, formula, model,
                         type=type, shared=shared, 
                         verbose=verbose)
             
-            # remove perm indices
-            rm(list.subset_perms); invisible(gc(F,T))
+            # copy subset of pertial Fmats
+            vcat(verbose, "...copying partial f-stats")
+            for (fi in 1:nfactors) {
+                orig_Fperms <- list.subset_Fperms[[fi]]
+                target_Fperms <- sub.big.matrix(list.partial_Fperms[[fi]], 
+                                                firstRow=firstPerm, 
+                                                lastRow=lastPerm)
+                deepcopy(x=orig_Fperms, y=target_Fperms)
+            }
+            
+            # remove subset Fmats and perm indices
+            vcat(verbose, "...removing subset f-stats and permutation indices")
+            rm(list.subset_Fperms, list.subset_perms); invisible(gc(F,T))
             
             return(NULL)
         }
