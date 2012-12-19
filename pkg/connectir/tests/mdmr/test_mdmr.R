@@ -5,9 +5,8 @@ library(stringr)
 context("MDMR")
 
 create_init_data <- function(n) {
-    n <- 100
     formula <- ~ group*continuous
-    model <- data.frame(group = rep(c(0,1), each=n/2), 
+    model <- data.frame(group = rep(c("A","B","C","D"), each=n/4), 
                         continuous = rnorm(n))
     factor.names <- c("group", "continuous", "group:continuous")
     

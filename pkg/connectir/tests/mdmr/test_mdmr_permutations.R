@@ -4,10 +4,10 @@ library(stringr)
 
 context("MDMR - Permutations")
 
-create_init_data <- function(n) {
+create_init_data <- function(n, ngrps=2) {
     n <- 100
     formula <- ~ group*continuous
-    model <- data.frame(group = rep(c(0,1), each=n/2), 
+    model <- data.frame(group = factor(rep(c(1:ngrps), each=n/ngrps)), 
                         continuous = rnorm(n))
     factor.names <- c("group", "continuous", "group:continuous")
     
@@ -18,8 +18,8 @@ create_init_data <- function(n) {
     ))
 }
 
-create_rhs <- function(n=100) {
-    dat <- create_init_data(n)
+create_rhs <- function(n=100, ngrps=2) {
+    dat <- create_init_data(n, ngrps)
     rhs <- mdmr_model.rhs(dat$formula, dat$model)
     return(rhs)
 }
@@ -86,6 +86,59 @@ test_that("can gather permutations that aren't significantly correlated with the
     rthresh <- tanh(1.96/sqrt(nrow(rhs)-3))
     
     expect_that(all(cors<rthresh), is_true())
+})
+
+test_that("permutes multiple columns for one factor with H2", {
+    rhs <- create_rhs(100, 4)
+    qrhs <- mdmr_model.qr(rhs)
+    rhs <- mdmr_model.rank(rhs, qrhs)
+    grps <- attr(qrhs, "grps")
+    factors2perm <- attr(qrhs, "factors2perm")
+    ps <- sample(100)
+    
+    # Reference
+    TOL <- 1e-07
+    ## H
+    Xj <- rhs
+    Xj[,2:4] <- Xj[ps,2:4]
+    qrX <- qr(Xj, tol=TOL)
+    Q <- qr.Q(qrX)
+    H <- tcrossprod(Q[,1:qrX$rank])
+    ## H2
+    Xj <- rhs[,c(1,5:8)]
+    qrX <- qr(Xj, tol = TOL)
+    Q <- qr.Q(qrX)
+    ref.H2 <- H - tcrossprod(Q[, 1:qrX$rank])
+    
+    # Comparison
+    comp.H2 <- mdmr_model.hat_matrix_2(rhs, grps, factors2perm[1], ps)
+    
+    expect_that(ref.H2, equals(comp.H2))
+})
+
+test_that("permutes multiple columns for one factor with IH", {
+    rhs <- create_rhs(100, 4)
+    qrhs <- mdmr_model.qr(rhs)
+    rhs <- mdmr_model.rank(rhs, qrhs)
+    grps <- attr(qrhs, "grps")
+    factors2perm <- attr(qrhs, "factors2perm")
+    ps <- sample(100)
+    
+    # Reference
+    TOL <- 1e-07
+    ## H
+    Xj <- rhs
+    Xj[,2:4] <- Xj[ps,2:4]
+    qrX <- qr(Xj, tol=TOL)
+    Q <- qr.Q(qrX)
+    H <- tcrossprod(Q[,1:qrX$rank])
+    ## H2
+    ref.IH <- diag(nrow(rhs)) - H
+    
+    # Comparison
+    comp.IH <- mdmr_model.hat_matrix_ih(rhs, grps, factors2perm[1], ps)
+    
+    expect_that(ref.IH, equals(comp.IH))
 })
 
 test_that("gather permuted H2s for a factor", {

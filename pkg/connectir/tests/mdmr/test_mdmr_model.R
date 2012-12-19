@@ -49,7 +49,7 @@ test_that("confirm that an elment with NA will throw error", {
                 throws_error("One of your factors has an empty element"))
 })
 
-test_that("take QR decomposition of RHS", {
+test_that("take QR decomposition of RHS and add relevant attributes", {
     rhs <- create_rhs(100)
     
     # Reference
@@ -64,23 +64,46 @@ test_that("take QR decomposition of RHS", {
     factors2perm <- 2:length(u.grps)
     names(factors2perm) <- factor.names
     attr(qrhs, "factors2perm") <- factors2perm
+    ## add columns to permute
+    cols2perm <- lapply(factors2perm, function(fi) which(grps==u.grps[fi]))
+    attr(qrhs, "cols2perm") <- cols2perm
     ## save qrhs
     ref.qrhs <- qrhs
     
     # Comparison
     comp.qrhs <- mdmr_model.qr(rhs)
     
+    # Will check that QR is done properly
+    # and that the following attributes are added to qrhs:
+    # grps, u.grps, factor.names, factors2perm, and cols2perm
     expect_that(ref.qrhs, equals(comp.qrhs))
 })
 
-test_that("adjust a rank-deficient matrix", {
+test_that("mdmr_model.qr will return an error if RHS has NULL for 'assign'", {
     rhs <- create_rhs(100)
-    rhs <- cbind(rhs, bad=rhs[,2])
-    rhs <- rhs[,c(1,2,5,3,4)]
+    fn <- attr(rhs, "factor.names")
+    rhs <- rhs[,]
+    
+    expect_that(mdmr_model.qr(rhs), throws_error())
+})
+
+test_that("mdmr_model.qr will return an error if RHS has NULL for 'factor.names'", {
+    rhs <- create_rhs(100)
+    attr(rhs, "assign") <- NULL
+    
+    expect_that(mdmr_model.qr(rhs), throws_error())
+})
+
+test_that("adjust a rank-deficient matrix", {
+    dat <- create_init_data(n)
+    dat$model <- cbind(dat$model, bad=dat$model$continuous)
+    dat$formula <- ~ group*continuous + bad
+    rhs <- mdmr_model.rhs(dat$formula, dat$model)
+    
     qrhs <- mdmr_model.qr(rhs)
     
     # Reference
-    ref.rhs <- rhs[,c(1,2,4,5)]
+    ref.rhs <- rhs[,c(1,2,3,5)]
     
     # Comparison
     comp.rhs <- mdmr_model.rank(rhs, qrhs, throw_error=FALSE)

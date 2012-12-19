@@ -85,32 +85,61 @@ mdmr_model.rhs <- function(formula, model, contr.unordered="contr.sum",
 #'         grps, u.grps, factor.names, & factor2perm
 mdmr_model.qr <- function(rhs, factors2perm=NULL)
 {
+    # Assign attributes
+    grps <- attr(rhs, "assign")
+    factor.names <- attr(rhs, "factor.names")
+    
+    # Check attributes
+    if (is.null(grps))
+        stop("missing attribute 'assign' in rhs")
+    if (is.null(factor.names))
+        stop("missing attribute 'factor.names' in rhs")
+    
+    # QR decomposition
     qrhs <- qr(rhs)
     
-    # Relate each regressor to factor id
-    grps <- attr(rhs, "assign")
+    # Relate each regressor to a factor id    
     grps <- grps[qrhs$pivot][1:qrhs$rank]
     u.grps <- unique(grps)
     attr(qrhs, "grps") <- grps
     attr(qrhs, "u.grps") <- u.grps
     
     # Factor names
-    factor.names <- attr(rhs, "factor.names")[u.grps]
+    factor.names <- factor.names[u.grps]
     attr(qrhs, "factor.names") <- factor.names
     
+    # Check factor.names
+    # 'adj' will adjust the index of factors2perm by given amount (0 or 1)
+    if (length(factor.names) == (length(u.grps) - 1)) {
+        adj <- 1
+    } else if (length(factor.names) == length(u.grps)) {
+        adj <- 0
+    } else {
+        stop(paste("factor.names must have length equal to or one less than", 
+                   "length of u.grps"))
+    }
+    
     # Permuted factors
-    cnames <- colnames(rhs)
     if (is.null(factors2perm)) {
-        factors2perm <- 1:length(cnames)
-        factors2perm <- factors2perm[cnames!="(Intercept)"]
+        factors2perm <- 1:length(factor.names)
+        names(factors2perm) <- factor.names
+    } else if (is.character(factors2perm)) {
+        factors2perm <- sapply(factors2perm, function(pname) {
+            which(factor.names == pname)
+        })
+    } else {
+        vstop("unidentified type for factors2perm (%s), must be null or character", 
+                class(factors2perm))
     }
-    if (is.character(factors2perm)) {
-        factors2perm <- sapply(factors2perm, function(x) 
-                                which(cnames==x))
-    }
-    factor2perm.names <- cnames[factors2perm]
-    names(factors2perm) <- factor2perm.names
+    
+    factors2perm <- factors2perm + adj
     attr(qrhs, "factors2perm") <- factors2perm
+    
+    # Permuted columns (associated with permuted factors)
+    cols2perm <- lapply(factors2perm, function(ui) {
+        which(grps == u.grps[ui])
+    })
+    attr(qrhs, "cols2perm") <- cols2perm
     
     return(qrhs)
 }
