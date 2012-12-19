@@ -119,7 +119,7 @@ test_that("confirm that error will be thrown if RHS is rank-deficient", {
     expect_that(mdmr_model.rank(rhs, qrhs), throws_error())
 })
 
-test_that("generate H2s properly", {
+test_that("generate H2s properly using 'rhs' permute option", {
     rhs <- create_rhs(100)
     qrhs <- mdmr_model.qr(rhs)
     rhs <- mdmr_model.rank(rhs, qrhs)
@@ -147,9 +147,104 @@ test_that("generate H2s properly", {
     })
     
     # Comparison
-    comp.H2s <- lapply(2:length(u.grps), function(j) mdmr_model.hat_matrix_2(rhs, grps, j, perms))
+    comp.H2s <- lapply(2:length(u.grps), function(j) mdmr_model.hat_matrix_2(rhs, grps, j, perms, "rhs"))
     
     expect_that(ref.H2s, equals(comp.H2s))
+})
+
+test_that("generate H2 properly using 'h2' permute option", {
+    rhs <- create_rhs(100)
+    qrhs <- mdmr_model.qr(rhs)
+    rhs <- mdmr_model.rank(rhs, qrhs)
+    
+    nobs <- nrow(rhs)
+    perms <- sample(1:nobs)
+    
+    # Reference
+    ## basics
+    TOL <- 1e-07
+    grps <- attr(qrhs, "grps")
+    u.grps <- attr(qrhs, "u.grps")
+    ## model with variable of interest
+    ref.H2s <- lapply(2:length(u.grps), function(j) {
+        Xj <- rhs
+        qrX <- qr(Xj, tol=TOL)
+        Q <- qr.Q(qrX)
+        H <- tcrossprod(Q)
+        
+        Xj <- rhs[, grps %in% u.grps[-j]]
+        qrX <- qr(Xj, tol = TOL)
+        Q <- qr.Q(qrX)
+        H2 <- H - tcrossprod(Q[,1:qrX$rank])
+        
+        H2[perms,perms]
+    })
+    
+    # Comparison
+    comp.H2s <- lapply(2:length(u.grps), function(j) mdmr_model.hat_matrix_2(rhs, grps, j, perms, "h2"))
+    
+    expect_that(ref.H2s, equals(comp.H2s))
+})
+
+test_that("generate H2 properly using 'h2_with_covariates' permute option", {
+    rhs <- create_rhs(100)
+    qrhs <- mdmr_model.qr(rhs)
+    rhs <- mdmr_model.rank(rhs, qrhs)
+    
+    nobs <- nrow(rhs)
+    perms <- sample(1:nobs)
+    
+    # Reference
+    ## basics
+    TOL <- 1e-07
+    grps <- attr(qrhs, "grps")
+    u.grps <- attr(qrhs, "u.grps")
+    ## model with variable of interest
+    ref.H2s <- lapply(2:length(u.grps), function(j) {
+        Xj <- rhs
+        qrX <- qr(Xj, tol=TOL)
+        Q <- qr.Q(qrX)
+        H <- tcrossprod(Q[,1:qrX$rank])
+        
+        Xj <- rhs[, grps %in% u.grps[-j]]
+        qrX <- qr(Xj, tol = TOL)
+        Q <- qr.Q(qrX)
+        H2 <- H - tcrossprod(Q[,1:qrX$rank])
+        
+        Xj <- rhs[,grps %in% u.grps[j]]
+        qrX <- qr(Xj, tol = TOL)
+        Q <- qr.Q(qrX)
+        H1 <- H - tcrossprod(Q[,1:qrX$rank])
+        IH1 <- diag(nobs) - H1
+        
+        IH1 %*% H2[perms,perms] %*% IH1
+    })
+    
+    # Comparison
+    comp.H2s <- lapply(2:length(u.grps), function(j) mdmr_model.hat_matrix_2(rhs, grps, j, perms, "h2_with_covariates"))    
+    expect_that(ref.H2s, equals(comp.H2s))
+})
+
+test_that("generation of hat matrix (H2) throws an error if o.inds is not valid", {
+    rhs <- create_rhs(100)
+    qrhs <- mdmr_model.qr(rhs)
+    rhs <- mdmr_model.rank(rhs, qrhs)
+    perms <- sample(1:nobs)[1:10]
+    grps <- attr(qrhs, "grps")
+    u.grps <- attr(qrhs, "u.grps")
+    
+    expect_that(mdmr_model.hat_matrix_2(rhs, grps, j, perms), throws_error())
+})
+
+test_that("generation of hat matrix (H2) throws an error if permute option is not valid", {
+    rhs <- create_rhs(100)
+    qrhs <- mdmr_model.qr(rhs)
+    rhs <- mdmr_model.rank(rhs, qrhs)
+    perms <- sample(1:nobs)
+    grps <- attr(qrhs, "grps")
+    u.grps <- attr(qrhs, "u.grps")
+    
+    expect_that(mdmr_model.hat_matrix_2(rhs, grps, j, perms, "junk"), throws_error())
 })
 
 test_that("generate IHs properly", {

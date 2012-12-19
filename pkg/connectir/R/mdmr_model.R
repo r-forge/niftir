@@ -197,31 +197,100 @@ mdmr_model.rank <- function(rhs, qrhs, throw_error=TRUE)
 #' @param rhs right-hand matrix
 #' @param grps vector indicating the factor index for each regressor
 #' @param f.ind factor index to examine
-#' @param o.inds vector of indices for observations (e.g., for a permutation)
-#' @return matrix
-mdmr_model.hat_matrix_2 <- function(rhs, grps, f.ind, o.inds=NULL)
+#' @param o.inds vector of indices for observations (e.g., for a permutation), 
+#'               default is not to permute.
+#' @param permute character indicating how to permute H2, can be 'rhs' or 'h2'.
+#'                the actual permutation indices are given with o.inds.
+#'                the rhs option will permute rows in the rhs matrix for 
+#'                columns with given factor (f.ind), the h2 option will 
+#'                directly permute rows and columns of H2 matrix, and the 
+#'                h2_with_covariates option will multiply the output of h2 by
+#'                (I - H1)
+#' @return hat matrix
+mdmr_model.hat_matrix_2 <- function(rhs, grps, f.ind, o.inds=NULL, permute="rhs")
 {
     TOL <- 1e-07
     u.grps <- unique(grps)
+    nobs <- nrow(rhs)
     if (is.null(o.inds))
-        o.inds <- 1:nrow(rhs)
+        o.inds <- 1:nobs
+    else if (!all(o.inds %in% (1:nobs)))
+        stop("each element in o.inds must in range 1 to # of observations")
     
-    # H
-    Xj <- rhs
-    cols <- grps %in% u.grps[f.ind]
-    Xj[,cols] <- Xj[o.inds,cols]
-    qrX <- qr(Xj, tol=TOL)
-    Q <- qr.Q(qrX)
-    H <- tcrossprod(Q[,1:qrX$rank])
+    # Permutes rhs and then calculates H2 matrix
+    permute_rhs <- function() {
+        # H
+        Xj <- rhs
+        cols <- grps %in% u.grps[f.ind]
+        Xj[,cols] <- Xj[o.inds,cols]
+        qrX <- qr(Xj, tol=TOL)
+        Q <- qr.Q(qrX)
+        H <- tcrossprod(Q[,1:qrX$rank])
     
-    # H2
-    cols <- grps %in% u.grps[-f.ind]
-    Xj <- rhs[,cols]
-    qrX <- qr(Xj, tol = TOL)
-    Q <- qr.Q(qrX)
-    H2 <- H - tcrossprod(Q[, 1:qrX$rank])
+        # H2
+        cols <- grps %in% u.grps[-f.ind]
+        Xj <- rhs[,cols]
+        qrX <- qr(Xj, tol = TOL)
+        Q <- qr.Q(qrX)
+        H2 <- H - tcrossprod(Q[, 1:qrX$rank])
+        
+        H2
+    }
     
-    return(H2)
+    # Calculates H2 matrix and then permutes
+    permute_h2 <- function() {
+        # H
+        Xj <- rhs
+        qrX <- qr(Xj, tol=TOL)
+        Q <- qr.Q(qrX)
+        H <- tcrossprod(Q[,1:qrX$rank])
+    
+        # H2
+        cols <- grps %in% u.grps[-f.ind]
+        Xj <- rhs[,cols]
+        qrX <- qr(Xj, tol = TOL)
+        Q <- qr.Q(qrX)
+        H2 <- H - tcrossprod(Q[, 1:qrX$rank])
+        
+        H2[o.inds,o.inds]
+    }
+    
+    # Calculates H2 matrix, multiplies by I-H1, and then permutes
+    permute_h2_with_covariates <- function() {
+        # H
+        Xj <- rhs
+        qrX <- qr(Xj, tol=TOL)
+        Q <- qr.Q(qrX)
+        H <- tcrossprod(Q[,1:qrX$rank])
+        
+        # H1
+        cols <- grps %in% u.grps[f.ind]
+        Xj <- rhs[,cols]
+        qrX <- qr(Xj, tol = TOL)
+        Q <- qr.Q(qrX)
+        H1 <- H - tcrossprod(Q[, 1:qrX$rank])
+        
+        # IH1
+        IH1 <- diag(nobs) - H1
+        
+        # H2
+        cols <- grps %in% u.grps[-f.ind]
+        Xj <- rhs[,cols]
+        qrX <- qr(Xj, tol = TOL)
+        Q <- qr.Q(qrX)
+        H2 <- H - tcrossprod(Q[, 1:qrX$rank])
+        
+        IH1 %*% H2[o.inds,o.inds] %*% IH1
+    }
+    
+    H2 <- switch(permute, 
+        rhs = permute_rhs(), 
+        h2 = permute_h2(), 
+        h2_with_covariates = permute_h2_with_covariates(), 
+        stop(sprintf("permute must be rhs, h2, or h2_with_covariates and not %s", permute))
+    )
+    
+    H2
 }
 
 ##' INTERNAL: Calculates the hat matrices for everything but the variable of 
