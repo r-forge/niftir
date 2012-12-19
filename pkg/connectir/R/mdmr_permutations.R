@@ -262,10 +262,12 @@ mdmr_perms.to_integer <- function(pmat)
 #' @param f.ind factor index to examine
 #' @param pmat matrix of permutations indices of nobs x nperms
 #' @param verbose boolean
+#' @param permute can be rhs, hat, or hat_with_covariates
 #' @param ... values given to big.matrix to be returned
 #' @return big.matrix of nobs^2 x nperms+1 with each column a permuted H2
 mdmr_perms.gather_H2perms_for_factor <- function(rhs, grps, f.ind, pmat,  
-                                                 verbose=TRUE, ...)
+                                                 verbose=TRUE, permute="rhs", 
+                                                 ...)
 {
     nobs   <- nrow(pmat)
     nperms <- ncol(pmat)
@@ -274,7 +276,7 @@ mdmr_perms.gather_H2perms_for_factor <- function(rhs, grps, f.ind, pmat,
     bigmat <- big.matrix(nobs^2, nperms, ...)
     
     l_ply(1:nperms, function(p) {
-        H2 <- mdmr_model.hat_matrix_2(rhs, grps, f.ind, pmat[,p])
+        H2 <- mdmr_model.hat_matrix_2(rhs, grps, f.ind, pmat[,p], permute=permute)
         bigmat[,p] <- as.vector(H2)
     }, .progress=progress)
     
@@ -289,10 +291,12 @@ mdmr_perms.gather_H2perms_for_factor <- function(rhs, grps, f.ind, pmat,
 #' @param f.ind factor index to examine
 #' @param pmat matrix of permutations indices of nobs x nperms
 #' @param verbose boolean
+#' @param permute can be rhs, hat, or hat_with_covariates
 #' @param ... values given to big.matrix to be returned
 #' @return big.matrix of nobs^2 x nperms+1 with each column a permuted H2
 mdmr_perms.gather_IHperms_for_factor <- function(rhs, grps, f.ind, pmat, 
-                                                 verbose=TRUE, ...)
+                                                 verbose=TRUE, permute="rhs", 
+                                                 ...)
 {
     nobs   <- nrow(pmat)
     nperms <- ncol(pmat)
@@ -301,7 +305,7 @@ mdmr_perms.gather_IHperms_for_factor <- function(rhs, grps, f.ind, pmat,
     bigmat <- big.matrix(nobs^2, nperms, ...)
     
     l_ply(1:nperms, function(p) {
-        IH <- mdmr_model.hat_matrix_ih(rhs, grps, f.ind, pmat[,p])
+        IH <- mdmr_model.hat_matrix_ih(rhs, grps, f.ind, pmat[,p], permute)
         bigmat[,p] <- as.vector(IH)
     }, .progress=progress)
     

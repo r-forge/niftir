@@ -152,7 +152,7 @@ test_that("generate H2s properly using 'rhs' permute option", {
     expect_that(ref.H2s, equals(comp.H2s))
 })
 
-test_that("generate H2 properly using 'h2' permute option", {
+test_that("generate H2 properly using 'hat' permute option", {
     rhs <- create_rhs(100)
     qrhs <- mdmr_model.qr(rhs)
     rhs <- mdmr_model.rank(rhs, qrhs)
@@ -181,12 +181,12 @@ test_that("generate H2 properly using 'h2' permute option", {
     })
     
     # Comparison
-    comp.H2s <- lapply(2:length(u.grps), function(j) mdmr_model.hat_matrix_2(rhs, grps, j, perms, "h2"))
+    comp.H2s <- lapply(2:length(u.grps), function(j) mdmr_model.hat_matrix_2(rhs, grps, j, perms, "hat"))
     
     expect_that(ref.H2s, equals(comp.H2s))
 })
 
-test_that("generate H2 properly using 'h2_with_covariates' permute option", {
+test_that("generate H2 properly using 'hat_with_covariates' permute option", {
     rhs <- create_rhs(100)
     qrhs <- mdmr_model.qr(rhs)
     rhs <- mdmr_model.rank(rhs, qrhs)
@@ -221,7 +221,7 @@ test_that("generate H2 properly using 'h2_with_covariates' permute option", {
     })
     
     # Comparison
-    comp.H2s <- lapply(2:length(u.grps), function(j) mdmr_model.hat_matrix_2(rhs, grps, j, perms, "h2_with_covariates"))    
+    comp.H2s <- lapply(2:length(u.grps), function(j) mdmr_model.hat_matrix_2(rhs, grps, j, perms, "hat_with_covariates"))    
     expect_that(ref.H2s, equals(comp.H2s))
 })
 
@@ -247,7 +247,7 @@ test_that("generation of hat matrix (H2) throws an error if permute option is no
     expect_that(mdmr_model.hat_matrix_2(rhs, grps, j, perms, "junk"), throws_error())
 })
 
-test_that("generate IHs properly", {
+test_that("generate IHs properly for rhs option", {
     rhs <- create_rhs(100)
     qrhs <- mdmr_model.qr(rhs)
     rhs <- mdmr_model.rank(rhs, qrhs)
@@ -266,12 +266,78 @@ test_that("generate IHs properly", {
         Xj[,grps %in% u.grps[j]] <- Xj[perms, grps %in% u.grps[j]]
         qrX <- qr(Xj, tol=TOL)
         Q <- qr.Q(qrX)
-        H <- tcrossprod(Q)
+        H <- tcrossprod(Q[,1:qrX$rank])
         diag(nobs) - H
     })
     
     # Comparison
-    comp.IH <- lapply(2:length(u.grps), function(j) mdmr_model.hat_matrix_ih(rhs, grps, j, perms))
+    comp.IH <- lapply(2:length(u.grps), function(j) mdmr_model.hat_matrix_ih(rhs, grps, j, perms, "rhs"))
+    
+    expect_that(ref.IH, equals(comp.IH))
+})
+
+
+test_that("generate IHs properly for 'hat' permute option", {
+    rhs <- create_rhs(100)
+    qrhs <- mdmr_model.qr(rhs)
+    rhs <- mdmr_model.rank(rhs, qrhs)
+    
+    nobs <- nrow(rhs)
+    perms <- sample(1:nobs)
+    
+    # Reference
+    ## basics
+    TOL <- 1e-07
+    grps <- attr(qrhs, "grps")
+    u.grps <- attr(qrhs, "u.grps")
+    ## model with variable of interest
+    ref.IH <- lapply(2:length(u.grps), function(j) {
+        Xj <- rhs
+        qrX <- qr(Xj, tol=TOL)
+        Q <- qr.Q(qrX)
+        H <- tcrossprod(Q[,1:qrX$rank])
+        IH <- diag(nobs) - H
+        IH[perms,perms]
+    })
+    
+    # Comparison
+    comp.IH <- lapply(2:length(u.grps), function(j) mdmr_model.hat_matrix_ih(rhs, grps, j, perms, "hat"))
+    
+    expect_that(ref.IH, equals(comp.IH))
+})
+
+test_that("generate IHs properly for 'hat_with_covariates' permute option", {
+    rhs <- create_rhs(100)
+    qrhs <- mdmr_model.qr(rhs)
+    rhs <- mdmr_model.rank(rhs, qrhs)
+    
+    nobs <- nrow(rhs)
+    perms <- sample(1:nobs)
+    
+    # Reference
+    ## basics
+    TOL <- 1e-07
+    grps <- attr(qrhs, "grps")
+    u.grps <- attr(qrhs, "u.grps")
+    ## model with variable of interest
+    ref.IH <- lapply(2:length(u.grps), function(j) {
+        Xj <- rhs
+        qrX <- qr(Xj, tol=TOL)
+        Q <- qr.Q(qrX)
+        H <- tcrossprod(Q)
+        IH <- diag(nobs) - H
+        
+        Xj <- rhs[,grps %in% u.grps[j]]
+        qrX <- qr(Xj, tol = TOL)
+        Q <- qr.Q(qrX)
+        H1 <- H - tcrossprod(Q[,1:qrX$rank])
+        IH1 <- diag(nobs) - H1
+        
+        IH1 %*% IH[perms,perms] %*% IH1
+    })
+    
+    # Comparison
+    comp.IH <- lapply(2:length(u.grps), function(j) mdmr_model.hat_matrix_ih(rhs, grps, j, perms, "hat"))
     
     expect_that(ref.IH, equals(comp.IH))
 })
