@@ -144,11 +144,11 @@ mdmr <- function(G, formula, model,
         
         # specify subset of G
         vcat(verbose, "...grabbing subset of Gower matrices")
-        if (sge.info$run)
+        if (is.filebacked(G))
             G <- attach.big.matrix(G.desc, backingpath=G.path)
         tmp_Gs <- deepcopy(x=G, cols=firstVox:lastVox, type=type, shared=shared)
         if (is.filebacked(G))
-            G <- free.memory(G, G.path)
+            rm(G); invisible(gc(F,T))
         
         # prepare partial Fperms
         vcat(verbose, "...preparing partial pesudo-F matrices")
