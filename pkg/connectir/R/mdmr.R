@@ -216,7 +216,7 @@ mdmr <- function(G, formula, model,
             list.Fperms <- llply(1:nfactors, function(fi) {
                 iFperms <- list.partial_Fperms[[fi]]
                 
-                if (sge.info$run) {
+                if (!is.null(fperms.path)) {
                     Fperms <- attach.big.matrix(list.fperms_desc[[fi]], 
                                                 backingpath=fperms.path)
                 } else {
