@@ -69,6 +69,7 @@ mdmr <- function(G, formula, model,
     if (nperms == 0)
         stop("number of permutations cannot be 0")    
     if (!is.null(sge.info)) {
+        library(Rsge)
         ref.names <- c("njobs", "nforks", "nthreads", "ignore.proc.error")
         if (!all.equal(names(sge.info), ref.names))
             stop("sge.info must include njobs, nforks, nthreads, and ignore.proc.error")
