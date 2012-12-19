@@ -264,7 +264,8 @@ mdmr <- function(G, formula, model,
         lastVox <- superblocks$ends[si]
         
         oPmat <- list.pvals[[si]]
-        sub_Pmat <- sub.big.matrix(Pmat, firstRow=firstVox, lastRow=lastVox)
+        sub_Pmat <- sub.big.matrix(Pmat, firstRow=firstVox, lastRow=lastVox, 
+                                   backingpath=fperms.path)
         
         deepcopy(x=oPmat, y=sub_Pmat)
     }
