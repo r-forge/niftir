@@ -99,7 +99,7 @@ mdmr_perms.gather_H2s <- function(rhs, qrhs, list.perms, verbose=TRUE, ...)
     
     list.H2s <- lapply(1:length(factors2perm), function(i) {
         j <- factors2perm[i]
-        name <- factor.names[j]
+        name <- factor.names[i]
         vcat(verbose, "...for factor %s (#%i)", name, i)
         
         perms <- list.perms[[i]]
@@ -137,7 +137,7 @@ mdmr_perms.gather_IHs <- function(rhs, qrhs, list.perms, verbose=TRUE, ...)
     
     list.IHs <- lapply(1:length(factors2perm), function(i) {
         j <- factors2perm[i]
-        name <- factor.names[j]
+        name <- factor.names[i]
         vcat(verbose, "...for factor %s (#%i)", name, i)
         
         perms <- list.perms[[i]]

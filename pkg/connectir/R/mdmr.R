@@ -46,6 +46,8 @@ mdmr <- function(G, formula, model,
     nvoxs <- length(voxs)
     nsubs <- sqrt(nrow(G))
     nperms <- nperms + 1    # account for original indices
+    if ((superblocksize == nvoxs) && !is.null(sge.info))
+        superblocksize <- round(superblocksize/2)
     superblocks <- niftir.split.indices(1, nvoxs, by=superblocksize)
     blocks <- niftir.split.indices(1, nperms, by=blocksize)
     blocks$nperms <- sapply(1:blocks$n, function(bi) {

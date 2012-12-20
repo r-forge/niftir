@@ -182,7 +182,7 @@ tryCatch({
   # Memory Demands: superblocksize & blocksize
   ###
   
-  nperms <- opts$permutations
+  nperms <- opts$permutations + 1
   opts <- get_mdmr_memlimit(opts, nsubs, nvoxs, nperms, nfactors)
   
   
