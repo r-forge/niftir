@@ -97,15 +97,15 @@ mdmr_perms.gather_H2s <- function(rhs, qrhs, list.perms, verbose=TRUE, ...)
     if (any(names(list.perms) != factor.names))
         stop("names for list.perms doesn't match factor.names")
     
-    print(factors2perm)
-    print(factor.names)
-    
     list.H2s <- lapply(1:length(factors2perm), function(i) {
+        print(i)
+        
         j <- factors2perm[i]
         name <- factor.names[i]
         vcat(verbose, "...for factor %s (#%i)", name, i)
         
         perms <- list.perms[[i]]
+        save(list=list(rhs=rhs, grps=grps, j=j, perms=perms, ...), file="ztmp.rda")
         H2mat <- mdmr_perms.gather_H2perms_for_factor(rhs, grps, j, perms, ...)
         
         return(H2mat)
