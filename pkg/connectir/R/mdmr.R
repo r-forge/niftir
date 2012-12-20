@@ -111,7 +111,7 @@ mdmr <- function(G, formula, model,
         vcat(verbose, "...preparing file-backed pesudo-F matrices")
         list.Fperms <- lapply(1:nfactors, function(fi) {
             if (is.null(fperms.path)) {
-                bm <- big.matrix(nperms, nvoxs, type=type, shared=shared)
+                bm <- big.matrix(nperms, nvoxs, type=type, shared=TRUE)
             } else {
                 name <- factor.names[fi]
                 bm <- big.matrix(nperms, nvoxs, type=type, shared=TRUE, 
@@ -156,7 +156,7 @@ mdmr <- function(G, formula, model,
         # prepare partial Fperms
         vcat(verbose, "...preparing partial pesudo-F matrices")
         list.partial_Fperms <- lapply(1:nfactors, function(fi) {
-            big.matrix(nperms, sub_nvoxs, type=type, shared=shared)
+            big.matrix(nperms, sub_nvoxs, type=type, shared=TRUE)
         })
         
         # function to run mdmr for specific factor
@@ -265,7 +265,7 @@ mdmr <- function(G, formula, model,
     # P-values for each factor
     vcat(verbose, "...compiling and saving p-values")
     if (is.null(fperms.path)) {
-        Pmat <- big.matrix(nvoxs, nfactors, type=type, shared=shared)
+        Pmat <- big.matrix(nvoxs, nfactors, type=type, shared=TRUE)
     } else {
         Pmat <- big.matrix(nvoxs, nfactors, type=type, shared=TRUE, 
                            backingpath=fperms.path, 

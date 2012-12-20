@@ -140,12 +140,12 @@ get_mdmr_memlimit <- function(opts, nsubs, nvoxs, nperms, nfactors) {
     
     tmp <- n2gb(nfactors*nsubs*nperms*2)
     mem_perms <- ifelse(nsubs < 2^31, tmp, tmp/2)
-    mem_pvals <- n2gb(nvoxs*nfactors*2)
+    mem_pvals <- n2gb(nvoxs*nfactors*2*2)
     vcat(opts$verbose, "...%.1f MB used for permutation indices", mem_perms*1024)
     vcat(opts$verbose, "...%.1f MB used for p-values", mem_pvals*1024)
     
     mem_gmats <- n2gb(2*len_dmat)               # *nvoxs
-    mem_fperms <- n2gb(2*nfactors*(nperms+1))   # *nvoxs
+    mem_fperms <- n2gb(2*2*nfactors*(nperms+1)) # *nvoxs
     vcat(opts$verbose, "...minimum of %.1f MB used for distance matrices", 
          2*mem_gmats*1024)
     vcat(opts$verbose, "...minimum of %.1f MB used for permuted pseudo-F stats", 
