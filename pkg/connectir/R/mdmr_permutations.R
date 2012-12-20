@@ -97,6 +97,9 @@ mdmr_perms.gather_H2s <- function(rhs, qrhs, list.perms, verbose=TRUE, ...)
     if (any(names(list.perms) != factor.names))
         stop("names for list.perms doesn't match factor.names")
     
+    print(factors2perm)
+    print(factor.names)
+    
     list.H2s <- lapply(1:length(factors2perm), function(i) {
         j <- factors2perm[i]
         name <- factor.names[i]
