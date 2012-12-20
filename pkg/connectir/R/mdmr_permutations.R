@@ -267,7 +267,6 @@ mdmr_perms.gather_H2perms_for_factor <- function(rhs, grps, f.ind, pmat,
 {
     nobs   <- nrow(pmat)
     nperms <- ncol(pmat)
-    progress <- ifelse(verbose, "text", "none")
     
     bigmat <- big.matrix(nobs^2, nperms, ...)
     
@@ -294,7 +293,6 @@ mdmr_perms.gather_IHperms_for_factor <- function(rhs, grps, f.ind, pmat,
 {
     nobs   <- nrow(pmat)
     nperms <- ncol(pmat)
-    progress <- ifelse(verbose, "text", "none")
     
     bigmat <- big.matrix(nobs^2, nperms, ...)
     
