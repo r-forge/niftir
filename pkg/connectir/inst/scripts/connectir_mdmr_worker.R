@@ -207,12 +207,11 @@ tryCatch({
                        ignore.proc.error=opts$ignoreprocerror)
   }
   
-  res.mdmr <- mdmr(xdist, formula, model, 
+  res.mdmr <- mdmr(xdist, formula, model, strata=opts$strata, 
                    nperms=opts$permutations, factors2perm=opts$factors2perm, 
                    superblocksize=opts$superblocksize, voxs=voxs, 
-                   blocksize=opts$blocksize, 
-                   strata=opts$strata, 
-                   verbose=verbosity, parallel=parallel_forks, 
+                   blocksize=opts$blocksize, verbose=verbosity, 
+                   parallel=parallel_forks, shared=parallel_forks, 
                    G.path=xdist.path, fperms.path=fperms.path, save.fperms=TRUE, 
                    sge.info=sge.info)
   

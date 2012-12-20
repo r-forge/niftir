@@ -36,7 +36,7 @@ mdmr <- function(G, formula, model,
                  strata=NULL, max.iter=100, 
                  verbose=1, parallel=FALSE, 
                  G.path=NULL, fperms.path=NULL, save.fperms=FALSE, 
-                 type="double", shared=TRUE, 
+                 type="double", shared=parallel, 
                  sge.info=NULL, permute="rhs")
 {
     inform <- verbose==2
@@ -111,7 +111,7 @@ mdmr <- function(G, formula, model,
         vcat(verbose, "...preparing file-backed pesudo-F matrices")
         list.Fperms <- lapply(1:nfactors, function(fi) {
             if (is.null(fperms.path)) {
-                bm <- big.matrix(nperms, nvoxs, type=type, shared=TRUE)
+                bm <- big.matrix(nperms, nvoxs, type=type, shared=shared)
             } else {
                 name <- factor.names[fi]
                 bm <- big.matrix(nperms, nvoxs, type=type, shared=TRUE, 
@@ -265,7 +265,7 @@ mdmr <- function(G, formula, model,
     # P-values for each factor
     vcat(verbose, "...compiling and saving p-values")
     if (is.null(fperms.path)) {
-        Pmat <- big.matrix(nvoxs, nfactors, type=type, shared=TRUE)
+        Pmat <- big.matrix(nvoxs, nfactors, type=type, shared=shared)
     } else {
         Pmat <- big.matrix(nvoxs, nfactors, type=type, shared=TRUE, 
                            backingpath=fperms.path, 
