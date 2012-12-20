@@ -103,8 +103,7 @@ mdmr_perms.gather_H2s <- function(rhs, qrhs, list.perms, verbose=TRUE, ...)
         vcat(verbose, "...for factor %s (#%i)", name, i)
         
         perms <- list.perms[[i]]
-        H2mat <- mdmr_perms.gather_H2perms_for_factor(rhs, grps, j, perms, 
-                                                      verbose, ...)
+        H2mat <- mdmr_perms.gather_H2perms_for_factor(rhs, grps, j, perms, ...)
         
         return(H2mat)
     })
@@ -141,8 +140,7 @@ mdmr_perms.gather_IHs <- function(rhs, qrhs, list.perms, verbose=TRUE, ...)
         vcat(verbose, "...for factor %s (#%i)", name, i)
         
         perms <- list.perms[[i]]
-        IHmat <- mdmr_perms.gather_IHperms_for_factor(rhs, grps, j, perms, 
-                                                      verbose, ...)
+        IHmat <- mdmr_perms.gather_IHperms_for_factor(rhs, grps, j, perms, ...)
         
         return(IHmat)
     })
@@ -261,13 +259,11 @@ mdmr_perms.to_integer <- function(pmat)
 #' @param grps vector indicating the factor index for each regressor
 #' @param f.ind factor index to examine
 #' @param pmat matrix of permutations indices of nobs x nperms
-#' @param verbose boolean
 #' @param permute can be rhs, hat, or hat_with_covariates
 #' @param ... values given to big.matrix to be returned
 #' @return big.matrix of nobs^2 x nperms+1 with each column a permuted H2
 mdmr_perms.gather_H2perms_for_factor <- function(rhs, grps, f.ind, pmat,  
-                                                 verbose=TRUE, permute="rhs", 
-                                                 ...)
+                                                 permute="rhs", ...)
 {
     nobs   <- nrow(pmat)
     nperms <- ncol(pmat)
@@ -275,10 +271,10 @@ mdmr_perms.gather_H2perms_for_factor <- function(rhs, grps, f.ind, pmat,
     
     bigmat <- big.matrix(nobs^2, nperms, ...)
     
-    l_ply(1:nperms, function(p) {
+    for (p in 1:nperms) {
         H2 <- mdmr_model.hat_matrix_2(rhs, grps, f.ind, pmat[,p], permute=permute)
         bigmat[,p] <- as.vector(H2)
-    }, .progress=progress)
+    }
     
     return(bigmat)
 }
@@ -290,13 +286,11 @@ mdmr_perms.gather_H2perms_for_factor <- function(rhs, grps, f.ind, pmat,
 #' @param grps vector indicating the factor index for each regressor
 #' @param f.ind factor index to examine
 #' @param pmat matrix of permutations indices of nobs x nperms
-#' @param verbose boolean
 #' @param permute can be rhs, hat, or hat_with_covariates
 #' @param ... values given to big.matrix to be returned
 #' @return big.matrix of nobs^2 x nperms+1 with each column a permuted H2
 mdmr_perms.gather_IHperms_for_factor <- function(rhs, grps, f.ind, pmat, 
-                                                 verbose=TRUE, permute="rhs", 
-                                                 ...)
+                                                 permute="rhs", ...)
 {
     nobs   <- nrow(pmat)
     nperms <- ncol(pmat)
@@ -304,10 +298,10 @@ mdmr_perms.gather_IHperms_for_factor <- function(rhs, grps, f.ind, pmat,
     
     bigmat <- big.matrix(nobs^2, nperms, ...)
     
-    l_ply(1:nperms, function(p) {
+    for (p in 1:nperms) {
         IH <- mdmr_model.hat_matrix_ih(rhs, grps, f.ind, pmat[,p], permute)
         bigmat[,p] <- as.vector(IH)
-    }, .progress=progress)
+    }
     
     return(bigmat)
 }
