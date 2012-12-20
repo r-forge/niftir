@@ -60,7 +60,7 @@ mdmr_perms.gather_perms <- function(rhs, qrhs, nperms, strata=NULL,
     
     list.perms <- lapply(1:length(factors2perm), function(i) {
         j <- factors2perm[i]
-        name <- factor.names[j]
+        name <- factor.names[i]
         vcat(verbose, "...for factor %s (#%i)", name, i)
         
         pmat <- mdmr_perms.gather_perms_for_factor(rhs, grps, j, nperms, 

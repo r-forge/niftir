@@ -446,16 +446,19 @@ save_mdmr.pvals_and_zstats <- function(sdir, mdir, Pvals, voxs, factor.names)
 #' @param mat.Gs matrix where each column is a Gower centered matrix
 #' @param list.perms list of matrices of nobs x nperms
 #' @param list.Fperms list of big matrices that will hold the F-statistics
+#' @param verbose boolean
 #' @param ... values given to \code{\link{mdmr_perms}}
 #' @return list.Fperms
-mdmr.worker <- function(modelinfo, mat.Gs, list.perms, list.Fperms, ...)
+mdmr.worker <- function(modelinfo, mat.Gs, list.perms, list.Fperms, 
+                        verbose=TRUE, ...)
 {
     list.H2s <- mdmr_perms.gather_H2s(modelinfo$rhs, modelinfo$qrhs, 
-                                      list.perms, ...)
+                                      list.perms, verbose=verbose, ...)
     list.IHs <- mdmr_perms.gather_IHs(modelinfo$rhs, modelinfo$qrhs, 
-                                      list.perms, ...)
+                                      list.perms, verbose=verbose, ...)
     
     # fill in values for list.Fperms
+    vcat(verbose, "...calculating Pseudo-F stats")
     .Call("mdmr_worker", mat.Gs, list.Fperms, list.H2s, list.IHs, 
             as.double(modelinfo$df.res), as.double(modelinfo$df.exp))
     
