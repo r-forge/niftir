@@ -81,6 +81,8 @@ mdmr <- function(G, formula, model,
         if (save.fperms == T && is.null(fperms.path))
             stop("must provide fperms.path if saving for SGE MDMR job")
         sge.info$run <- TRUE
+        sge.options(sge.user.options = sprintf("-S /bin/bash -pe mpi_smp %i", 
+                                            sge.info$nthreads*sge.info$nforks))
     } else {
         sge.info <- list(run=FALSE)
     }
