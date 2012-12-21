@@ -158,7 +158,7 @@ mdmr <- function(G, formula, model,
         # prepare partial Fperms
         vcat(verbose, "...preparing partial pesudo-F matrices")
         list.partial_Fperms <- lapply(1:nfactors, function(fi) {
-            big.matrix(nperms, sub_nvoxs, type=type, shared=FALSE)
+            big.matrix(nperms, sub_nvoxs, type=type, shared=shared)
         })
         
         # function to run mdmr for specific factor
@@ -277,7 +277,8 @@ mdmr <- function(G, formula, model,
         firstVox <- superblocks$starts[si]
         lastVox <- superblocks$ends[si]
         oPmat <- list.pvals[[si]]
-        bedeepcopy(x=oPmat, y=Pmat, y.rows=firstVox:lastVox)
+        Pmat[firstVox:lastVox,] <- oPmat
+        #bedeepcopy(x=oPmat, y=Pmat, y.rows=firstVox:lastVox)
     }
     rm(list.pvals); invisible(gc(F,T))
     
