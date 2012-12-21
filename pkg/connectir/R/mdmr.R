@@ -158,7 +158,7 @@ mdmr <- function(G, formula, model,
         # prepare partial Fperms
         vcat(verbose, "...preparing partial pesudo-F matrices")
         list.partial_Fperms <- lapply(1:nfactors, function(fi) {
-            big.matrix(nperms, sub_nvoxs, type=type, shared=TRUE)
+            big.matrix(nperms, sub_nvoxs, type=type, shared=FALSE)
         })
         
         # function to run mdmr for specific factor
@@ -192,10 +192,9 @@ mdmr <- function(G, formula, model,
             vcat(verbose, "...copying partial f-stats")
             for (fi in 1:nfactors) {
                 orig_Fperms <- list.subset_Fperms[[fi]]
-                target_Fperms <- sub.big.matrix(list.partial_Fperms[[fi]], 
-                                                firstRow=firstPerm, 
-                                                lastRow=lastPerm)
-                deepcopy(x=orig_Fperms, y=target_Fperms)
+                target_Fperms <- list.partial_Fperms[[fi]]
+                bedeepcopy(x=orig_Fperms, y=target_Fperms, 
+                           y.rows=firstPerm:lastPerm)
             }
             
             # remove subset Fmats and perm indices
@@ -267,7 +266,7 @@ mdmr <- function(G, formula, model,
     # P-values for each factor
     vcat(verbose, "...compiling and saving p-values")
     if (is.null(fperms.path)) {
-        Pmat <- big.matrix(nvoxs, nfactors, type=type, shared=TRUE)
+        Pmat <- big.matrix(nvoxs, nfactors, type=type, shared=FALSE)
     } else {
         Pmat <- big.matrix(nvoxs, nfactors, type=type, shared=TRUE, 
                            backingpath=fperms.path, 
@@ -277,12 +276,8 @@ mdmr <- function(G, formula, model,
     for (si in 1:superblocks$n) {
         firstVox <- superblocks$starts[si]
         lastVox <- superblocks$ends[si]
-        
         oPmat <- list.pvals[[si]]
-        sub_Pmat <- sub.big.matrix(Pmat, firstRow=firstVox, lastRow=lastVox, 
-                                   backingpath=fperms.path)
-        
-        deepcopy(x=oPmat, y=sub_Pmat)
+        bedeepcopy(x=oPmat, y=Pmat, y.rows=firstVox:lastVox)
     }
     rm(list.pvals); invisible(gc(F,T))
     

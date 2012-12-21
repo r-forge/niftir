@@ -25,3 +25,5 @@ test.transpose <- function() {
     .Call("BigTransposeMain", xbigmat@address, t.xbigmat@address)
     list(all.equal(as.vector(t.xmat), as.vector(t.xbigmat[,])), t.xmat, t.xbigmat)
 }
+
+

@@ -42,19 +42,22 @@ void SetDiag(BigMatrix *pMat, double *pValues, index_type n) {
 }
 
 template<typename CType, typename BMAccessorType>
-void BigDeepCopy(BigMatrix *pOrigMat, BigMatrix *pNewMat, SEXP rowIndices, SEXP colIndices) {
+void BigDeepCopy(BigMatrix *pOrigMat, SEXP origRowIndices, SEXP origColIndices, BigMatrix *pNewMat, SEXP newRowIndices, SEXP newColIndices) {
     BMAccessorType origmat( *pOrigMat );
     BMAccessorType newmat( *pNewMat );
     
-    double *pRows = NUMERIC_DATA(rowIndices);
-    double *pCols = NUMERIC_DATA(colIndices);
-    index_type numRows = GET_LENGTH(rowIndices);
-    index_type numCols = GET_LENGTH(colIndices);
+    double *pOrigRows = NUMERIC_DATA(origRowIndices);
+    double *pOrigCols = NUMERIC_DATA(origColIndices);
+    double *pNewRows = NUMERIC_DATA(newRowIndices);
+    double *pNewCols = NUMERIC_DATA(newColIndices);
     
-    if (numRows != pNewMat->nrow())
-        error("length of row indices does not equal the # of rows in the new matrix");
-    if (numCols != pNewMat->ncol())
-        error("length of column indices does not equal the # of columns in the new matrix");
+    index_type numRows = GET_LENGTH(origRowIndices);
+    index_type numCols = GET_LENGTH(origColIndices);
+    
+    if (numRows != GET_LENGTH(newRowIndices))
+        error("length of orig row inds does not equal the length of new row inds");
+    if (numCols != GET_LENGTH(newColIndices))
+        error("length of orig col inds does not equal the length of new col inds");
     
     index_type i=0;
     index_type j=0;
@@ -62,10 +65,11 @@ void BigDeepCopy(BigMatrix *pOrigMat, BigMatrix *pNewMat, SEXP rowIndices, SEXP 
     CType *pNewColumn;
     
     for (i = 0; i < numCols; ++i) {
-        pOrigColumn = origmat[static_cast<index_type>(pCols[i])-1];
-        pNewColumn = newmat[i];
-        for (j = 0; j < numRows; ++j)
-            pNewColumn[j] = pOrigColumn[static_cast<index_type>(pRows[j])-1];
+        pOrigColumn = origmat[static_cast<index_type>(pOrigCols[i])-1];
+        pNewColumn = newmat[static_cast<index_type>(pNewCols[i])-1];
+        for (j = 0; j < numRows; ++j) {
+            pNewColumn[static_cast<index_type>(pNewRows[j])-1] = pOrigColumn[static_cast<index_type>(pOrigRows[j])-1];
+        }
     }
     
     return;
@@ -425,7 +429,8 @@ extern "C" {
         return R_NilValue;
     }
     
-    SEXP BigDeepCopyMain(SEXP origAddr, SEXP newAddr, SEXP rowIndices, SEXP colIndices) {
+    SEXP BigDeepCopyMain(SEXP origAddr, SEXP origRowIndices, SEXP origColIndices, \
+                         SEXP newAddr, SEXP newRowIndices, SEXP newColIndices) {
 
         BigMatrix *pOrigMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(origAddr));
         BigMatrix *pNewMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(newAddr));
@@ -438,19 +443,23 @@ extern "C" {
             switch (pOrigMat->matrix_type()) {
                 case 1:
                     BigDeepCopy<char, SepMatrixAccessor<char> >( 
-                    pOrigMat, pNewMat, rowIndices, colIndices);
+                        pOrigMat, origRowIndices, origColIndices, 
+                        pNewMat, newRowIndices, newColIndices);
                     break;
                 case 2:
                     BigDeepCopy<short, SepMatrixAccessor<short> >( 
-                    pOrigMat, pNewMat, rowIndices, colIndices);
+                        pOrigMat, origRowIndices, origColIndices, 
+                        pNewMat, newRowIndices, newColIndices);
                     break;
                 case 4:
                     BigDeepCopy<int, SepMatrixAccessor<int> >( 
-                    pOrigMat, pNewMat, rowIndices, colIndices);
+                        pOrigMat, origRowIndices, origColIndices, 
+                        pNewMat, newRowIndices, newColIndices);
                     break;
                 case 8:
                     BigDeepCopy<double, SepMatrixAccessor<double> >( 
-                    pOrigMat, pNewMat, rowIndices, colIndices);
+                        pOrigMat, origRowIndices, origColIndices, 
+                        pNewMat, newRowIndices, newColIndices);
                     break;
             }
         }
@@ -458,19 +467,23 @@ extern "C" {
             switch (pOrigMat->matrix_type()) {
                 case 1:
                     BigDeepCopy<char, MatrixAccessor<char> >( 
-                    pOrigMat, pNewMat, rowIndices, colIndices);
+                        pOrigMat, origRowIndices, origColIndices, 
+                        pNewMat, newRowIndices, newColIndices);
                     break;
                 case 2:
                     BigDeepCopy<short, MatrixAccessor<short> >( 
-                    pOrigMat, pNewMat, rowIndices, colIndices);
+                        pOrigMat, origRowIndices, origColIndices, 
+                        pNewMat, newRowIndices, newColIndices);
                     break;
                 case 4:
                     BigDeepCopy<int, MatrixAccessor<int> >( 
-                    pOrigMat, pNewMat, rowIndices, colIndices);
+                        pOrigMat, origRowIndices, origColIndices, 
+                        pNewMat, newRowIndices, newColIndices);
                     break;
                 case 8:
                     BigDeepCopy<double, MatrixAccessor<double> >( 
-                    pOrigMat, pNewMat, rowIndices, colIndices);
+                        pOrigMat, origRowIndices, origColIndices, 
+                        pNewMat, newRowIndices, newColIndices);
                     break;
             }
         }

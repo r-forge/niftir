@@ -337,7 +337,7 @@ test_that("generate IHs properly for 'hat_with_covariates' permute option", {
     })
     
     # Comparison
-    comp.IH <- lapply(2:length(u.grps), function(j) mdmr_model.hat_matrix_ih(rhs, grps, j, perms, "hat"))
+    comp.IH <- lapply(2:length(u.grps), function(j) mdmr_model.hat_matrix_ih(rhs, grps, j, perms, "hat_with_covariates"))
     
     expect_that(ref.IH, equals(comp.IH))
 })
