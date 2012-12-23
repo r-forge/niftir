@@ -32,7 +32,7 @@ roi_mean_wrapper <- function(func_file, roi_file, mask_file=NULL,
     }
     
     vcat(verbose, "...masking")
-    func <- do.mask(func, mask)
+    func <- do.mask(func, mask, shared=shared)
     rois <- rois[mask]
     
     vcat(verbose, "...averaging")
