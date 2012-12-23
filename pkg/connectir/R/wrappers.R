@@ -3,7 +3,7 @@
 roi_mean_wrapper <- function(func_file, roi_file, mask_file=NULL, 
                               out_file=NULL, outtype="nifti", 
                               to_return=FALSE, overwrite=FALSE, 
-                              verbose=TRUE)
+                              verbose=TRUE, shared=FALSE)
 {
     vcat(verbose, "Averaging mean signal in '%s' with '%s' ROIs", 
             basename(func_file), basename(roi_file))
@@ -22,7 +22,7 @@ roi_mean_wrapper <- function(func_file, roi_file, mask_file=NULL,
         stop("output type can only be nifti or text")
     
     vcat(verbose, "...reading data")
-    func <- read.big.nifti4d(func_file)
+    func <- read.big.nifti4d(func_file, shared=shared)
     rois <- read.mask(roi_file, NULL)
     hdr <- read.nifti.header(func_file)
     if (!is.null(mask_file)) {
