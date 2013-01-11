@@ -283,7 +283,7 @@ tryCatch({
   
   vcat(opts$verbose, "Computing subject distances")
   if (use.set2) {
-      checks <- compute_subdist_wrapper3(funclist1, dists_list, 
+      checks <-  (funclist1, dists_list, 
                                         opts$blocksize, opts$superblocksize, 
                                         funclist2, 
                                         design_mat=opts$regress, 
@@ -298,15 +298,15 @@ tryCatch({
                                         ztransform=opts$ztransform, method=method)
   }
   
-  vcat(opts$verbose, "...saving zchecks")  
-  hdr <- read.nifti.header(infiles1[1])
-  if (length(hdr$dim) == 4) {
-      hdr$dim <- hdr$dim[1:3]; hdr$pixdim <- hdr$pixdim[1:3]
-  }
-  write.nifti(checks$sdist, hdr, mask1, odt="char", 
-              outfile=file.path(outdir, "zcheck_subdist.nii.gz"))
-  write.nifti(checks$gdist, hdr, mask1, odt="char", 
-              outfile=file.path(outdir, "zcheck_subdist_gower.nii.gz"))
+  #vcat(opts$verbose, "...saving zchecks")  
+  #hdr <- read.nifti.header(infiles1[1])
+  #if (length(hdr$dim) == 4) {
+  #    hdr$dim <- hdr$dim[1:3]; hdr$pixdim <- hdr$pixdim[1:3]
+  #}
+  #write.nifti(checks$sdist, hdr, mask1, odt="char", 
+  #            outfile=file.path(outdir, "zcheck_subdist.nii.gz"))
+  #write.nifti(checks$gdist, hdr, mask1, odt="char", 
+  #            outfile=file.path(outdir, "zcheck_subdist_gower.nii.gz"))
 
   end.time <- Sys.time()
   vcat(opts$verbose, "Done! Total computation time: %.1f minutes\n", 

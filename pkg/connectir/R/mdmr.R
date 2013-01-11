@@ -158,7 +158,7 @@ mdmr <- function(G, formula, model,
         # prepare partial Fperms
         vcat(verbose, "...preparing partial pesudo-F matrices")
         list.partial_Fperms <- lapply(1:nfactors, function(fi) {
-            big.matrix(nperms, sub_nvoxs, type=type, shared=shared)
+            big.matrix(nperms, sub_nvoxs, type=type, shared=TRUE)
         })
         
         # function to run mdmr for specific factor
@@ -170,10 +170,13 @@ mdmr <- function(G, formula, model,
             include.orig <- ifelse(bi==1, TRUE, FALSE)
             
             # subset of partial Fmats
-            vcat(verbose, "...creating subset of partial f-stats")
-            list.subset_Fperms <- lapply(1:nfactors, function(fi) {
-                big.matrix(sub_nperms, sub_nvoxs, type=type, shared=FALSE)
+            vcat(verbose, "...extracting subset of partial f-stats")
+            list.subset_Fperms <- lapply(list.partial_Fperms, function(partial_Fperms) {
+                sub.big.matrix(partial_Fperms, firstRow=firstPerm, lastRow=lastPerm)
             })
+            #list.subset_Fperms <- lapply(1:nfactors, function(fi) {
+            #    big.matrix(sub_nperms, sub_nvoxs, type=type, shared=FALSE)
+            #})
             
             # subset of permutation indices
             vcat(verbose, "...preparing subset of permutation indices")
@@ -188,14 +191,14 @@ mdmr <- function(G, formula, model,
                         type=type, shared=shared, 
                         verbose=verbose)
             
-            # copy subset of pertial Fmats
-            vcat(verbose, "...copying partial f-stats")
-            for (fi in 1:nfactors) {
-                orig_Fperms <- list.subset_Fperms[[fi]]
-                target_Fperms <- list.partial_Fperms[[fi]]
-                bedeepcopy(x=orig_Fperms, y=target_Fperms, 
-                           y.rows=firstPerm:lastPerm)
-            }
+            # copy subset of partial Fmats
+            #vcat(verbose, "...copying partial f-stats")
+            #for (fi in 1:nfactors) {
+            #    orig_Fperms <- list.subset_Fperms[[fi]]
+            #    target_Fperms <- list.partial_Fperms[[fi]]
+            #    bedeepcopy(x=orig_Fperms, y=target_Fperms, 
+            #               y.rows=firstPerm:lastPerm)
+            #}
             
             # remove subset Fmats and perm indices
             vcat(verbose, "...removing subset f-stats and permutation indices")
