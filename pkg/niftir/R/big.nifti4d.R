@@ -160,6 +160,90 @@ setMethod('is.big.nifti4d',
 # read.nifti4d FUNCTION
 #----------------------
 
+# Read in header and pointer to nifti class
+read.big.nifti_obj <- function(file) {
+    obj <- .Call("read_bignifti_header", abspath(file))
+    return(obj)
+}
+
+# Generate big matrix for later big nifti object
+read.big.nifti_gen.bigmat <- function(nifti, tpts=NULL, voxs=NULL, type=NULL, ...) 
+{
+    # Get new 2d dimensions for original data
+    ## note that the setup here is sort-of the transpose of the
+    ## original original data
+    orig_dim <- nifti$header$dim
+    if (length(orig_dim) != 4)
+        stop("needs to be a 4 dimensional nifti image")
+    orig_dim <- c(orig_dim[4], prod(orig_dim[1:3]))
+    
+    # Set time-points
+    if (is.null(tpts) && !is.null(voxs)) {
+        tpts <- 1:orig_dim[1]
+        ntpts <- length(tpts)
+    } else {
+        tpts <- NULL
+        ntpts <- orig_dim[1]
+    }
+    
+    # Set voxels
+    if (is.null(voxs) && !is.null(tpts)) {
+        voxs <- 1:orig_dim[2]
+        nvoxs <- length(voxs)
+    } else {
+        nvoxs <- orig_dim[2]
+    }
+    
+    # Get the data type
+    if (is.null(type)) {
+        type <- .Call("niftir_datatype_string", nifti$header$datatype)
+        type <- switch(type, 
+            BINARY = "char", 
+            INT8 = "char", 
+            UINT8 = "short", 
+            INT16 = "short", 
+            UINT16 = "integer", 
+            INT32 = "integer", 
+            UINT32 = "double", 
+            FLOAT32 = "double", 
+            FLOAT64 = "double", 
+            UNKNOWN = "double", 
+            stop("Unsupported datatype ", type)
+        )
+    } else if (!(type %in% c("char", "short", "integer", "double"))) {
+        stop("unsupported datatype ", type)
+    }
+    
+    # Create the matrix
+    bigmat <- big.matrix(ntpts, nvoxs, type=type, ...)
+    
+    # Add needed attributes
+    attr(bigmat, "read_partial") <- !(is.null(tpts) && is.null(voxs))
+    attr(bigmat, "tpts") <- tpts
+    attr(bigmat, "voxs") <- voxs
+    
+    return(bigmat)
+}
+
+# Copy over data from file in nifti_obj to bigmat
+read.big.nifti_read <- function(nifti_obj, bigmat) {
+    # Which time-points and voxels to read in
+    read_partial <- attr(bigmat, "read_partial")
+    tot_voxs <- prod(nifti_obj$header$dim[1:3])
+    
+    # Read!
+    if (read_partial) {
+        tpts <- as.double(attr(bigmat, "tpts"))
+        voxs <- as.double(attr(bigmat, "voxs"))
+        .Call("read_partial_bignifti_data", nifti_obj$address, bigmat@address, 
+              tpts, voxs, tot_voxs, PACKAGE="niftir")
+    } else {
+        .Call("read_bignifti_data", nifti_obj$address, bigmat@address, PACKAGE="niftir")
+    }
+    
+    return(bigmat)
+}
+
 #' Read in a big.nifti4d object from a file
 #'
 #' @usage read.big.nifti4d(fname, ...)
@@ -178,46 +262,37 @@ setMethod('is.big.nifti4d',
 #' 
 #' @keywords methods
 read.big.nifti4d <- function(file, ...) {
-    # Read in header and pointer to nifti class
-    x <- .Call("read_bignifti_header", abspath(file))
-    
-    # Get new 2d dimensions for data
-    idim <- x$header$dim
-    if (length(idim) != 4)
-        stop("need a 4 dimensional nifti image")
-    idim <- c(idim[4], prod(idim[1:3]))
-    
-    # Create the big matrix based on header attributes
-    if (is.null(list(...)$type)) {
-        dtype <- .Call("niftir_datatype_string", x$header$datatype)
-        dtype <- switch(dtype,
-            BINARY = "char",
-            INT8 = "char",
-            UINT8 = "short",
-            INT16 = "short",
-            UINT16 = "int",
-            INT32 = "int",
-            UINT32 = "double",
-            FLOAT32 = "double",
-            FLOAT64 = "double",
-            UNKNOWN = "double",
-            stop("Unsupported datatype ", dtype)
-        )
-        bigmat <- big.matrix(idim[1], idim[2], type=dtype, ...)
-    } else {
-        bigmat <- big.matrix(idim[1], idim[2], ...)
-    }
-    
-    # Save nifti data into the big matrix
-    .Call("read_bignifti_data", x$address, bigmat@address)
-    
-    # Clear nifti address
-    header <- x$header
-    gc(FALSE)
-    
-    as.big.nifti4d(bigmat, header, rep(TRUE, ncol(bigmat)), ...)
+    read.big.nifti(file, nifti4d=TRUE, ...)
 }
 
+read.big.nifti <- function(file, nifti4d=FALSE, type=NULL, ...) {
+    # Read in header and pointer to nifti class
+    nifti_obj <- read.big.nifti_obj(file)
+    
+    # Get output big matrix
+    bigmat <- read.big.nifti_gen.bigmat(nifti_obj, type=type, ...)
+    
+    # Read in data
+    bigmat <- read.big.nifti_read(nifti_obj, bigmat)
+    
+    # Clear nifti address
+    header <- nifti_obj$header
+    rm(nifti_obj); invisible(gc(F, T))
+    
+    if (nifti4d) {
+        # Create mask
+        mask <- vector("logical", prod(header$dim[1:3]))
+        voxs <- attr(bigmat, "voxs")
+        if (is.null(voxs))
+            mask[] <- T
+        else
+            mask[voxs] <- T
+        # Convert to big.nifti4d object
+        bigmat <- as.big.nifti4d(bigmat, header, mask, ...)
+    }
+    
+    return(bigmat)
+}
 
 #' @nord
 setMethod("free.memory",

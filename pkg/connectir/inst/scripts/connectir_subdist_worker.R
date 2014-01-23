@@ -226,6 +226,7 @@ tryCatch({
   
   vcat(opts$verbose, "Loading and masking functional data (Part 1)")
   ftype1 <- ifelse(opts$in2d1, "nifti2d", "nifti4d")
+  #ftype1 <- detect_ftypes(infiles1)
   reader1 <- gen_big_reader(ftype1, type="double", shared=parallel_forks)
   funclist1 <- load_and_mask_func_data2(infiles1, reader1, mask=mask1, 
                                         verbose=opts$verbose, scale=!glasso,  

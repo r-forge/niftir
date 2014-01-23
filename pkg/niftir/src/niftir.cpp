@@ -1,4 +1,5 @@
 #include "bigmemory/BigMatrix.h"
+
 #include "bigmemory/MatrixAccessor.hpp"
 #include "bigmemory/isna.hpp"
 #include "bigmemory/util.h"
@@ -18,115 +19,6 @@
 using namespace std;
 
 // Masking function: pass two big matrices, pass the indices of first to mask
-
-template<typename bT, typename dT, typename MatrixAccessorType>
-void NiftiDataToBigMatrix(void *pnim_data, MatrixAccessorType m, index_type ncols, index_type nrows) {
-    index_type i=0;
-    index_type j=0;
-    index_type k=0;
-    bT *pColumn;
-        
-    for (i=0; i < nrows; ++i)
-  	    for (j=0; j < ncols; ++j, ++k)       
-            m[j][i] = (bT)((dT)pnim_data)[k];
-}
-
-template<typename bT, typename MatrixAccessorType>
-SEXP NiftiToBigMatrix(nifti_image *pnim, BigMatrix *pMat, MatrixAccessorType m) {
-    // Loop through columns and rows; assign the elements in pnim that correspond
-    switch (pnim->datatype) {
-        case NIFTI_TYPE_UINT8:
-            NiftiDataToBigMatrix<bT, unsigned char*>(pnim->data, m, pMat->ncol(), pMat->nrow());
-            break;
-        case NIFTI_TYPE_INT8:
-            NiftiDataToBigMatrix<bT, signed char*>(pnim->data, m, pMat->ncol(), pMat->nrow());
-            break;            
-        case NIFTI_TYPE_UINT16:
-            NiftiDataToBigMatrix<bT, unsigned short*>(pnim->data, m, pMat->ncol(), pMat->nrow());
-            break;            
-        case NIFTI_TYPE_INT16:
-            NiftiDataToBigMatrix<bT, short*>(pnim->data, m, pMat->ncol(), pMat->nrow());
-            break;            
-        case NIFTI_TYPE_UINT32:
-            NiftiDataToBigMatrix<bT, unsigned int*>(pnim->data, m, pMat->ncol(), pMat->nrow());
-            break;            
-        case NIFTI_TYPE_INT32:
-            NiftiDataToBigMatrix<bT, int*>(pnim->data, m, pMat->ncol(), pMat->nrow());
-            break;
-        case NIFTI_TYPE_FLOAT32:
-            NiftiDataToBigMatrix<bT, float*>(pnim->data, m, pMat->ncol(), pMat->nrow());
-            break;
-        case NIFTI_TYPE_FLOAT64:
-            NiftiDataToBigMatrix<bT, double*>(pnim->data, m, pMat->ncol(), pMat->nrow());
-            break;
-    	default:
-    	    warning("unsupported data format (identifier %d)", pnim->datatype);
-            break;
-    }
-    
-    return R_NilValue;
-}
-
-template<typename CType, typename NType, typename BMAccessorType>
-void BigMatrixToNiftiData(nifti_image *pnim, BigMatrix *pMat, SEXP indices) {
-    BMAccessorType m( *pMat );
-    
-    int *pCols = INTEGER_DATA(indices);
-    index_type numCols = GET_LENGTH(indices);
-    if (numCols != pMat->ncol())
-        error("indices must have the same length as number of columns in big matrix");
-    index_type numRows = pMat->nrow();
-    
-    index_type i=0;
-    index_type j=0;
-    CType *pColumn;
-    
-    index_type numVoxs = (index_type)(pnim->dim[1]*pnim->dim[2]*pnim->dim[3]);
-    
-    for (i = 0; i < numCols; ++i) {
-        pColumn = m[i];
-        for (j = 0; j < numRows; ++j) {
-            ((NType*)pnim->data)[(j*numVoxs)+(static_cast<index_type>(pCols[i])-1)] = (NType)(pColumn[j]);
-        }
-    }
-    
-    return;
-}
-
-template<typename CType, typename BMAccessorType>
-SEXP BigMatrixToNifti(nifti_image *pnim, BigMatrix *pMat, SEXP indices) {
-    switch (pnim->datatype) {
-        case NIFTI_TYPE_UINT8:
-            BigMatrixToNiftiData<CType, unsigned char, BMAccessorType>(pnim, pMat, indices);
-            break;
-        case NIFTI_TYPE_INT8:
-            BigMatrixToNiftiData<CType, signed char, BMAccessorType>(pnim, pMat, indices);
-            break;            
-        case NIFTI_TYPE_UINT16:
-            BigMatrixToNiftiData<CType, unsigned short, BMAccessorType>(pnim, pMat, indices);
-            break;            
-        case NIFTI_TYPE_INT16:
-            BigMatrixToNiftiData<CType, short, BMAccessorType>(pnim, pMat, indices);
-            break;            
-        case NIFTI_TYPE_UINT32:
-            BigMatrixToNiftiData<CType, unsigned int, BMAccessorType>(pnim, pMat, indices);
-            break;            
-        case NIFTI_TYPE_INT32:
-            BigMatrixToNiftiData<CType, int, BMAccessorType>(pnim, pMat, indices);
-            break;
-        case NIFTI_TYPE_FLOAT32:
-            BigMatrixToNiftiData<CType, float, BMAccessorType>(pnim, pMat, indices);
-            break;
-        case NIFTI_TYPE_FLOAT64:
-            BigMatrixToNiftiData<CType, double, BMAccessorType>(pnim, pMat, indices);
-            break;
-    	default:
-    	    warning("unsupported data format (identifier %d)", pnim->datatype);
-            break;
-    }
-    
-    return R_NilValue;
-}
 
 extern "C" {
 
@@ -512,7 +404,7 @@ void set_nifti_header(nifti_image *pnim, SEXP header) {
     if (tmpRElement != R_NilValue)
         SEXP_to_pchar(tmpRElement, pnim->descrip, 80);
     UNPROTECT(1);
-        
+    
     //header and image names (fname, iname)
     // already done
     
@@ -718,7 +610,7 @@ SEXP write_nifti(SEXP header, SEXP data, SEXP outfile) {
     // Convert/save nifti image to double
     switch (pnim->datatype) {
         case NIFTI_TYPE_UINT8:
-            for(size_t i = 0 ; i < pnim->nvox; ++i)
+            for (size_t i = 0 ; i < pnim->nvox; ++i)
                 ((unsigned char*)pnim->data)[i] = (unsigned char)(DOUBLE_DATA(data)[i]);
             break;
         case NIFTI_TYPE_INT8:
@@ -767,176 +659,515 @@ SEXP write_nifti(SEXP header, SEXP data, SEXP outfile) {
     return R_NilValue;
 }
 
+} // End Extern C
 
-/****************************************
- * big nifti functions
- ****************************************/
 
-SEXP read_bignifti_header(SEXP file) {
-    SEXP nim, header, ptr;
-    nifti_image *pnim;
+/***
+Summary:
+This file contains functions to read and write 4D nifti files to/from 2D big matrices
 
-    // Read in file
-    pnim = niftir_image_read(file, int_to_SEXP(0));
+Contents:
+* Reading Header
+* Reading Data
+  note: two streams of functions 
+  1. for reading the whole data
+  2. for reading part of the data
+* Writing Data
+***/
+
+
+
+/*********************
+*** Reading Header ***
+*********************/
+
+extern "C" {
+    SEXP read_bignifti_header(SEXP file) {
+        SEXP nim, header, ptr;
+        nifti_image *pnim;
+
+        // Read in file
+        pnim = niftir_image_read(file, int_to_SEXP(0));
     
-    // Convert header to list
-    PROTECT(header = get_nifti_header(pnim));
+        // Convert header to list
+        PROTECT(header = get_nifti_header(pnim));
 
-    // Get nifti pointer    
-    ptr = R_MakeExternalPtr(pnim, install("NIFTI_TYPE_TAG"), R_NilValue);
-    PROTECT(ptr);
-    R_RegisterCFinalizer(ptr, (R_CFinalizer_t) niftir_image_free);
+        // Get nifti pointer    
+        ptr = R_MakeExternalPtr(pnim, install("NIFTI_TYPE_TAG"), R_NilValue);
+        PROTECT(ptr);
+        R_RegisterCFinalizer(ptr, (R_CFinalizer_t) niftir_image_free);
 
-    // Create nifti R list (holds header and nifti address)
-    PROTECT(nim = NEW_LIST(2));
-    SET_ELEMENT(nim, 0, header);
-    SET_ELEMENT(nim, 1, ptr);
+        // Create nifti R list (holds header and nifti address)
+        PROTECT(nim = NEW_LIST(2));
+        SET_ELEMENT(nim, 0, header);
+        SET_ELEMENT(nim, 1, ptr);
 
-    // Give names to list
-    SEXP names;
-    PROTECT(names = allocVector(STRSXP, 2));
-    SET_STRING_ELT(names, 0, mkChar("header"));
-    SET_STRING_ELT(names, 1, mkChar("address"));
-    SET_NAMES(nim, names);
+        // Give names to list
+        SEXP names;
+        PROTECT(names = allocVector(STRSXP, 2));
+        SET_STRING_ELT(names, 0, mkChar("header"));
+        SET_STRING_ELT(names, 1, mkChar("address"));
+        SET_NAMES(nim, names);
     
-    UNPROTECT(4);
-    return nim;
+        UNPROTECT(4);
+        return nim;
+    }
 }
 
-SEXP read_bignifti_data(SEXP nim_addr, SEXP big_addr) {
-    // Get nifti object pointer
-    nifti_image *pnim = (nifti_image *)R_ExternalPtrAddr(nim_addr);
-    
-    // Get nifti data
-    if (nifti_image_load(pnim) < 0) {
-       nifti_image_free(pnim);
-       error("Could not load nifti data");
-    }
-    
-    // Save data to big matrix object
-    BigMatrix *pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(big_addr));    
-    
-    if (pMat->separated_columns()) {
-        switch (pMat->matrix_type()) {
-            case 1:
-                return NiftiToBigMatrix<char>(pnim, pMat, SepMatrixAccessor<char>(*pMat));
-                break;
-            case 2:
-                return NiftiToBigMatrix<short>(pnim, pMat, SepMatrixAccessor<short>(*pMat));
-                break;
-            case 4:
-                return NiftiToBigMatrix<int>(pnim, pMat, SepMatrixAccessor<int>(*pMat));
-                break;
-            case 8:
-                return NiftiToBigMatrix<double>(pnim, pMat, SepMatrixAccessor<double>(*pMat));
-                break;
-        }
-    }
-    else {
-        switch (pMat->matrix_type()) {
-            case 1:
-                return NiftiToBigMatrix<char>(pnim, pMat, MatrixAccessor<char>(*pMat));
-                break;
-            case 2:
-                return NiftiToBigMatrix<short>(pnim, pMat, MatrixAccessor<short>(*pMat));
-                break;
-            case 4:
-                return NiftiToBigMatrix<int>(pnim, pMat, MatrixAccessor<int>(*pMat));
-                break;
-            case 8:
-                return NiftiToBigMatrix<double>(pnim, pMat, MatrixAccessor<double>(*pMat));
-                break;
-        }
-    }
-    
-    error("failed to identify big matrix type");
-}
 
-SEXP write_bignifti(SEXP header, SEXP big_addr, SEXP indices, SEXP outfile) {    
-    SEXP Rdim, Rdatatype;
-    
-    // Load big matrix
-    BigMatrix *pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(big_addr));    
-    
-    // Get dim
-    PROTECT(Rdim = GET_LIST_ELEMENT(header, "dim"));
-    if (Rdim == R_NilValue)
-        error("header must have a proper dim (dimension) attribute");
-    if (GET_LENGTH(Rdim) != 4)
-        error("header must have a 4D dim (dimension) attribute");
-    
-    // Get datatype
-    PROTECT(Rdatatype = GET_LIST_ELEMENT(header, "datatype"));
-    if (Rdatatype == R_NilValue) {
-        int datatype;
-        switch(pMat->matrix_type()) {
-            case 1:     // char
-                datatype = DT_INT8;
-                break;
-            case 2:     // short
-                datatype = DT_INT16;
-                break;
-            case 4:     // int
-                datatype = DT_INT32;
-                break;
-            case 8:     // double
-                datatype = DT_FLOAT64;
-                break;
-            default:
-                error("unrecognized big matrix data type");
-                break;
-        }
-        Rdatatype = int_to_SEXP(datatype);
-    }
-    UNPROTECT(1);
-    
-    // Load nifti object
-    nifti_image *pnim = create_nifti_image(header, Rdim, Rdatatype, outfile);
-    
-    if (pMat->separated_columns()) {
-        switch (pMat->matrix_type()) {
-            case 1:
-                BigMatrixToNifti<char, SepMatrixAccessor<char> >(pnim, pMat, indices);
-                break;
-            case 2:
-                BigMatrixToNifti<short, SepMatrixAccessor<short> >(pnim, pMat, indices);
-                break;
-            case 4:
-                BigMatrixToNifti<int, SepMatrixAccessor<int> >(pnim, pMat, indices);
-                break;
-            case 8:
-                BigMatrixToNifti<double, SepMatrixAccessor<double> >(pnim, pMat, indices);
-                break;
-        }
-    }
-    else {
-        switch (pMat->matrix_type()) {
-            case 1:
-                BigMatrixToNifti<char, MatrixAccessor<char> >(pnim, pMat, indices);
-                break;
-            case 2:
-                BigMatrixToNifti<short, MatrixAccessor<short> >(pnim, pMat, indices);
-                break;
-            case 4:
-                BigMatrixToNifti<int, MatrixAccessor<int> >(pnim, pMat, indices);
-                break;
-            case 8:
-                BigMatrixToNifti<double, MatrixAccessor<double> >(pnim, pMat, indices);
-                break;
-        }
-    }
-    
-    if (!nifti_nim_is_valid(pnim, 1))
-        error("data seems invalid");
-    
-    if (pnim!=NULL)
-        nifti_image_write(pnim);
-    else
-        error("pnim was NULL");
+
+/*******************
+*** Reading Data ***
+*******************/
+
+/**************************************
+3rd or Final Step (3 Step Process) **/
+
+// Read data completely and plainly
+template<typename bT, typename dT, typename MatrixAccessorType>
+void Read_Nifti_to_BigMatrix_Step3(void *pnim_data, MatrixAccessorType m, \
+                                  index_type ncols, index_type nrows) {
+   index_type i=0;
+   index_type j=0;
+   index_type k=0;
+   bT *pColumn;
         
-    nifti_image_free(pnim);
+   for (i=0; i < nrows; ++i)
+       for (j=0; j < ncols; ++j, ++k)       
+           m[j][i] = (bT)((dT)pnim_data)[k];
+}
+
+// Read partial data
+template<typename bT, typename dT, typename MatrixAccessorType>
+void Read_Partial_Nifti_To_BigMatrix_Step3(void *pnim_data, MatrixAccessorType m, \
+                                          SEXP rowIndices, SEXP colIndices, \
+                                          SEXP totalVoxs) {
+   index_type i=0;
+   index_type j=0;
+   index_type k=0;
+   index_type ii=0;
+   index_type jj=0;
+   index_type kk=0;
+   bT *pColumn;
+   bT value; // not really used (for debugging)
+    
+   // Take only a subset based on the 
+   // rows (spatial) or the cols (time-point)
+   double *pTpts = NUMERIC_DATA(rowIndices);
+   double *pVoxs = NUMERIC_DATA(colIndices);
+   index_type ntpts = GET_LENGTH(rowIndices);
+   index_type nvoxs = GET_LENGTH(colIndices);
+    
+   //printf("nvoxs: %i; ntpts: %i\n", (int)nvoxs, (int)ntpts);
+    
+   // Total number of tpts and voxs in pnim_data
+   index_type totvoxs = static_cast<index_type>(DOUBLE_DATA(totalVoxs)[0]);
+    
+   for (j=0; j < nvoxs; ++j) {
+       jj = static_cast<index_type>(pVoxs[j] - 1);
+       pColumn = m[j];
+       for (i=0; i < ntpts; ++i) {
+           ii = static_cast<index_type>(pTpts[i] - 1);
+           kk = ii * totvoxs + jj;
+           pColumn[i] = (bT)((dT)pnim_data)[kk];
+            
+           //value = (bT)((dT)pnim_data)[kk];
+           //printf("ii: %i; jj: %i; kk: %i; val: %f\n", \
+           //       (int)ii, (int)jj, (int)kk, (double)value);
+       }
+   }
+}
+
+
+/*****************************
+2nd Step (3 Step Process) **/
+
+template<typename bT, typename MatrixAccessorType>
+SEXP Read_Nifti_to_BigMatrix_Step2(nifti_image *pnim, BigMatrix *pMat, MatrixAccessorType m) {
+   // Loop through columns and rows; assign the elements in pnim that correspond
+   switch (pnim->datatype) {
+       case NIFTI_TYPE_UINT8:
+           Read_Nifti_to_BigMatrix_Step3<bT, unsigned char*>(pnim->data, m, \
+                                                             pMat->ncol(), pMat->nrow());
+           break;
+       case NIFTI_TYPE_INT8:
+           Read_Nifti_to_BigMatrix_Step3<bT, signed char*>(pnim->data, m, \
+                                                           pMat->ncol(), pMat->nrow());
+           break;
+       case NIFTI_TYPE_UINT16:
+           Read_Nifti_to_BigMatrix_Step3<bT, unsigned short*>(pnim->data, m, \
+                                                              pMat->ncol(), pMat->nrow());
+           break;
+       case NIFTI_TYPE_INT16:
+           Read_Nifti_to_BigMatrix_Step3<bT, short*>(pnim->data, m, \
+                                                     pMat->ncol(), pMat->nrow());
+           break;
+       case NIFTI_TYPE_UINT32:
+           Read_Nifti_to_BigMatrix_Step3<bT, unsigned int*>(pnim->data, m, \
+                                                            pMat->ncol(), pMat->nrow());
+           break;
+       case NIFTI_TYPE_INT32:
+           Read_Nifti_to_BigMatrix_Step3<bT, int*>(pnim->data, m, \
+                                                   pMat->ncol(), pMat->nrow());
+           break;
+       case NIFTI_TYPE_FLOAT32:
+           Read_Nifti_to_BigMatrix_Step3<bT, float*>(pnim->data, m, \
+                                                     pMat->ncol(), pMat->nrow());
+           break;
+       case NIFTI_TYPE_FLOAT64:
+           Read_Nifti_to_BigMatrix_Step3<bT, double*>(pnim->data, m, \
+                                                      pMat->ncol(), pMat->nrow());
+           break;
+       default:
+           warning("unsupported data format (identifier %d)", pnim->datatype);
+           break;
+   }
+    
+   return R_NilValue;
+}
+
+template<typename bT, typename MatrixAccessorType>
+SEXP Read_Partial_Nifti_To_BigMatrix_Step2(nifti_image *pnim, MatrixAccessorType m, \
+                                          SEXP newRowIndices, SEXP newColIndices, \
+                                          SEXP totalVoxs) {
+   // Loop through columns and rows; assign the elements in pnim that correspond
+   switch (pnim->datatype) {
+       case NIFTI_TYPE_UINT8:
+           Read_Partial_Nifti_To_BigMatrix_Step3<bT, unsigned char*>(pnim->data, m, \
+                                                     newRowIndices, newColIndices, \
+                                                     totalVoxs);
+           break;
+       case NIFTI_TYPE_INT8:
+           Read_Partial_Nifti_To_BigMatrix_Step3<bT, signed char*>(pnim->data, m, \
+                                                   newRowIndices, newColIndices, \
+                                                   totalVoxs);
+           break;
+       case NIFTI_TYPE_UINT16:
+           Read_Partial_Nifti_To_BigMatrix_Step3<bT, unsigned short*>(pnim->data, m, \
+                                                      newRowIndices, newColIndices, \
+                                                      totalVoxs);
+           break;
+       case NIFTI_TYPE_INT16:
+           Read_Partial_Nifti_To_BigMatrix_Step3<bT, short*>(pnim->data, m, \
+                                             newRowIndices, newColIndices, \
+                                             totalVoxs);
+           break;
+       case NIFTI_TYPE_UINT32:
+           Read_Partial_Nifti_To_BigMatrix_Step3<bT, unsigned int*>(pnim->data, m, \
+                                                    newRowIndices, newColIndices, \
+                                                    totalVoxs);
+           break;
+       case NIFTI_TYPE_INT32:
+           Read_Partial_Nifti_To_BigMatrix_Step3<bT, int*>(pnim->data, m, \
+                                           newRowIndices, newColIndices, \
+                                           totalVoxs);
+           break;
+       case NIFTI_TYPE_FLOAT32:
+           Read_Partial_Nifti_To_BigMatrix_Step3<bT, float*>(pnim->data, m, \
+                                             newRowIndices, newColIndices, \
+                                             totalVoxs);
+           break;
+       case NIFTI_TYPE_FLOAT64:
+           Read_Partial_Nifti_To_BigMatrix_Step3<bT, double*>(pnim->data, m, \
+                                             newRowIndices, newColIndices, \
+                                             totalVoxs);
+           break;
+       default:
+           warning("unsupported data format (identifier %d)", pnim->datatype);
+           break;
+   }
+    
+   return R_NilValue;
+}
+
+
+/*****************************
+1st Step (3 Step Process) **/
+
+extern "C" {
+   SEXP read_bignifti_data(SEXP nim_addr, SEXP big_addr) {
+       // Get nifti object pointer
+       nifti_image *pnim = (nifti_image *)R_ExternalPtrAddr(nim_addr);
+    
+       // Get nifti data
+       if (nifti_image_load(pnim) < 0) {
+          nifti_image_free(pnim);
+          error("Could not load nifti data");
+       }
+    
+       // Save data to big matrix object
+       BigMatrix *pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(big_addr));    
+    
+       if (pMat->separated_columns()) {
+           switch (pMat->matrix_type()) {
+               case 1:
+                   return Read_Nifti_to_BigMatrix_Step2<char>(pnim, pMat, SepMatrixAccessor<char>(*pMat));
+                   break;
+               case 2:
+                   return Read_Nifti_to_BigMatrix_Step2<short>(pnim, pMat, SepMatrixAccessor<short>(*pMat));
+                   break;
+               case 4:
+                   return Read_Nifti_to_BigMatrix_Step2<int>(pnim, pMat, SepMatrixAccessor<int>(*pMat));
+                   break;
+               case 8:
+                   return Read_Nifti_to_BigMatrix_Step2<double>(pnim, pMat, SepMatrixAccessor<double>(*pMat));
+                   break;
+           }
+       }
+       else {
+           switch (pMat->matrix_type()) {
+               case 1:
+                   return Read_Nifti_to_BigMatrix_Step2<char>(pnim, pMat, MatrixAccessor<char>(*pMat));
+                   break;
+               case 2:
+                   return Read_Nifti_to_BigMatrix_Step2<short>(pnim, pMat, MatrixAccessor<short>(*pMat));
+                   break;
+               case 4:
+                   return Read_Nifti_to_BigMatrix_Step2<int>(pnim, pMat, MatrixAccessor<int>(*pMat));
+                   break;
+               case 8:
+                   return Read_Nifti_to_BigMatrix_Step2<double>(pnim, pMat, MatrixAccessor<double>(*pMat));
+                   break;
+           }
+       }
+        
+       error("failed to identify big matrix type");
+   }
+    
+   SEXP read_partial_bignifti_data(SEXP nim_addr, SEXP big_addr, \
+                                   SEXP rowIndices, SEXP colIndices, \
+                                   SEXP totalVoxs) {
+       // Get nifti object pointer
+       nifti_image *pnim = (nifti_image *)R_ExternalPtrAddr(nim_addr);
+        
+       // Get nifti data
+       if (nifti_image_load(pnim) < 0) {
+          nifti_image_free(pnim);
+          error("Could not load nifti data");
+       }
+        
+       // Save data to big matrix object
+       BigMatrix *pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(big_addr));
+        
+       if (pMat->separated_columns()) {
+           switch (pMat->matrix_type()) {
+               case 1:
+                   return Read_Partial_Nifti_To_BigMatrix_Step2<char>(pnim, SepMatrixAccessor<char>(*pMat), \
+                                                  rowIndices, colIndices, totalVoxs);
+                   break;
+               case 2:
+                   return Read_Partial_Nifti_To_BigMatrix_Step2<short>(pnim, SepMatrixAccessor<short>(*pMat), \
+                                                   rowIndices, colIndices, totalVoxs);
+                   break;
+               case 4:
+                   return Read_Partial_Nifti_To_BigMatrix_Step2<int>(pnim, SepMatrixAccessor<int>(*pMat), \
+                                                 rowIndices, colIndices, totalVoxs);
+                   break;
+               case 8:
+                   return Read_Partial_Nifti_To_BigMatrix_Step2<double>(pnim, SepMatrixAccessor<double>(*pMat), \
+                                                    rowIndices, colIndices, totalVoxs);
+                   break;
+           }
+       }
+       else {
+           switch (pMat->matrix_type()) {
+               case 1:
+                   return Read_Partial_Nifti_To_BigMatrix_Step2<char>(pnim, MatrixAccessor<char>(*pMat), \
+                                                  rowIndices, colIndices, totalVoxs);
+                   break;
+               case 2:
+                   return Read_Partial_Nifti_To_BigMatrix_Step2<short>(pnim, MatrixAccessor<short>(*pMat), \
+                                                   rowIndices, colIndices, totalVoxs);
+                   break;
+               case 4:
+                   return Read_Partial_Nifti_To_BigMatrix_Step2<int>(pnim, MatrixAccessor<int>(*pMat), \
+                                                 rowIndices, colIndices, totalVoxs);
+                   break;
+               case 8:
+                   return Read_Partial_Nifti_To_BigMatrix_Step2<double>(pnim, MatrixAccessor<double>(*pMat), \
+                                                    rowIndices, colIndices, totalVoxs);
+                   break;
+           }
+       }
+    
+       error("failed to identify big matrix type");
+   }
+}
+
+
+
+/*******************
+*** Writing Data ***
+*******************/
+
+/**************************************
+3rd or Final Step (3 Step Process) **/
+
+template<typename CType, typename NType, typename BMAccessorType>
+void Write_BigMatrix_To_Nifti_Step3(nifti_image *pnim, BigMatrix *pMat, SEXP indices) {
+    printf("1\n");
+    
+    BMAccessorType m( *pMat );
+    
+    printf("1.1\n");
+    
+    double *pCols = NUMERIC_DATA(indices);
+    
+    printf("1.2\n");
+    
+    index_type numCols = GET_LENGTH(indices);
+    
+    printf("1.3\n");
+    
+    if (numCols != pMat->ncol())
+        error("indices must have the same length as number of columns in big matrix");
+    index_type numRows = pMat->nrow();
+    
+    printf("1.4\n");
+    
+    index_type i=0;
+    index_type j=0;
+    index_type k=0;
+    CType *pColumn;
+    
+    index_type numVoxs = (index_type)(pnim->dim[1]*pnim->dim[2]*pnim->dim[3]);
+    
+    printf("2\n");
+    
+    for (i = 0; i < numCols; ++i) {
+        pColumn = m[i];
+        for (j = 0; j < numRows; ++j) {
+            k = (j*numVoxs)+(static_cast<index_type>(pCols[i])-1);
+            printf("i = %i; j = %i; k = %i\n", (int)i, (int)j, (int)k);
+            ((NType*)pnim->data)[k] = (NType)(pColumn[j]);
+        }
+    }
+    
+    return;
+}
+
+template<typename CType, typename BMAccessorType>
+SEXP Write_BigMatrix_To_Nifti_Step2(nifti_image *pnim, BigMatrix *pMat, SEXP indices) {
+    switch (pnim->datatype) {
+        case NIFTI_TYPE_UINT8:
+            Write_BigMatrix_To_Nifti_Step3<CType, unsigned char, BMAccessorType>(pnim, pMat, indices);
+            break;
+        case NIFTI_TYPE_INT8:
+            Write_BigMatrix_To_Nifti_Step3<CType, signed char, BMAccessorType>(pnim, pMat, indices);
+            break;
+        case NIFTI_TYPE_UINT16:
+            Write_BigMatrix_To_Nifti_Step3<CType, unsigned short, BMAccessorType>(pnim, pMat, indices);
+            break;
+        case NIFTI_TYPE_INT16:
+            Write_BigMatrix_To_Nifti_Step3<CType, short, BMAccessorType>(pnim, pMat, indices);
+            break;
+        case NIFTI_TYPE_UINT32:
+            Write_BigMatrix_To_Nifti_Step3<CType, unsigned int, BMAccessorType>(pnim, pMat, indices);
+            break;
+        case NIFTI_TYPE_INT32:
+            Write_BigMatrix_To_Nifti_Step3<CType, int, BMAccessorType>(pnim, pMat, indices);
+            break;
+        case NIFTI_TYPE_FLOAT32:
+            Write_BigMatrix_To_Nifti_Step3<CType, float, BMAccessorType>(pnim, pMat, indices);
+            break;
+        case NIFTI_TYPE_FLOAT64:
+            Write_BigMatrix_To_Nifti_Step3<CType, double, BMAccessorType>(pnim, pMat, indices);
+            break;
+    	default:
+    	    warning("unsupported data format (identifier %d)", pnim->datatype);
+            break;
+    }
     
     return R_NilValue;
 }
 
-} // End Extern C
+
+extern "C" {
+    
+    SEXP write_bignifti(SEXP header, SEXP big_addr, SEXP indices, SEXP outfile) {    
+        SEXP Rdim, Rdatatype;
+        
+        // Load big matrix
+        BigMatrix *pMat = reinterpret_cast<BigMatrix*>(R_ExternalPtrAddr(big_addr));    
+        
+        // Get dim
+        PROTECT(Rdim = GET_LIST_ELEMENT(header, "dim"));
+        if (Rdim == R_NilValue)
+            error("header must have a proper dim (dimension) attribute");
+        if (GET_LENGTH(Rdim) != 4)
+            error("header must have a 4D dim (dimension) attribute");
+        
+        // Get datatype
+        PROTECT(Rdatatype = GET_LIST_ELEMENT(header, "datatype"));
+        if (Rdatatype == R_NilValue) {
+            int datatype;
+            switch(pMat->matrix_type()) {
+                case 1:     // char
+                    datatype = DT_INT8;
+                    break;
+                case 2:     // short
+                    datatype = DT_INT16;
+                    break;
+                case 4:     // int
+                    datatype = DT_INT32;
+                    break;
+                case 8:     // double
+                    datatype = DT_FLOAT64;
+                    break;
+                default:
+                    error("unrecognized big matrix data type");
+                    break;
+            }
+            Rdatatype = int_to_SEXP(datatype);
+        }
+        UNPROTECT(1);
+        
+        // Load nifti object
+        nifti_image *pnim = create_nifti_image(header, Rdim, Rdatatype, outfile);
+        
+        if (pMat->separated_columns()) {
+            switch (pMat->matrix_type()) {
+                case 1:
+                    Write_BigMatrix_To_Nifti_Step2<char, SepMatrixAccessor<char> >(pnim, pMat, indices);
+                    break;
+                case 2:
+                    Write_BigMatrix_To_Nifti_Step2<short, SepMatrixAccessor<short> >(pnim, pMat, indices);
+                    break;
+                case 4:
+                    Write_BigMatrix_To_Nifti_Step2<int, SepMatrixAccessor<int> >(pnim, pMat, indices);
+                    break;
+                case 8:
+                    Write_BigMatrix_To_Nifti_Step2<double, SepMatrixAccessor<double> >(pnim, pMat, indices);
+                    break;
+            }
+        }
+        else {
+            switch (pMat->matrix_type()) {
+                case 1:
+                    Write_BigMatrix_To_Nifti_Step2<char, MatrixAccessor<char> >(pnim, pMat, indices);
+                    break;
+                case 2:
+                    Write_BigMatrix_To_Nifti_Step2<short, MatrixAccessor<short> >(pnim, pMat, indices);
+                    break;
+                case 4:
+                    Write_BigMatrix_To_Nifti_Step2<int, MatrixAccessor<int> >(pnim, pMat, indices);
+                    break;
+                case 8:
+                    Write_BigMatrix_To_Nifti_Step2<double, MatrixAccessor<double> >(pnim, pMat, indices);
+                    break;
+            }
+        }
+        
+        if (!nifti_nim_is_valid(pnim, 1))
+            error("data seems invalid");
+        
+        if (pnim!=NULL)
+            nifti_image_write(pnim);
+        else
+            error("pnim was NULL");
+        
+        nifti_image_free(pnim);
+        
+        return R_NilValue;
+    }
+}

@@ -104,11 +104,11 @@ check_subdist <- function(sdir) {
 
 # This creates a new subdist directory and relevant files
 # and returns a new subdist object
-create_subdist <- function(outdir, infiles1, mask1, infiles2, mask2, opts, ...) {
+create_subdist <- function(outdir, inlist1, inlist2, opts, ...) {
     if (file.exists(outdir))
         stop("output directory cannot exist")
     
-    if (is.null(infiles2) || is.null(mask2))
+    if (is.null(infiles2))
         use.set2 <- FALSE
     else
         use.set2 <- TRUE
@@ -128,14 +128,14 @@ create_subdist <- function(outdir, infiles1, mask1, infiles2, mask2, opts, ...) 
     # Create symlinks for the input funcs
     if (!opts$"no-link-functionals") {
         vcat(opts$verbose, "...creating soft links to subject functional data")
-        for (i in 1:length(infiles1)) {
-            from <- infiles1[i]
+        for (i in 1:length(inlist1$files)) {
+            from <- inlist1$files[i]
             to <- file.path(infuncdir, sprintf("scan%04i.%s", i, getext(from)))
             file.symlink(from, to)
         }
         if (use.set2) {
-            for (i in 1:length(infiles2)) {
-                from <- infiles2[i]
+            for (i in 1:length(inlist2$files)) {
+                from <- inlist2$files[i]
                 to <- file.path(infuncdir2, sprintf("scan%04i.%s", i, getext(from)))
                 file.symlink(from, to)
             }
@@ -143,33 +143,42 @@ create_subdist <- function(outdir, infiles1, mask1, infiles2, mask2, opts, ...) 
     }
     
     # Get a header file from the first functional
-    hdr <- read.nifti.header(infiles1[1])
-    if (length(hdr$dim) == 4) {
-        hdr$dim <- hdr$dim[1:3]
-        hdr$pixdim <- hdr$pixdim[1:3]
-    } else if (length(hdr$dim) == 2) {
-        hdr$dim <- c(hdr$dim[2], 1)
-        hdr$pixdim <- c(hdr$pixdim[2], 1)
-    }
-    
-    if (use.set2) {
-        hdr2 <- read.nifti.header(infiles2[1])
-        if (length(hdr2$dim) == 4) {
-            hdr2$dim <- hdr2$dim[1:3]
-            hdr2$pixdim <- hdr2$pixdim[1:3]
-        } else if (length(hdr2$dim) == 2) {
-            hdr2$dim <- c(hdr2$dim[2], 1)
-            hdr2$pixdim <- c(hdr2$pixdim[2], 1)
-        }
+    vcat(opts$verbose, "...getting header from first functionals")
+    if (inlist1$ftype %in% c("nifti", "nifti4d")) {
+        hdr <- read.nifti.header(inlist1$files[1])
+        return(hdr$dim[4])
+    } else if (inlist$ftype %in% c("space", "tab", "csv")) {
+        cmd <- sprintf("wc -l %s | awk '{print $1}'", inlist$files[i])
+        return(system(cmd, intern=T))
+    } else {
+        vstop("Cannot read # of time-points for type '%s'", inlist$ftype)
     }
     
     # Write the brain masks
     vcat(opts$verbose, "...saving masks")
-    outfile <- file.path(outdir, "mask.nii.gz")
-    write.nifti(mask1, hdr, outfile=outfile, odt="char")
+    if (inlist1$ftype %in% c("nifti", "nifti4d")) {
+        hdr <- read.nifti.header(inlist1$files[1])
+        hdr$dim <- hdr$dim[1:3]; hdr$pixdim <- hdr$pixdim[1:3]
+        outfile <- file.path(outdir, "mask.nii.gz")
+        write.nifti(inlist1$mask, hdr, outfile=outfile, odt="char")
+    } else if (inlist1$ftype %in% c("space", "tab", "csv")) {
+        outfile <- file.path(outdir, "mask.txt")
+        write.table(inlist1$mask, file=outfile, row.names=F, col.names=F)
+    } else {
+        vstop("Cannot save mask based on input type of '%s'", inlist1$ftype)
+    }
     if (use.set2) {
-        outfile <- file.path(outdir, "mask2.nii.gz")
-        write.nifti(mask2, hdr2, outfile=outfile, odt="char")
+        if (inlist2$ftype %in% c("nifti", "nifti4d")) {
+            hdr <- read.nifti.header(inlist2$files[1])
+            hdr$dim <- hdr$dim[1:3]; hdr$pixdim <- hdr$pixdim[1:3]
+            outfile <- file.path(outdir, "mask2.nii.gz")
+            write.nifti(inlist2$mask, hdr, outfile=outfile, odt="char")
+        } else if (inlist2$ftype %in% c("space", "tab", "csv")) {
+            outfile <- file.path(outdir, "mask2.txt")
+            write.table(inlist2$mask, file=outfile, row.names=F, col.names=F)
+        } else {
+            vstop("Cannot save mask based on input type of '%s'", inlist2$ftype)
+        }
     }
     
     # Copy over standard brain
@@ -180,8 +189,8 @@ create_subdist <- function(outdir, infiles1, mask1, infiles2, mask2, opts, ...) 
     # Save options
     vcat(opts$verbose, "...saving options")
     opts$outdir <- outdir
-    opts$infiles <- infiles1
-    opts$infiles2 <- infiles2
+    opts$infiles <- inlist1$files
+    opts$infiles2 <- inlist2$files
     save(opts, file=file.path(outdir, "options.rda"))
     
     # Create file-backed subject distances and gower matrices
@@ -197,9 +206,9 @@ create_subdist <- function(outdir, infiles1, mask1, infiles2, mask2, opts, ...) 
                         backingfile="subdist_gower.bin", 
                         descriptorfile="subdist_gower.desc")
     
-    # Create temporary subject distances matrix
-    
-    list(sdist=sdist, gdist=gdist, bpath=outdir)
+    list(sdist=sdist, gdist=gdist, 
+         sdist.fname="subdist.desc", gdist.fname="subdist_gower.desc", 
+         bpath=outdir)
 }
 
 compute_subdist_wrapper <- function(sub.funcs, list.dists, 
@@ -714,7 +723,8 @@ compute_subdist_worker <- function(sub.cormaps, cor_inds, outmat, dist_inds, typ
     ALPHA <- 1/(nvoxs-2)
     voxs <- 1:nvoxs
     for (i in 1:nseeds) {
-        .Call("CombineSubMapsMain", sub.cormaps, subsMap@address, as.double(i), as.double(voxs[-cor_inds[i]]), as.double(nvoxs-1), as.double(nsubs))
+        .Call("CombineSubMapsMain", sub.cormaps, subsMap@address, as.double(i), 
+                as.double(voxs[-cor_inds[i]]), as.double(nvoxs-1), as.double(nsubs))
         col <- sub.big.matrix(outmat, firstCol=dist_inds[i], lastCol=dist_inds[i])
         dgemm(C=col, A=subsMap, B=subsMap, TRANSA='t', ALPHA=ALPHA, LDC=as.double(nsubs))
         .Call("BigSubtractScalarMain", col@address, as.double(1), TRUE);

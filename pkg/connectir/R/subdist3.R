@@ -119,6 +119,179 @@ compute_subdist_wrapper3 <- function(sub.funcs1, list.dists,
     list(sdist=zcheck1, gdist=zcheck2)
 }
 
+compute_subdist_sge_wrapper3 <- function(inlist1, list.dists, 
+                                         blocksize, superblocksize, 
+                                         inlist2=NULL, 
+                                         design_mat=NULL, 
+                                         verbose=1, parallel=FALSE, ...)
+{
+    # Variables to indicate level of verbosity
+    ## inform will show debugging information
+    inform <- verbose==2
+    verbosity <- verbose
+    verbose <- as.logical(verbose)
+    
+    vcat(verbose, "Subject Distances SGE Wrapper")
+    
+    # Subject and Gower Distance Matrices
+    ## want to get filenames and path since will load within caller function
+    sdist.fname <- describe(list.dists$sdist)$filename
+    gdist.fname <- describe(list.dists$gdist)$filename
+    bpath <- list.dists$bpath
+    
+    # Confirm that output matrices are file-backed
+    if (!is.filebacked(lists.dists$sdist) || !is.filebacked(lists.dists$gdist))
+        stop("Output distance and gower matrices must be file-backed")
+    
+    # N details
+    ## # of subjects
+    nsubs <- length(inlist1$files)
+    if (!is.null(inlist2) && nsubs != length(inlist2$files))
+        stop("length mismatch between 2 set of functional files")
+    ## # of voxels
+    nvoxs <- ncol(list.dists$sdist)
+    if (nvoxs != sum(inlist1$mask))
+        stop("nvoxs in distance matrix does not match nvoxs in mask")
+    
+    # Super Blocks
+    ## steps in which will go through the voxels or ROIs (related to inlist1)
+    superblocks <- niftir.split.indices(1, nvoxs, by=superblocksize)
+    
+    # Design Matrix
+    ## includes factors to regress out before computing connectivity
+    if (!is.null(design_mat)) {
+        ## check rank deficiency
+        k <- qlm_rank(design_mat)
+        if (k < ncol(design_mat))
+            stop("design matrix is rank deficient")
+        
+        ## since Rsge won't properly copy a big.matrix for each job
+        ## convert it to a regular matrix for now
+        design_mat <- as.matrix(design_mat)
+    }
+    
+    # Scale the time-series?
+    ## no scaling if connectivity is computed via an inverse covariance matrix
+    glasso <- list(...)$glasso
+    scale <- ifelse(is.null(glasso), FALSE, !glasso)
+    
+    # Function that does the heavy lifting (somewhat)
+    caller_for_superblocks <- function(i) {
+        vcat(verbose, "large block %i", i)
+        start.time <- Sys.time()
+        
+        # Indices
+        ## The subset of seeds (voxels/ROIs) for this block
+        ## in the complete distance matrix
+        firstSeed <- superblocks$start[i]; lastSeed <- superblocks$ends[i]
+        ## The associated index location
+        ## in the temporary distance matrix
+        firstDist <- 1; lastDist <- lastSeed - firstSeed + 1
+        ncol <- lastDist
+        
+        # Convert design mat to big matrix
+        ## should have been in the env as a matrix
+        design_mat <- as.big.matrix(design_mat)
+        
+        # Load output (distances)
+        vcat(verbose, "...loading file-backed distance matrices")
+        sdist <- attach.big.matrix(sdist.fname, backingpath=bpath)
+        gdist <- attach.big.matrix(gdist.fname, backingpath=bpath)
+        
+        # Load inputs (functional data)
+        vcat(verbose, "...loading and scaling functional data - set #1")
+        inlist1 <- load_funcs.read(inlist1, verbose, type="double", 
+                                   shared=parallel)
+        inlist1 <- load_funcs.scale(inlist1, verbose, parallel=parallel, 
+                                    scale=scale)
+        if (is.null(inlist2)) {
+            vcat(verbose, "...copying set #1 => set #2")
+            inlist2 <- inlist1
+        } else {
+            vcat(verbose, "...loading and scaling functional data - set #2")
+            inlist2 <- load_funcs.read(inlist2, verbose, type="double", 
+                                       shared=parallel)
+            inlist2 <- load_funcs.scale(inlist2, verbose, parallel=parallel, 
+                                        scale=scale)
+        }
+        
+        # Temporary RAM-based matrix (subset of distances)
+        vcat(verbose, "...creating temporary distance matrices")
+        tmp_sdist <- big.matrix(nsubs^2, ncol, type="double", shared=parallel)
+        
+        # Distance Computation
+        ## hand off to another function
+        vcat(verbose, "...compute distances")
+        compute_subdist3(inlist1$funcs, firstSeed, lastSeed, inlist2$funcs, 
+                         tmp_sdist, firstDist, lastDist, 
+                         blocksize=blocksize, design_mat=design_mat, 
+                         verbose=verbosity, parallel=parallel, type="double", 
+                         ...)
+        
+        # Save distances
+        vcat(verbose, "...saving distances")
+        sub_sdist <- sub.big.matrix(sdist, firstCol=firstSeed, lastCol=lastSeed, 
+                                    backingpath=bpath)
+        deepcopy(x=tmp_sdist, y=sub_sdist)
+        ## checks
+        zcheck1 <- (sub_sdist[2,]!=0)*1 + 1
+        if (any(zcheck1==1))
+            vcat(verbose, "...there are %i bad voxels", sum(zcheck1==1))
+        ## clear file-backed RAM usage
+        flush(sub_sdist); flush(sdist)
+        rm(sub_sdist, sdist); invisible(gc(FALSE, TRUE))
+        
+        # Gower center distances
+        vcat(verbose, "...gower centering")
+        sub_gdist <- sub.big.matrix(gdist, firstCol=firstSeed, lastCol=lastSeed, 
+                                    backingpath=bpath)
+        gower.subdist2(tmp_sdist, outmat=sub_gdist, verbose=verbosity, parallel=parallel)
+        ## checks
+        tmp <- (sub_gdist[2,]!=0)*1 + 1
+        zcheck2 <- c(zcheck2, tmp)
+        if (any(zcheck2==1))
+            vcat(verbose, "...there are %i bad voxels", sum(zcheck2==1))
+        ## clear file-backed RAM usage
+        flush(sub_gdist); flush(gdist)
+        rm(sub_gdist, gdist); invisible(gc(FALSE, TRUE))
+        
+        # Remove temporary distances
+        rm(tmp_sdist); invisible(gc(FALSE, TRUE))
+        
+        # How long did it take?
+        end.time <- Sys.time()
+        time.total <- as.numeric(end.time-start.time, units="mins")
+        time.left <- time.total*(superblocks$n-i)
+        vcat(verbose, "...took %.1f minutes (%.1f minutes left)\n", 
+             time.total, time.left)
+        
+        # Return the results of the two checks
+        return(list(sdist=zcheck1, gdist=zscheck2))
+    }
+    
+    vcat(verbose, "will run through %i large blocks", superblocks$n)
+    if (sge.info$run) {
+        list.checks <- sge.parLapply(1:superblocks$n, caller_for_superblocks, 
+                                    debug=inform, trace=inform, 
+                                    packages=c("connectir"), 
+                                    function.savelist=ls(), 
+                                    njobs=sge.info$njobs)
+    } else {
+        # This part is only here for debugging
+        list.checks <- lapply(1:superblocks$n, caller_for_superblocks)
+    }
+    
+    # Collate outputs from checks
+    zcheck1 <- c(); zcheck2 <- c()
+    for (i in 1:length(list.checks)) {
+        zcheck1 <- c(zcheck1, list.checks$zcheck1)
+        zcheck2 <- c(zcheck2, list.checks$zcheck2)
+    }
+    
+    # Return only the checks
+    return(list(sdist=zcheck1, gdist=zcheck2))
+}
+
 compute_subdist3 <- function(sub.funcs1, firstSeed, lastSeed, sub.funcs2, 
                              dmats, firstDist, lastDist, 
                              blocksize=floor(ncol(dmats)/getDoParWorkers()), 

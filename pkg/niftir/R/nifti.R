@@ -186,21 +186,31 @@ setMethod('write.nifti',
 )
 
 #' @nord
-setMethod('write.nifti',
-    signature(x='big.nifti4d', header='missing', mask='missing'),
+setMethod('write.nifti', 
+    signature(x='big.nifti4d', header='missing', mask='missing'), 
     function(x, outfile=NULL, overwrite=FALSE, odt=NULL, ...) {
         library(biganalytics)
-        header <- autocal(x, header, odt)
-        header <- create.header(x@header, ...)
+        header <- autocal(x, x@header, odt)
+        header <- create.header(header, ...)
         outfile <- check.outfile(outfile, overwrite, header)
-        .Call("write_bignifti", header, x@address, which(x@mask), outfile,
-              PACKAGE="niftir")
+        
+        # Temporary and ghetto fix
+        ## Converting big matrix to matrix and then saving
+        arr <- matrix(NA, header$dim[4], prod(header$dim[1:3]))
+        arr[,x@mask] <- as.matrix(x)
+        arr <- t(arr)
+        dim(arr) <- header$dim
+        write.nifti(arr, header, outfile=outfile, odt=odt, overwrite=overwrite, ...)
+        
+        # Get back to this soon!
+        #.Call("write_bignifti", header, x@address, which(x@mask), outfile, 
+        #      PACKAGE="niftir")
     }
 )
 
 #' @nord
-setMethod('write.nifti',
-    signature(x='array', header='list', mask='missing'),
+setMethod('write.nifti', 
+    signature(x='array', header='list', mask='missing'), 
     function(x, header, outfile=NULL, overwrite=FALSE, odt=NULL, ...) {
         header <- autocal(x, header, odt)
         header <- create.header(header)
@@ -210,11 +220,13 @@ setMethod('write.nifti',
 )
 
 #' @nord
-setMethod('write.nifti',
-    signature(x='matrix', header='list', mask='logical'),
+setMethod('write.nifti', 
+    signature(x='matrix', header='list', mask='logical'), 
     function(x, header, mask, outfile=NULL, overwrite=FALSE, odt=NULL, ...) {
         if (sum(mask) != nrow(x))
             stop("number of TRUE elements in mask is not equal to nrow of input x")
+        
+        stop("This function needs to be tested before further use!")
         
         header <- autocal(x, header, odt)
         header <- create.header(header, ...)

@@ -6,7 +6,7 @@ roi_mean_wrapper <- function(func_file, roi_file, mask_file=NULL,
                               verbose=TRUE, shared=FALSE)
 {
     vcat(verbose, "Averaging mean signal in '%s' with '%s' ROIs", 
-            basename(func_file), basename(roi_file))
+         basename(func_file), basename(roi_file))
     
     if (!is.character(func_file) || !file.exists(func_file))
         stop("Could not find functional file ", func_file)
@@ -42,7 +42,7 @@ roi_mean_wrapper <- function(func_file, roi_file, mask_file=NULL,
         vcat(verbose, "...writing file '%s'", out_file)
         if (outtype == "nifti") {
             hdr$dim <- dim(new_func)
-            hdr$pixdim <- c(new_func[4], 1)
+            hdr$pixdim <- c(hdr$pixdim[4], 1)
             write.nifti(new_func, hdr, odt="float", 
                         outfile=out_file, overwrite=overwrite)
         } else if (outtype == "text") {

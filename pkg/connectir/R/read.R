@@ -25,7 +25,7 @@ read.big.nifti2d <- function(file, ...) {
 
 # Read input data as big matrix
 gen_big_reader <- function(intype, ...) {
-    choices <- c("nifti2d", "nifti4d", "tab", "space", "csv", "matlab")
+    choices <- c("nifti2d", "nifti4d", "nifti", "tab", "space", "csv", "matlab")
     if (!(intype %in% choices))
         stop("unrecognized input type: ", intype)
     
@@ -51,8 +51,10 @@ gen_big_reader <- function(intype, ...) {
 # Detect the type of files
 detect_ftypes <- function(fnames, force.type=NULL, verbose=TRUE) {
     df <- data.frame(
-        extensions = c(".nii.gz", ".nii", ".hdr", ".img", ".mat", ".txt", ".tab", ".csv"), 
-        formats = c("nifti4d", "nifti4d", "nifti4d", "nifti4d", "matlab", "space", "tab", "csv")
+        extensions = c(".nii.gz", ".nii", ".hdr", ".img", 
+                       ".mat", ".txt", ".1D", ".tab", ".csv"), 
+        formats = c("nifti", "nifti", "nifti", "nifti", 
+                    "matlab", "space", "space", "tab", "csv")
     )
     
     if (!is.null(force.type) && !(force.type %in% df$formats))
@@ -71,61 +73,88 @@ detect_ftypes <- function(fnames, force.type=NULL, verbose=TRUE) {
     if (!is.null(force.type) && any(formats != force.type))
         vcat(verbose, "not all extensions are the same as the forced one ", force.type)
     
-    ftype <- ifelse(is.null(force.type), force.type, formats[1])
+    ftype <- ifelse(is.null(force.type), formats[1], force.type)
     
     return(ftype)
 }
 
-
-# Automatically determine the appropriate mask for data
-## computes variance @ each voxel
-## if var=0, then vox=0, otherwise vox=1
-automask <- function(x, cols=NULL, na.rm=FALSE) {
-    vs <- colvar(x, cols, na.rm)
-    return(vs!=0)
+# Only get time-points for set of functional files
+get_funclist_tpts <- function(inlist) {
+    sapply(1:length(inlist$files), function(i) {
+        if (inlist$ftype == "nifti") {
+            hdr <- read.nifti.header(inlist$files[i])
+            return(hdr$dim[4])
+        } else if (inlist$ftype %in% c("space", "tab", "csv")) {
+            cmd <- sprintf("wc -l %s | awk '{print $1}'", inlist$files[i])
+            return(system(cmd, intern=T))
+        } else {
+            vstop("Cannot read # of time-points for type '%s'", inlist$ftype)
+        }
+            
+    })
 }
 
-# Create common mask across participants
-## '...' => for as.big.matrix creation
-## exclude.thresh => 
-overlap_automasks <- function(xs, read_fun, verbose=FALSE, parallel=FALSE, na.rm=FALSE, 
-                              exclude.thresh=0, ...) 
+mask.read <- function(file, ftype)
 {
-    if (!is.list(xs) && !is.vector(xs))
-        stop("input 'xs' must be a vector or list")
-    if (!is.function(read_fun))
-        stop("input 'read_fun' must be a function")
+    if (ftype == "nifti") {
+        mask <- read.nifti.image(file)
+        mask <- as.vector(mask)
+    } else if (ftype == "space") {
+        mask <- read.table(file)
+        mask <- as.vector(as.matrix(mask))
+    } else {
+        vstop("unrecognized file type '%s' for mask '%s'", ftype, file)
+    }
+    mask > 0
+}
+
+mask.auto <- function(file, read_fun, na.rm=FALSE, ...)
+{
+    x <- read_fun(file, ...)
+    mask <- colvar(x, na.rm=na.rm)
+    mask != 0
+}
+
+# If automask is false then files are assumed to be 4D or 2D
+# If automask is true then files are assumed to be 3D or 1D
+overlap_masks <- function(files, automask=FALSE, verbose=TRUE)
+{
+    vcat(verbose, "Calculating overlap of masks")
+    
     progress <- ifelse(verbose, "text", "none")
-    n <- length(xs)
     
-    masks <- laply(xs, function(x) {
-        x <- read_fun(x, shared=parallel, ...)
-        m <- automask(x, na.rm=na.rm)*1
-        rm(x); gc(FALSE, TRUE)
-        return(m)
-    }, .progress=progress, .parallel=parallel)
+    vcat(verbose, "...detecting file type")
+    ftype <- detect_ftypes(files, verbose=verbose)
     
-    nas <- is.na(masks)
-    if (any(nas)) {
-        vcat(verbose, "%i NaNs found...setting to 0", sum(nas))
-        masks[nas] <- 0
+    if (automask) {
+        vcat(verbose, "...reading in functionals and automasking")
+        reader <- gen_big_reader(ftype, type="double", shared=FALSE)
+        # ghetto fix for not setting the type properly...todo
+        fun <- function(...) suppressWarnings(mask.auto(...))
+        masks <- laply(files, fun, reader, .progress=progress)
+    } else {
+        vcat(verbose, "...reading in masks")
+        masks <- laply(files, mask.read, ftype, .progress=progress)
     }
     
-    nnodes <- ncol(masks)
-    sub.ns <- vector("numeric", n)
-    subs.nbad <- alply(masks, 2, function(x) which(x!=1))
-    for (i in 1:nnodes) 
-        sub.ns[subs.nbad[[i]]] <- sub.ns[subs.nbad[[i]]] + 1
-    exclude.subs <- which(sub.ns/nnodes > exclude.thresh)
-    # include.subs <- which(sub.ns/nnodes < exclude.thresh)
+    vcat(verbose, "...checking for NaNs")
+    nas <- is.na(masks)
+    if (any(nas))
+        vstop("%i NaNs found", sum(nas))
     
-    overlap <- colMeans(masks[-exclude.subs,])
+    vcat(verbose, "...calculating overlap")
+    overlap <- colMeans(masks)
     
+    vcat(verbose, "...creating overlap mask")
     mask <- overlap == 1
-    vcat(verbose, "mask has %i good nodes and %i bad ones", sum(mask), sum(!mask))
+    percent_nonzero <- round(mean(mask)*100, 2)
+    vcat(verbose, "mask has %.2f%% of non-zero voxels", percent_nonzero)
     
     return(list(mask=mask, overlap=overlap, sub.masks=masks))
 }
+
+
+
 
 exclude_sub_masks <- function(inmasks, exclude.thresh=0.05, filter.mask=NULL, 
                               verbose=FALSE, parallel=FALSE) 
@@ -178,6 +207,161 @@ exclude_sub_masks <- function(inmasks, exclude.thresh=0.05, filter.mask=NULL,
     list(mask=mask, overlap=overlap2, all=all.masks, 
          bad.ns=sub.ns/nnodes, include=include.subs, exclude=exclude.subs)
 }
+
+
+# Loading Functional Data
+
+## Prepares the way forward
+## 1. What are the type of files?
+## 2. What is the function to read these files?
+
+## A bunch of mask related stuff
+## 3. Do we need to automask the data?
+## 4. Do we get the overlap across subject masks?
+## 5. Is there a group mask to consider as well?
+
+## 6. Actually load and mask the data
+
+## 6. really should be for any vector => voxelwise transform
+## 6. For ROI data, is there a voxelwise ROI map? This should be unrelated to above.
+
+
+## 4. Read in the functional data given a brain mask
+
+
+## Prepares the way forward
+## 1. What are the type of files?
+## 2. What is the function to read these files?
+load_funcs.prepare <- function(files, verbose=TRUE) 
+{
+    vcat(verbose, "Preparing functional info")
+    
+    # What is the file type?
+    ftype <- detect_ftypes(files, verbose=verbose)
+    
+    # What is the function to read these functional files?
+    reader <- gen_big_reader(ftype, type="double")
+    
+    ret <- list(files=files, ftype=ftype, reader=reader)
+    class(ret) <- "inlist_prepare"
+    
+    return(ret)
+}
+
+## A bunch of mask related stuff
+## 3. Do we need to automask the data?
+## 4. Do we get the overlap across subject masks?
+## 5. Is there a group mask to consider as well?
+load_funcs.mask <- function(inlist, automask=FALSE, subject.masks=NULL,  
+                            group.mask=NULL, verbose=TRUE, detailed=FALSE)
+{
+    vcat(verbose, "Computing brain mask")
+    
+    if (class(inlist) != "inlist_prepare")
+        stop("Input inlist must be of class inlist_prepare")
+    
+    mat <- inlist$reader(inlist$files[1])
+    default <- rep(T, ncol(mat))
+    mask <- auto <- subjects <- group <- default
+    rm(mat)
+    
+    if (automask) {
+        auto <- overlap_masks(inlist$files, automask, verbose)
+        mask <- mask & auto$mask
+    }
+    
+    if (!is.null(subject.masks)) {
+        subjects <- overlap_masks(subject.masks, verbose=verbose)
+        mask <- mask & subjects$mask
+    }
+    
+    if (!is.null(group.mask)) {
+        ftype <- detect_ftypes(group.mask, verbose=FALSE)
+        group <- mask.read(group.mask, ftype)
+        percent_nonzero <- round(mean(group)*100, 2)
+        mask <- mask & group
+        vcat(verbose, "group mask has %.2f%% non-zero voxels", percent_nonzero)
+    }
+    
+    percent_nonzero <- round(mean(mask) * 100, 2)
+    vcat(verbose, "final mask has %.2f%% non-zero voxels", percent_nonzero)
+    
+    if (sum(mask) == 0)
+        stop("no non-zero voxels found in final mask")
+    
+    inlist$mask <- mask
+    if (detailed)
+        inlist$mask_details <- list(auto=auto, subjects=subjects, group=group)
+    class(inlist) <- "inlist"
+    
+    return(inlist)
+}
+
+load_funcs.read <- function(inlist, verbose=TRUE, ...)
+{
+    vcat(verbose, "Reading in functional data")
+    
+    if (class(inlist) != "inlist")
+        stop("input argument must be of class inlist")
+    progress <- ifelse(verbose, "text", "none")
+    
+    inds <- which(inlist$mask)
+    inlist$funcs <- llply(inlist$files, function(f) {
+        if (inlist$ftype == "nifti") {
+            func <- inlist$reader(f, voxs=inds, ...)
+        } else {
+            func <- inlist$reader(f, ...)
+            func <- deepcopy(func, cols=inds)
+        }
+    }, .progress=progress)
+    
+    return(inlist)
+}
+
+load_funcs.scale <- function(inlist, verbose=TRUE, to.copy=FALSE, 
+                             parallel=FALSE, ...)
+{
+    vcat(verbose, "Scaling functional data")
+    
+    if (class(inlist) != "inlist")
+        stop("input argument must be of class inlist")
+    
+    progress <- ifelse(verbose, "text", "none")
+    
+    if (to.copy)
+        inlist$funcs_nonscaled <- inlist$funcs
+    
+    inlist$funcs <- llply(inlist$funcs, function(func) {
+        scale(func, to.copy=to.copy, ...)
+    }, .progress=progress, .parallel=parallel)
+    
+    invisible(gc(FALSE, TRUE))
+    
+    return(inlist)
+}
+
+load_funcs.read_and_scale <- function(inlist, verbose=TRUE, to.copy=FALSE, 
+                                      parallel=FALSE, ...)
+{
+    inlist <- load_funcs.read(inlist, verbose, ...)
+    inlist <- load_funcs.scale(inlist, verbose, to.copy, parallel, ...)
+    return(inlist)
+}
+
+load_funcs <- function(files, verbose=TRUE, 
+                       automask=FALSE, subject.masks=NULL,  
+                       group.mask=NULL, detailed=FALSE, 
+                       to.copy=FALSE, parallel=FALSE, 
+                       ...)
+{
+    inlist <- load_funcs.prepare(files, verbose)
+    inlist <- load_funcs.mask(inlist, automask, subject.masks,  
+                              group.mask, verbose, detailed)
+    inlist <- load_funcs.read(inlist, verbose, ...)
+    inlist <- load_funcs.scale(inlist, verbose, to.copy, parallel, ...)
+    return(inlist)             
+}
+
 
 # Load data
 load_and_mask_func_data2 <- function(xs, read_fun, mask=NULL, verbose=FALSE, 

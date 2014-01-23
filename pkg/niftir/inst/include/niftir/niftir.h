@@ -85,6 +85,25 @@ SEXP read_nifti(SEXP file, SEXP read_data);
 SEXP write_nifti(SEXP header, SEXP data, SEXP outfile);
 
 
+/****************************************
+ * BigNifti Read/Write Functions
+ ****************************************/
+
+// Reading Functions
+
+SEXP read_bignifti_header(SEXP file);
+
+SEXP read_bignifti_data(SEXP nim_addr, SEXP big_addr);
+
+SEXP read_partial_bignifti_data(SEXP nim_addr, SEXP big_addr, \
+                                SEXP rowIndices, SEXP colIndices, \
+                                SEXP totalVoxs);
+
+// Writing Functions
+
+SEXP write_bignifti(SEXP header, SEXP big_addr, SEXP indices, SEXP outfile);
+
+
 #ifdef __cplusplus
 }
 #endif
