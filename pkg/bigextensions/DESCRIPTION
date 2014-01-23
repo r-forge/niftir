@@ -7,7 +7,7 @@ Author: Zarrar Shehzad <zarrar [dot] shehzad [at] yale.edu> and Jay
   Emerson
 Maintainer: Zarrar Shehzad <zarrar.shehzad@yale.edu>
 Depends: methods, bigmemory, plyr
-LinkingTo: bigmemory
+LinkingTo: bigmemory, BH
 Description: A set of functions that allow manipulation of bigmemory objects
 License: LGPL-3
 LazyLoad: yes
